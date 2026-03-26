@@ -7,7 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
 <style>
 :root { --fs: 15px; --bg: #f7f5f2; }
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; max-width: 100%; }
 html, body { height: 100%; overflow-x: hidden; }
 body { font-family: 'DM Sans', -apple-system, sans-serif; background: var(--bg); color: #111; display: flex; flex-direction: column; height: 100%; -webkit-font-smoothing: antialiased; }
 
@@ -17,11 +17,11 @@ header { height: 48px; padding: 0 20px; display: flex; align-items: center; just
 .logo-en { color: #888; font-weight: 400; }
 
 
-nav { min-height: 44px; padding: 6px 12px; display: flex; align-items: center; gap: 6px; flex-shrink: 0; background: var(--bg); border-bottom: 1px solid #e8e5e0; flex-wrap: wrap; }
+nav { min-height: 44px; padding: 6px 12px; display: flex; align-items: center; gap: 6px; flex-shrink: 0; background: var(--bg); border-bottom: 1px solid #e8e5e0; flex-wrap: wrap; max-width: 100%; box-sizing: border-box; }
 .nl { font-size: 11px; color: #bbb; }
 select { appearance: none; background: #efecea; border: 1px solid #d8d4ce; border-radius: 6px; color: #111; cursor: pointer; font: 13px inherit; padding: 5px 24px 5px 10px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath fill='%23999' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 7px center; outline: none; }
 select:focus { border-color: #555; }
-#bk { min-width: 185px; } #ch { min-width: 64px; }
+#bk { flex: 1; min-width: 0; max-width: 220px; } #ch { width: 60px; min-width: 0; }
 .btn-read { background: #222; border: none; border-radius: 6px; color: #fff; cursor: pointer; font: 500 13px inherit; padding: 6px 18px; }
 .btn-read:hover { opacity: 0.8; } .btn-read:disabled { opacity: 0.35; cursor: not-allowed; }
 .btn-nav { background: #efecea; border: 1px solid #d8d4ce; border-radius: 6px; color: #555; cursor: pointer; font-size: 14px; padding: 5px 11px; line-height: 1; }
@@ -31,12 +31,12 @@ select:focus { border-color: #555; }
 .fbtn { background: #efecea; border: 1px solid #d8d4ce; border-radius: 5px; color: #666; cursor: pointer; font-size: 12px; font-weight: 500; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; user-select: none; }
 .fbtn:hover { background: #e4e0da; } .fbtn:active { background: #d8d4ce; }
 
-main { flex: 1; overflow-y: auto; min-height: 0; background: var(--bg); }
+main { flex: 1; overflow-y: auto; overflow-x: hidden; min-height: 0; background: var(--bg); max-width: 100%; }
 main::-webkit-scrollbar { width: 4px; }
 main::-webkit-scrollbar-thumb { background: #d8d4ce; border-radius: 4px; }
 
 /* Grid layout */
-.col-headers { display: grid; grid-template-columns: 1fr 1fr; position: sticky; top: 0; z-index: 10; background: var(--bg); border-bottom: 1px solid #e8e5e0; }
+.col-headers { display: grid; grid-template-columns: 1fr 1fr; position: sticky; top: 0; z-index: 10; background: var(--bg); border-bottom: 1px solid #e8e5e0; max-width: 100%; overflow: hidden; }
 .col-hdr { padding: 14px 28px; display: flex; align-items: baseline; justify-content: space-between; }
 .col-hdr:first-child { border-right: 1px solid #e8e5e0; }
 .clbl { font-size: 10px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: #bbb; }
@@ -81,8 +81,13 @@ sup.fn-ref { font-size: 9px; color: #94a3b8; margin-left: 1px; vertical-align: s
 footer { border-top: 1px solid #e8e5e0; color: #bbb; background: var(--bg); font-size: 10px; padding: 8px 20px; text-align: center; flex-shrink: 0; }
 
 @media (max-width: 640px) {
-  #bk { min-width: 0; max-width: 140px; }
-  #ch { min-width: 0; width: 54px; }
+  #bk { max-width: 130px; }
+  #ch { width: 50px; }
+  .verse-cell { padding: 8px 12px; }
+  .col-hdr { padding: 10px 12px; }
+  .col-headers { display: none; }
+  .title-row, .shead-row { padding: 16px 12px 4px; }
+  .fn-row .en-side, .footnotes { padding: 12px 12px 28px; }
   .col-headers, .title-row, .shead-row, .verse-row { grid-template-columns: 1fr; }
   .verse-cell.ko-side, .col-hdr:first-child, .shead-row .ko-side, .title-row .ko-side { border-right: none; border-bottom: 1px solid #e8e5e0; }
   .fctl { margin-left: 0; }
