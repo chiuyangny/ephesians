@@ -6,330 +6,193 @@
 <title>개역개정 · ESV</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
 <style>
-:root { --fs: 15px; --bg: #f7f5f2; }
-* { box-sizing: border-box; margin: 0; padding: 0; max-width: 100%; }
-html, body { height: 100%; overflow-x: hidden; }
-body { font-family: 'DM Sans', -apple-system, sans-serif; background: var(--bg); color: #111; display: flex; flex-direction: column; height: 100%; -webkit-font-smoothing: antialiased; }
-
-header { height: 48px; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; background: var(--bg); border-bottom: 1px solid #e8e5e0; }
-.logo { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: #222; }
-.logo-div { color: #ccc; }
-.logo-en { color: #888; font-weight: 400; }
-
-
-nav { min-height: 44px; padding: 6px 12px; display: flex; align-items: center; gap: 6px; flex-shrink: 0; background: var(--bg); border-bottom: 1px solid #e8e5e0; flex-wrap: wrap; max-width: 100%; box-sizing: border-box; }
-.nl { font-size: 11px; color: #bbb; }
-select { appearance: none; background: #efecea; border: 1px solid #d8d4ce; border-radius: 6px; color: #111; cursor: pointer; font: 13px inherit; padding: 5px 24px 5px 10px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath fill='%23999' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 7px center; outline: none; }
-select:focus { border-color: #555; }
-#bk { flex: 1; min-width: 0; max-width: 220px; } #ch { width: 60px; min-width: 0; }
-.btn-read { background: #222; border: none; border-radius: 6px; color: #fff; cursor: pointer; font: 500 13px inherit; padding: 6px 18px; }
-.btn-read:hover { opacity: 0.8; } .btn-read:disabled { opacity: 0.35; cursor: not-allowed; }
-.btn-nav { background: #efecea; border: 1px solid #d8d4ce; border-radius: 6px; color: #555; cursor: pointer; font-size: 14px; padding: 5px 11px; line-height: 1; }
-.btn-nav:hover { background: #e4e0da; } .btn-nav:disabled { opacity: 0.3; cursor: not-allowed; }
-.fctl { margin-left: auto; display: flex; align-items: center; gap: 3px; }
-.fctl > span { font-size: 11px; color: #bbb; margin-right: 2px; }
-.fbtn { background: #efecea; border: 1px solid #d8d4ce; border-radius: 5px; color: #666; cursor: pointer; font-size: 12px; font-weight: 500; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; user-select: none; }
-.fbtn:hover { background: #e4e0da; } .fbtn:active { background: #d8d4ce; }
-
-main { flex: 1; overflow-y: auto; overflow-x: hidden; min-height: 0; background: var(--bg); max-width: 100%; }
-main::-webkit-scrollbar { width: 4px; }
-main::-webkit-scrollbar-thumb { background: #d8d4ce; border-radius: 4px; }
-
-/* Grid layout */
-.col-headers { display: grid; grid-template-columns: 1fr 1fr; position: sticky; top: 0; z-index: 10; background: var(--bg); border-bottom: 1px solid #e8e5e0; max-width: 100%; overflow: hidden; }
-.col-hdr { padding: 14px 28px; display: flex; align-items: baseline; justify-content: space-between; }
-.col-hdr:first-child { border-right: 1px solid #e8e5e0; }
-.clbl { font-size: 10px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: #bbb; }
-.cref { font-size: 12px; color: #999; }
-
-.title-row { display: grid; grid-template-columns: 1fr 1fr; padding: 28px 0 16px; }
-.ko-side { padding: 0 28px; border-right: 1px solid #e8e5e0; }
-.en-side { padding: 0 28px; }
-.ch-title { font-size: 17px; font-weight: 600; color: #222; letter-spacing: -0.02em; }
-.ko-side .ch-title { font-family: 'Noto Sans KR', sans-serif; }
-
-.shead-row { display: grid; grid-template-columns: 1fr 1fr; padding: 20px 0 4px; }
-.shead-row .ko-side { border-right: 1px solid #e8e5e0; }
-.fn-row { display: grid; grid-template-columns: 1fr 1fr; }
-.fn-row .ko-side { border-right: 1px solid #e8e5e0; }
-.shead { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #bbb; }
-
-/* Each verse row: both sides same height */
-.verse-row { display: grid; grid-template-columns: 1fr 1fr; }
-.verse-row:hover { background: #f0ede8; }
-.verse-cell { padding: 9px 28px; display: flex; gap: 10px; align-items: baseline; }
-.verse-cell.ko-side { border-right: 1px solid #e8e5e0; }
-.vn { color: #ccc; font-size: 10px; font-weight: 600; min-width: 16px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; line-height: var(--lh); padding-top: 2px; }
-.vt { line-height: 1.85; color: #1c1c1c; flex: 1; }
-.ko-side .vt { font-family: 'Noto Sans KR', sans-serif; font-weight: 400; word-break: keep-all; letter-spacing: -0.02em; }
-.en-side .vt { font-family: 'DM Sans', -apple-system, sans-serif; font-weight: 400; }
-sup.fn-ref { font-size: 9px; color: #2563eb; margin-left: 1px; vertical-align: super; line-height: 0; cursor: pointer; padding: 0 1px; }
-
-.footnotes { padding: 20px 28px 40px; border-top: 1px solid #e8e5e0; margin-top: 4px; }
-.footnotes .fn-title { font-size: 10px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: #bbb; margin-bottom: 10px; }
-.fn-item { display: flex; gap: 8px; font-size: 12px; color: #777; line-height: 1.6; margin-bottom: 3px; border-radius: 4px; padding: 4px 2px; }
-.fn-back-btn { background: none; border: none; color: #2563eb; font: 600 10px inherit; cursor: pointer; padding: 2px 4px; border-radius: 4px; min-width: 28px; text-align: left; line-height: 1.4; flex-shrink: 0; }
-.fn-back-btn:active { background: #e8f0fe; }
-.fn-n { color: #94a3b8; font-size: 9px; font-weight: 600; flex-shrink: 0; padding-top: 3px; }
-
-.ph { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 72px 20px; color: #bbb; text-align: center; }
-.ph p { font-size: 13px; line-height: 1.6; }
-.ldg { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 64px 20px; }
-@keyframes spin { to { transform: rotate(360deg); } }
-.spinner { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #e8e5e0; border-top-color: #555; animation: spin 0.6s linear infinite; }
-.ldg-txt { font-size: 12px; color: #bbb; }
-.errbox { background: #fff5f5; border: 1px solid #fecaca; border-radius: 6px; color: #dc2626; padding: 10px 14px; font-size: 13px; line-height: 1.5; margin: 16px 28px; }
-
-footer { border-top: 1px solid #e8e5e0; color: #bbb; background: var(--bg); font-size: 10px; padding: 8px 20px; text-align: center; }
-
-@media (max-width: 640px) {
-  header { display: none; }
-  nav { padding: 6px 12px; min-height: 0; }
-  .col-headers { display: none; }
-  .col-headers, .title-row, .shead-row, .verse-row { grid-template-columns: 1fr; }
-
-  /* Stack ko above en with no vertical divider between them */
-  .verse-cell { padding: 6px 14px; }
-  .verse-cell.ko-side {
-    border-right: 0 !important;
-    border-bottom: none !important;
-    padding-bottom: 2px;
-  }
-  .verse-cell.en-side {
-    padding-top: 2px;
-    border-bottom: 1px solid #e8e5e0;
-  }
-  .title-row { padding: 16px 14px 4px; }
-  .title-row .ko-side { border-right: 0 !important; border-bottom: none !important; padding-bottom: 4px; }
-  .title-row .en-side { padding-top: 0; }
-  .shead-row { padding: 12px 14px 2px; }
-  .shead-row .ko-side { display: none; }
-
-  /* Footnotes: stack Korean on top, English below */
-  .fn-row { display: block !important; }
-  .fn-row .ko-side { display: block !important; border-right: none !important; padding: 0 !important; }
-  .fn-row .en-side { padding: 0 !important; }
-  .footnotes { padding: 14px 14px 24px; border-top: 1px solid #e8e5e0; }
+:root{--fs:15px;--bg:#f7f5f2}
+*{box-sizing:border-box;margin:0;padding:0;max-width:100%}
+html,body{height:100%;overflow-x:hidden}html{overscroll-behavior:none}body{overscroll-behavior:none}
+body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:#111;display:flex;flex-direction:column;height:100%;-webkit-font-smoothing:antialiased}
+header{height:48px;padding:0 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--bg);border-bottom:1px solid #e8e5e0}
+.logo{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:#222}
+.logo-div{color:#ccc}.logo-en{color:#888;font-weight:400}
+nav{min-height:44px;padding:6px 12px;display:flex;align-items:center;gap:6px;flex-shrink:0;background:var(--bg);border-bottom:1px solid #e8e5e0;flex-wrap:wrap;max-width:100%}
+.nl{font-size:11px;color:#bbb}
+select{appearance:none;background:#efecea;border:1px solid #d8d4ce;border-radius:6px;color:#111;cursor:pointer;font:13px inherit;padding:5px 24px 5px 10px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath fill='%23999' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 7px center;outline:none}
+#bk{flex:1;min-width:0;max-width:220px}#ch{width:60px;min-width:0}
+.btn-read{background:#222;border:none;border-radius:6px;color:#fff;cursor:pointer;font:500 13px inherit;padding:6px 18px}
+.btn-read:disabled{opacity:.35;cursor:not-allowed}
+.btn-nav{background:#efecea;border:1px solid #d8d4ce;border-radius:6px;color:#555;cursor:pointer;font-size:14px;padding:5px 11px;line-height:1}
+.btn-nav:disabled{opacity:.3;cursor:not-allowed}
+.fctl{margin-left:auto;display:flex;align-items:center;gap:3px}
+.fctl>span{font-size:11px;color:#bbb;margin-right:2px}
+.fbtn{background:#efecea;border:1px solid #d8d4ce;border-radius:5px;color:#666;cursor:pointer;font-size:12px;font-weight:500;width:26px;height:26px;display:flex;align-items:center;justify-content:center;user-select:none}
+main{flex:1;overflow-y:auto;overflow-x:hidden;min-height:0;background:var(--bg);max-width:100%}
+main::-webkit-scrollbar{width:4px}
+main::-webkit-scrollbar-thumb{background:#d8d4ce;border-radius:4px}
+.col-headers{display:grid;grid-template-columns:1fr 1fr;position:sticky;top:0;z-index:10;background:var(--bg);border-bottom:1px solid #e8e5e0;overflow:hidden}
+.col-hdr{padding:14px 28px;display:flex;align-items:baseline;justify-content:space-between}
+.col-hdr:first-child{border-right:1px solid #e8e5e0}
+.clbl{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#bbb}
+.cref{font-size:12px;color:#999}
+.title-row{display:grid;grid-template-columns:1fr 1fr;padding:28px 0 16px}
+.ko-side{padding:0 28px;border-right:1px solid #e8e5e0}
+.en-side{padding:0 28px}
+.ch-title{font-size:17px;font-weight:600;color:#222;letter-spacing:-.02em}
+.ko-side .ch-title{font-family:'Noto Sans KR',sans-serif}
+.shead-row{display:grid;grid-template-columns:1fr 1fr;padding:20px 0 4px}
+.shead-row .ko-side{border-right:1px solid #e8e5e0}
+.fn-row{display:grid;grid-template-columns:1fr 1fr}
+.fn-row .ko-side{border-right:1px solid #e8e5e0}
+.shead{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#bbb}
+.verse-row{display:grid;grid-template-columns:1fr 1fr}
+.verse-row:hover{background:#f0ede8}
+.verse-cell{padding:9px 28px;display:flex;gap:10px;align-items:baseline}
+.verse-cell.ko-side{border-right:1px solid #e8e5e0}
+.vn{color:#ccc;font-size:10px;font-weight:600;min-width:16px;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums;padding-top:2px}
+.vt{line-height:1.85;color:#1c1c1c;flex:1}
+.ko-side .vt{font-family:'Noto Sans KR',sans-serif;font-weight:400;word-break:keep-all;letter-spacing:-.02em}
+.en-side .vt{font-family:'DM Sans',-apple-system,sans-serif;font-weight:400}
+sup.fn-ref{font-size:9px;color:#2563eb;margin-left:1px;vertical-align:super;line-height:0;cursor:pointer;padding:0 1px}
+.footnotes{padding:20px 28px 40px;border-top:1px solid #e8e5e0;margin-top:4px}
+.footnotes .fn-title{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#bbb;margin-bottom:10px}
+.fn-item{display:flex;gap:8px;font-size:12px;color:#777;line-height:1.6;margin-bottom:3px;border-radius:4px;padding:4px 2px}
+.fn-back-btn{background:none;border:none;color:#2563eb;font:600 10px inherit;cursor:pointer;padding:2px 4px;border-radius:4px;min-width:28px;text-align:left;line-height:1.4;flex-shrink:0}
+.fn-n{color:#94a3b8;font-size:9px;font-weight:600;flex-shrink:0;padding-top:3px}
+.ph{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:72px 20px;color:#bbb;text-align:center}
+.ph p{font-size:13px;line-height:1.6}
+.ldg{display:flex;flex-direction:column;align-items:center;gap:12px;padding:64px 20px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{width:20px;height:20px;border-radius:50%;border:2px solid #e8e5e0;border-top-color:#555;animation:spin .6s linear infinite}
+.ldg-txt{font-size:12px;color:#bbb}
+.errbox{background:#fff5f5;border:1px solid #fecaca;border-radius:6px;color:#dc2626;padding:10px 14px;font-size:13px;line-height:1.5;margin:16px 28px}
+footer{border-top:1px solid #e8e5e0;color:#bbb;background:var(--bg);font-size:10px;padding:8px 20px;text-align:center}
+@media(max-width:640px){
+  header{display:none}
+  nav{padding:6px 12px;min-height:0}
+  .col-headers{display:none}
+  .col-headers,.title-row,.shead-row,.verse-row{grid-template-columns:1fr}
+  .verse-cell{padding:6px 14px}
+  .verse-cell.ko-side{border-right:0!important;border-bottom:none!important;padding-bottom:2px}
+  .verse-cell.en-side{padding-top:2px;border-bottom:1px solid #e8e5e0}
+  .title-row{padding:16px 14px 4px}
+  .title-row .ko-side{border-right:0!important;border-bottom:none!important;padding-bottom:4px}
+  .title-row .en-side{padding-top:0}
+  .shead-row{padding:12px 14px 2px}
+  .shead-row .ko-side{display:none}
+  .fn-row{display:block!important}
+  .fn-row .ko-side{display:block!important;border-right:none!important;padding:0!important}
+  .fn-row .en-side{padding:0!important}
+  .footnotes{padding:14px 14px 24px;border-top:1px solid #e8e5e0}
 }
-
-/* Desktop/mobile visibility */
-.mob-nav { display: none; }
-@media (max-width: 640px) {
-  .desk-only { display: none !important; }
-  .mob-nav { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+.mob-nav{display:none}
+@media(max-width:640px){
+  .desk-only{display:none!important}
+  .mob-nav{display:flex;align-items:center;justify-content:space-between;width:100%}
 }
-
-/* Mobile nav bar */
-.mob-nav-btn {
-  display: flex; align-items: center; gap: 6px;
-  background: #efecea; border: 1px solid #d8d4ce; border-radius: 8px;
-  font-size: 13px; font-weight: 700; color: #222; padding: 7px 12px; font-family: inherit;
-  cursor: pointer; flex: 0 1 auto;
-}
-.mob-nav-btn span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mob-nav-btn svg { flex-shrink: 0; color: #999; }
-.mob-nav-actions { display: flex; gap: 5px; flex-shrink: 0; }
-.mob-icon-btn.arrow { display: none; }
-.mob-icon-btn {
-  background: #efecea; border: 1px solid #d8d4ce; border-radius: 8px;
-  font: 500 14px inherit; color: #444; width: 34px; height: 34px;
-  display: flex; align-items: center; justify-content: center; cursor: pointer;
-}
-.mob-icon-btn:disabled { opacity: 0.35; cursor: not-allowed; }
-.mob-icon-btn:active { background: #e0dbd4; }
-
-/* Bottom sheet */
-.mob-sheet {
-  position: fixed; inset: 0; z-index: 100;
-  background: rgba(0,0,0,0.4);
-  display: flex; align-items: flex-end;
-  transition: opacity 0.2s;
-}
-.mob-sheet.hidden { display: none; }
-.mob-sheet-drag { width: 100%; height: 32px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: transparent; }
-.mob-sheet-drag::after { content: ""; display: block; width: 40px; height: 4px; background: #d0cdc8; border-radius: 2px; }
-.mob-sheet-inner { position: relative;
-  background: var(--bg); border-radius: 16px 16px 0 0;
-  width: 100%; max-height: 85vh;
-  display: flex; flex-direction: column;
-  overflow: hidden;
-}
-.mob-sheet-hdr {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 20px 12px; border-bottom: 1px solid #e8e5e0;
-  flex-shrink: 0;
-}
-.mob-sheet-hdr span { font-size: 14px; font-weight: 500; color: #222; }
-.mob-sheet-close {
-  background: #efecea; border: none; border-radius: 50%;
-  width: 28px; height: 28px; font-size: 12px; color: #666;
-  display: flex; align-items: center; justify-content: center; cursor: pointer;
-}
-#mob-sheet-body { overflow-y: auto; flex: 1; }
-
-/* Book list in sheet */
-.mob-book-grid {
-  display: grid; grid-template-columns: 1fr 1fr;
-  gap: 0;
-}
-.mob-book-item {
-  padding: 13px 16px; font-size: 14px; color: #222;
-  border-bottom: 0.5px solid #f0ede8; cursor: pointer;
-  display: flex; align-items: center; gap: 6px;
-}
-.mob-book-item:active { background: #f0ede8; }
-.mob-book-item.active { color: #222; font-weight: 600; }
-.mob-book-item .ko { font-family: 'Noto Sans KR', sans-serif; font-size: 13px; }
-.mob-book-item .en { font-size: 11px; color: #999; }
-
-/* Chapter grid in sheet */
-.mob-ch-grid {
-  display: grid; grid-template-columns: repeat(6, 1fr);
-  gap: 6px; padding: 16px;
-}
-.mob-ch-item {
-  aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
-  border-radius: 8px; font-size: 14px; color: #222;
-  background: #efecea; cursor: pointer; font-weight: 400;
-}
-.mob-ch-item:active { background: #d8d4ce; }
-.mob-ch-item.active { background: #222; color: #fff; font-weight: 500; }
-
-/* Font sheet */
-.mob-font-sheet {
-  padding: 8px 16px 24px;
-}
-.mob-font-row {
-  display: flex; align-items: center; gap: 16px; padding: 12px 0;
-}
-.mob-font-row span { font-size: 12px; color: #999; min-width: 28px; }
-.mob-font-btn {
-  background: #efecea; border: 1px solid #d8d4ce; border-radius: 8px;
-  font: 500 18px inherit; color: #222; width: 48px; height: 48px;
-  display: flex; align-items: center; justify-content: center; cursor: pointer;
-}
-.mob-font-preview {
-  flex: 1; font-size: 15px; color: #555; text-align: center;
-  font-family: 'Noto Sans KR', sans-serif;
-}
-
+.mob-nav-btn{display:flex;align-items:center;gap:6px;background:#efecea;border:1px solid #d8d4ce;border-radius:8px;font-size:13px;font-weight:700;color:#222;padding:7px 12px;font-family:inherit;cursor:pointer;flex:0 1 auto}
+.mob-nav-btn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mob-nav-btn svg{flex-shrink:0;color:#999}
+.mob-nav-actions{display:flex;gap:5px;flex-shrink:0}
+.mob-icon-btn{background:#efecea;border:1px solid #d8d4ce;border-radius:8px;font:500 14px inherit;color:#444;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.mob-icon-btn:disabled{opacity:.35;cursor:not-allowed}
+/* Sheet */
+.mob-sheet{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.4);display:flex;align-items:flex-end}
+.mob-sheet.hidden{display:none}
+.mob-sheet-inner{background:var(--bg);border-radius:16px 16px 0 0;width:100%;max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
+/* Handle: touch-action:none is THE key — tells browser to skip scroll handling and give all touch events to JS */
+.mob-handle{width:100%;height:44px;display:flex;align-items:center;justify-content:center;flex-shrink:0;touch-action:none;cursor:grab;background:transparent}
+.mob-handle::after{content:"";display:block;width:40px;height:4px;background:#d0cdc8;border-radius:2px}
+.mob-sheet-hdr{display:flex;align-items:center;justify-content:space-between;padding:0 20px 12px;flex-shrink:0;border-bottom:1px solid #e8e5e0}
+.mob-sheet-hdr span{font-size:14px;font-weight:500;color:#222}
+.mob-sheet-close{background:#efecea;border:none;border-radius:50%;width:28px;height:28px;font-size:12px;color:#666;display:flex;align-items:center;justify-content:center;cursor:pointer}
+#mob-sheet-body{overflow-y:auto;flex:1}
+.mob-book-grid{display:grid;grid-template-columns:1fr 1fr}
+.mob-book-item{padding:13px 16px;font-size:14px;color:#222;border-bottom:.5px solid #f0ede8;cursor:pointer}
+.mob-book-item:active{background:#f0ede8}
+.mob-book-item.active{font-weight:600}
+.mob-book-item .ko{font-family:'Noto Sans KR',sans-serif;font-size:13px}
+.mob-book-item .en{font-size:11px;color:#999}
+.mob-ch-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;padding:16px}
+.mob-ch-item{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;color:#222;background:#efecea;cursor:pointer}
+.mob-ch-item:active{background:#d8d4ce}
+.mob-ch-item.active{background:#222;color:#fff;font-weight:500}
+.mob-font-sheet{padding:16px 16px 32px}
+.mob-font-row{display:flex;align-items:center;gap:16px;padding:12px 0}
+.mob-font-btn{background:#efecea;border:1px solid #d8d4ce;border-radius:8px;font:500 18px inherit;color:#222;width:56px;height:56px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.mob-font-preview{flex:1;font-size:15px;color:#555;text-align:center}
 </style>
 </head>
 <body>
-
 <header>
-  <div class="logo">
-    <span>개역개정</span>
-    <span class="logo-div">/</span>
-    <span class="logo-en">English Standard Version</span>
-  </div>
+  <div class="logo"><span>개역개정</span><span class="logo-div">/</span><span class="logo-en">English Standard Version</span></div>
 </header>
-
-
 <nav>
-  <!-- Desktop nav (hidden on mobile) -->
   <span class="nl desk-only">Book</span>
   <select id="bk" class="desk-only" onchange="onBook()"></select>
   <span class="nl desk-only">Ch.</span>
   <select id="ch" class="desk-only"></select>
-  <button class="btn-nav desk-only" id="bp" onclick="step(-1)" disabled>‹</button>
+  <button class="btn-nav desk-only" id="bp" onclick="step(-1)" disabled>&#8249;</button>
   <button class="btn-read desk-only" id="bload" onclick="load()">Read</button>
-  <button class="btn-nav desk-only" id="bn" onclick="step(1)" disabled>›</button>
+  <button class="btn-nav desk-only" id="bn" onclick="step(1)" disabled>&#8250;</button>
   <div class="fctl desk-only">
     <span>A</span>
-    <button class="fbtn" id="fminus" type="button">−</button>
+    <button class="fbtn" id="fminus" type="button">&#8722;</button>
     <button class="fbtn" id="fplus" type="button">+</button>
   </div>
-
-  <!-- Mobile nav (hidden on desktop) -->
   <div class="mob-nav">
-    <button class="mob-nav-btn" id="mob-passage-btn" onclick="mobOpenPassage()">
-      <span id="mob-passage-label">Genesis 1</span>
+    <button class="mob-nav-btn" id="mob-passage-btn" onclick="sheetOpen('passage')">
+      <span id="mob-passage-label">요한복음 3장</span>
       <svg width="10" height="6" viewBox="0 0 10 6"><path fill="currentColor" d="M0 0l5 6 5-6z"/></svg>
     </button>
     <div class="mob-nav-actions">
-      <button class="mob-icon-btn arrow" id="mob-bp" onclick="step(-1)" disabled>‹</button>
-      <button class="mob-icon-btn arrow" id="mob-bn" onclick="step(1)" disabled>›</button>
-      <button class="mob-icon-btn" onclick="mobOpenFont()">A</button>
+      <button class="mob-icon-btn" onclick="sheetOpen('font')">A</button>
     </div>
   </div>
 </nav>
-
-<!-- Mobile passage picker sheet -->
-<div id="mob-sheet" class="mob-sheet hidden" onclick="mobSheetBgClick(event)" ontouchstart="window._bkSY=event.touches[0].clientY" ontouchend="var _dy=event.changedTouches[0].clientY-window._bkSY;if(_dy>80&&event.target===this)mobCloseSheet()">
-  <div class="mob-sheet-inner" id="mob-sheet-inner">
-    <div id="mob-swipe-zone" style="position:absolute;top:0;left:0;right:0;height:80px;z-index:10;touch-action:none" ontouchstart="window._szSY=event.touches[0].clientY" ontouchmove="var _d=event.touches[0].clientY-window._szSY;if(_d>60)mobCloseSheet()"></div>
-    <div class="mob-sheet-drag" id="mob-drag-pill"></div>
-    <div class="mob-sheet-hdr" id="mob-sheet-hdr">
-      <span id="mob-sheet-title">Select passage</span>
-      <button class="mob-sheet-close" onclick="mobCloseSheet()">✕</button>
+<div id="mob-sheet" class="mob-sheet hidden">
+  <div class="mob-sheet-inner">
+    <div class="mob-handle" id="mob-handle"></div>
+    <div class="mob-sheet-hdr">
+      <span id="mob-sheet-title"></span>
+      <button class="mob-sheet-close" onclick="sheetClose()">&#10005;</button>
     </div>
     <div id="mob-sheet-body"></div>
   </div>
 </div>
-
 <main id="main">
-  <div id="content">
-    <div class="ph"><p>책과 장을 선택하고 Read를 누르세요</p></div>
-  </div>
-
-<footer>개역개정판 © 대한성서공회 &nbsp;·&nbsp; ESV® © 2001 Crossway · Used by permission</footer>
+  <div id="content"><div class="ph"><p>책과 장을 선택하고 Read를 누르세요</p></div></div>
+  <footer>개역개정판 &copy; 대한성서공회 &nbsp;&middot;&nbsp; ESV&reg; &copy; 2001 Crossway &middot; Used by permission</footer>
 </main>
-
 <script>
 const WORKER='https://bibleread.pauljkim22.workers.dev';
-const BOOKS=[
-  {ko:"창세기",en:"Genesis",n:1,ch:50},{ko:"출애굽기",en:"Exodus",n:2,ch:40},
-  {ko:"레위기",en:"Leviticus",n:3,ch:27},{ko:"민수기",en:"Numbers",n:4,ch:36},
-  {ko:"신명기",en:"Deuteronomy",n:5,ch:34},{ko:"여호수아",en:"Joshua",n:6,ch:24},
-  {ko:"사사기",en:"Judges",n:7,ch:21},{ko:"룻기",en:"Ruth",n:8,ch:4},
-  {ko:"사무엘상",en:"1 Samuel",n:9,ch:31},{ko:"사무엘하",en:"2 Samuel",n:10,ch:24},
-  {ko:"열왕기상",en:"1 Kings",n:11,ch:22},{ko:"열왕기하",en:"2 Kings",n:12,ch:25},
-  {ko:"역대상",en:"1 Chronicles",n:13,ch:29},{ko:"역대하",en:"2 Chronicles",n:14,ch:36},
-  {ko:"에스라",en:"Ezra",n:15,ch:10},{ko:"느헤미야",en:"Nehemiah",n:16,ch:13},
-  {ko:"에스더",en:"Esther",n:17,ch:10},{ko:"욥기",en:"Job",n:18,ch:42},
-  {ko:"시편",en:"Psalms",n:19,ch:150},{ko:"잠언",en:"Proverbs",n:20,ch:31},
-  {ko:"전도서",en:"Ecclesiastes",n:21,ch:12},{ko:"아가",en:"Song of Solomon",n:22,ch:8},
-  {ko:"이사야",en:"Isaiah",n:23,ch:66},{ko:"예레미야",en:"Jeremiah",n:24,ch:52},
-  {ko:"예레미야애가",en:"Lamentations",n:25,ch:5},{ko:"에스겔",en:"Ezekiel",n:26,ch:48},
-  {ko:"다니엘",en:"Daniel",n:27,ch:12},{ko:"호세아",en:"Hosea",n:28,ch:14},
-  {ko:"요엘",en:"Joel",n:29,ch:3},{ko:"아모스",en:"Amos",n:30,ch:9},
-  {ko:"오바댜",en:"Obadiah",n:31,ch:1},{ko:"요나",en:"Jonah",n:32,ch:4},
-  {ko:"미가",en:"Micah",n:33,ch:7},{ko:"나훔",en:"Nahum",n:34,ch:3},
-  {ko:"하박국",en:"Habakkuk",n:35,ch:3},{ko:"스바냐",en:"Zephaniah",n:36,ch:3},
-  {ko:"학개",en:"Haggai",n:37,ch:2},{ko:"스가랴",en:"Zechariah",n:38,ch:14},
-  {ko:"말라기",en:"Malachi",n:39,ch:4},
-  {ko:"마태복음",en:"Matthew",n:40,ch:28},{ko:"마가복음",en:"Mark",n:41,ch:16},
-  {ko:"누가복음",en:"Luke",n:42,ch:24},{ko:"요한복음",en:"John",n:43,ch:21},
-  {ko:"사도행전",en:"Acts",n:44,ch:28},{ko:"로마서",en:"Romans",n:45,ch:16},
-  {ko:"고린도전서",en:"1 Corinthians",n:46,ch:16},{ko:"고린도후서",en:"2 Corinthians",n:47,ch:13},
-  {ko:"갈라디아서",en:"Galatians",n:48,ch:6},{ko:"에베소서",en:"Ephesians",n:49,ch:6},
-  {ko:"빌립보서",en:"Philippians",n:50,ch:4},{ko:"골로새서",en:"Colossians",n:51,ch:4},
-  {ko:"데살로니가전서",en:"1 Thessalonians",n:52,ch:5},{ko:"데살로니가후서",en:"2 Thessalonians",n:53,ch:3},
-  {ko:"디모데전서",en:"1 Timothy",n:54,ch:6},{ko:"디모데후서",en:"2 Timothy",n:55,ch:4},
-  {ko:"디도서",en:"Titus",n:56,ch:3},{ko:"빌레몬서",en:"Philemon",n:57,ch:1},
-  {ko:"히브리서",en:"Hebrews",n:58,ch:13},{ko:"야고보서",en:"James",n:59,ch:5},
-  {ko:"베드로전서",en:"1 Peter",n:60,ch:5},{ko:"베드로후서",en:"2 Peter",n:61,ch:3},
-  {ko:"요한일서",en:"1 John",n:62,ch:5},{ko:"요한이서",en:"2 John",n:63,ch:1},
-  {ko:"요한삼서",en:"3 John",n:64,ch:1},{ko:"유다서",en:"Jude",n:65,ch:1},
-  {ko:"요한계시록",en:"Revelation",n:66,ch:22},
-];
-
-let bi=42, ci=3, fs=15;
-
+const BOOKS=[{ko:"창세기",en:"Genesis",n:1,ch:50},{ko:"출애굽기",en:"Exodus",n:2,ch:40},{ko:"레위기",en:"Leviticus",n:3,ch:27},{ko:"민수기",en:"Numbers",n:4,ch:36},{ko:"신명기",en:"Deuteronomy",n:5,ch:34},{ko:"여호수아",en:"Joshua",n:6,ch:24},{ko:"사사기",en:"Judges",n:7,ch:21},{ko:"룻기",en:"Ruth",n:8,ch:4},{ko:"사무엘상",en:"1 Samuel",n:9,ch:31},{ko:"사무엘하",en:"2 Samuel",n:10,ch:24},{ko:"열왕기상",en:"1 Kings",n:11,ch:22},{ko:"열왕기하",en:"2 Kings",n:12,ch:25},{ko:"역대상",en:"1 Chronicles",n:13,ch:29},{ko:"역대하",en:"2 Chronicles",n:14,ch:36},{ko:"에스라",en:"Ezra",n:15,ch:10},{ko:"느헤미야",en:"Nehemiah",n:16,ch:13},{ko:"에스더",en:"Esther",n:17,ch:10},{ko:"욥기",en:"Job",n:18,ch:42},{ko:"시편",en:"Psalms",n:19,ch:150},{ko:"잠언",en:"Proverbs",n:20,ch:31},{ko:"전도서",en:"Ecclesiastes",n:21,ch:12},{ko:"아가",en:"Song of Solomon",n:22,ch:8},{ko:"이사야",en:"Isaiah",n:23,ch:66},{ko:"예레미야",en:"Jeremiah",n:24,ch:52},{ko:"예레미야애가",en:"Lamentations",n:25,ch:5},{ko:"에스겔",en:"Ezekiel",n:26,ch:48},{ko:"다니엘",en:"Daniel",n:27,ch:12},{ko:"호세아",en:"Hosea",n:28,ch:14},{ko:"요엘",en:"Joel",n:29,ch:3},{ko:"아모스",en:"Amos",n:30,ch:9},{ko:"오바댜",en:"Obadiah",n:31,ch:1},{ko:"요나",en:"Jonah",n:32,ch:4},{ko:"미가",en:"Micah",n:33,ch:7},{ko:"나훔",en:"Nahum",n:34,ch:3},{ko:"하박국",en:"Habakkuk",n:35,ch:3},{ko:"스바냐",en:"Zephaniah",n:36,ch:3},{ko:"학개",en:"Haggai",n:37,ch:2},{ko:"스가랴",en:"Zechariah",n:38,ch:14},{ko:"말라기",en:"Malachi",n:39,ch:4},{ko:"마태복음",en:"Matthew",n:40,ch:28},{ko:"마가복음",en:"Mark",n:41,ch:16},{ko:"누가복음",en:"Luke",n:42,ch:24},{ko:"요한복음",en:"John",n:43,ch:21},{ko:"사도행전",en:"Acts",n:44,ch:28},{ko:"로마서",en:"Romans",n:45,ch:16},{ko:"고린도전서",en:"1 Corinthians",n:46,ch:16},{ko:"고린도후서",en:"2 Corinthians",n:47,ch:13},{ko:"갈라디아서",en:"Galatians",n:48,ch:6},{ko:"에베소서",en:"Ephesians",n:49,ch:6},{ko:"빌립보서",en:"Philippians",n:50,ch:4},{ko:"골로새서",en:"Colossians",n:51,ch:4},{ko:"데살로니가전서",en:"1 Thessalonians",n:52,ch:5},{ko:"데살로니가후서",en:"2 Thessalonians",n:53,ch:3},{ko:"디모데전서",en:"1 Timothy",n:54,ch:6},{ko:"디모데후서",en:"2 Timothy",n:55,ch:4},{ko:"디도서",en:"Titus",n:56,ch:3},{ko:"빌레몬서",en:"Philemon",n:57,ch:1},{ko:"히브리서",en:"Hebrews",n:58,ch:13},{ko:"야고보서",en:"James",n:59,ch:5},{ko:"베드로전서",en:"1 Peter",n:60,ch:5},{ko:"베드로후서",en:"2 Peter",n:61,ch:3},{ko:"요한일서",en:"1 John",n:62,ch:5},{ko:"요한이서",en:"2 John",n:63,ch:1},{ko:"요한삼서",en:"3 John",n:64,ch:1},{ko:"유다서",en:"Jude",n:65,ch:1},{ko:"요한계시록",en:"Revelation",n:66,ch:22}];
+let bi=42,ci=3,fs=15,pendingBook=null;
 (function(){
   const s=document.getElementById('bk');
-  BOOKS.forEach((b,i)=>{const o=document.createElement('option');o.value=i;o.textContent=b.ko+'  ·  '+b.en;s.appendChild(o);});
-  s.value=bi; buildCh(); document.getElementById('ch').value=ci;
+  BOOKS.forEach((b,i)=>{const o=document.createElement('option');o.value=i;o.textContent=b.ko+'  .  '+b.en;s.appendChild(o);});
+  s.value=bi;buildCh();document.getElementById('ch').value=ci;
   applyFs();
   document.getElementById('fminus').addEventListener('click',()=>{fs=Math.max(11,fs-1);applyFs();});
   document.getElementById('fplus').addEventListener('click',()=>{fs=Math.min(22,fs+1);applyFs();});
+  updateLabel();
+  // Sheet drag handle — touch-action:none means browser hands ALL touch events to JS, no scroll interference
+  const handle=document.getElementById('mob-handle');
+  let hy=0;
+  handle.addEventListener('touchstart',function(e){
+    hy=e.touches[0].clientY;
+  },{passive:false});
+  handle.addEventListener('touchmove',function(e){
+    e.preventDefault();
+    if(e.touches[0].clientY - hy > 60) sheetClose();
+  },{passive:false});
+  // Tap dark backdrop closes sheet
+  document.getElementById('mob-sheet').addEventListener('click',function(e){
+    if(e.target===this) sheetClose();
+  });
 })();
-
 function applyFs(){
   document.documentElement.style.setProperty('--fs',fs+'px');
   document.querySelectorAll('.vt').forEach(el=>el.style.fontSize=fs+'px');
 }
+function updateLabel(){document.getElementById('mob-passage-label').textContent=BOOKS[bi].ko+' '+ci+'장';}
 function onBook(){bi=+document.getElementById('bk').value;ci=1;buildCh();}
 function buildCh(){
   const s=document.getElementById('ch');s.innerHTML='';
@@ -342,9 +205,42 @@ function step(d){
   else{if(c<BOOKS[bi].ch)document.getElementById('ch').value=c+1;else if(bi<BOOKS.length-1){bi++;document.getElementById('bk').value=bi;ci=1;buildCh();}}
   load();
 }
-
+function sheetOpen(mode){
+  document.getElementById('mob-sheet').classList.remove('hidden');
+  const body=document.getElementById('mob-sheet-body');
+  if(mode==='passage'){
+    document.getElementById('mob-sheet-title').textContent='Select book';
+    pendingBook=null;
+    let h='<div class="mob-book-grid">';
+    BOOKS.forEach((b,i)=>{h+='<div class="mob-book-item '+(i===bi?'active':'')+'" onclick="sheetSelectBook('+i+')"><div class="ko">'+b.ko+'</div><div class="en">'+b.en+'</div></div>';});
+    h+='</div>';
+    body.innerHTML=h;
+    setTimeout(()=>body.querySelector('.active')?.scrollIntoView({block:'center'}),50);
+  } else {
+    document.getElementById('mob-sheet-title').textContent='Font size';
+    body.innerHTML='<div class="mob-font-sheet"><div class="mob-font-row"><button class="mob-font-btn" onclick="adjFont(-1)">&#8722;</button><div class="mob-font-preview">&#44032; Aa &#8212; '+fs+'px</div><button class="mob-font-btn" onclick="adjFont(1)">+</button></div></div>';
+  }
+}
+function sheetSelectBook(idx){
+  pendingBook=idx;
+  document.getElementById('mob-sheet-title').textContent=BOOKS[idx].ko+' &#8212; &#51109; &#49440;&#53469;';
+  let h='<div class="mob-ch-grid">';
+  for(let i=1;i<=BOOKS[idx].ch;i++)h+='<div class="mob-ch-item '+(idx===bi&&i===ci?'active':'')+'" onclick="sheetSelectCh('+i+')">'+i+'</div>';
+  h+='</div>';
+  document.getElementById('mob-sheet-body').innerHTML=h;
+}
+function sheetSelectCh(ch){
+  bi=pendingBook;ci=ch;
+  document.getElementById('bk').value=bi;buildCh();document.getElementById('ch').value=ci;
+  sheetClose();updateLabel();load();
+}
+function sheetClose(){document.getElementById('mob-sheet').classList.add('hidden');pendingBook=null;}
+function adjFont(d){
+  fs=Math.min(22,Math.max(11,fs+d));applyFs();
+  const p=document.querySelector('.mob-font-preview');if(p)p.textContent='가 Aa — '+fs+'px';
+}
 async function load(){
-  bi=+document.getElementById('bk').value; ci=+document.getElementById('ch').value;
+  bi=+document.getElementById('bk').value;ci=+document.getElementById('ch').value;
   const bk=BOOKS[bi];
   document.getElementById('bp').disabled=(bi===0&&ci===1);
   document.getElementById('bn').disabled=(bi===BOOKS.length-1&&ci===bk.ch);
@@ -352,349 +248,120 @@ async function load(){
   document.getElementById('content').innerHTML='<div class="ldg"><div class="spinner"></div><div class="ldg-txt">Loading…</div></div>';
   const [kr,er]=await Promise.allSettled([fetchKo(bk,ci),fetchEsv(bk,ci)]);
   document.getElementById('bload').disabled=false;
-  if(kr.status==='rejected'){document.getElementById('content').innerHTML=`<div class="errbox"><b>Error:</b> ${esc(kr.reason?.message||'실패')}</div>`;return;}
-  if(er.status==='rejected'){document.getElementById('content').innerHTML=`<div class="errbox"><b>ESV Error:</b> ${esc(er.reason?.message||'Failed')}</div>`;return;}
+  if(kr.status==='rejected'){document.getElementById('content').innerHTML='<div class="errbox"><b>Error:</b> '+esc(kr.reason?.message||'실패')+'</div>';return;}
+  if(er.status==='rejected'){document.getElementById('content').innerHTML='<div class="errbox"><b>ESV Error:</b> '+esc(er.reason?.message||'Failed')+'</div>';return;}
   render(kr.value,er.value,bk,ci);
-  document.getElementById('main').scrollTop=0;
-  mobUpdateLabel();
+  document.getElementById('main').scrollTop=0;updateLabel();
 }
-
 async function fetchKo(bk,ch){
-  const r=await fetch(`${WORKER}/nkrv/${bk.n}/${ch}`);
-  if(!r.ok) throw new Error('Worker error '+r.status);
+  const r=await fetch(WORKER+'/nkrv/'+bk.n+'/'+ch);
+  if(!r.ok)throw new Error('Worker error '+r.status);
   const d=await r.json();
-  if(d.error) throw new Error(d.error);
-  // Handle both old array format and new {verses, footnotes} format
-  if(Array.isArray(d)) return {verses:d, footnotes:{}};
-  if(!d.verses||d.verses.length===0) throw new Error('No verses');
-  return {verses:d.verses, footnotes:d.footnotes||{}};
+  if(d.error)throw new Error(d.error);
+  if(Array.isArray(d))return{verses:d,footnotes:{}};
+  if(!d.verses||d.verses.length===0)throw new Error('No verses');
+  return{verses:d.verses,footnotes:d.footnotes||{}};
 }
-
 async function fetchEsv(bk,ch){
-  const q=bk.en+' '+ch;
-  const url=WORKER+'/esv/?q='+encodeURIComponent(q);
-  const r=await fetch(url);
-  if(!r.ok) throw new Error('ESV proxy error '+r.status);
+  const r=await fetch(WORKER+'/esv/?q='+encodeURIComponent(bk.en+' '+ch));
+  if(!r.ok)throw new Error('ESV proxy error '+r.status);
   const d=await r.json();
-  if(!d.passages||!d.passages[0]) throw new Error('No ESV data');
-
-  const txt=d.passages[0];
-  const verses={}, footnotes={};
-
-  // Separate footnotes (lines starting with "(N)") from passage
-  const allLines=txt.split('\n');
-  const passageLines=[], fnLines=[];
+  if(!d.passages||!d.passages[0])throw new Error('No ESV data');
+  const txt=d.passages[0],verses={},footnotes={};
+  const aL=txt.split('\n'),pL=[],fL=[];
   let inFn=false;
-  for(const line of allLines){
-    if(!inFn && /^\s*\(\d+\)/.test(line)) inFn=true;
-    if(inFn) fnLines.push(line); else passageLines.push(line);
+  for(const l of aL){if(!inFn&&/^\s*\(\d+\)/.test(l))inFn=true;if(inFn)fL.push(l);else pL.push(l);}
+  for(const l of fL){const m=l.match(/\((\d+)\)\s*(.+)/);if(m)footnotes[m[1]]=m[2].trim();}
+  for(const vp of pL.join(' ').split(/(?=\[\d+\])/)){
+    const p=vp.trim();if(!p)continue;
+    const m=p.match(/^\[(\d+)\]\s*([\s\S]*)/);if(m)verses[+m[1]]=m[2].replace(/\s+/g,' ').trim();
   }
-  for(const line of fnLines){
-    const fm=line.match(/\((\d+)\)\s*(.+)/);
-    if(fm) footnotes[fm[1]]=fm[2].trim();
-  }
-
-  // Join all passage text and split on [N] markers wherever they appear
-  const fullText=passageLines.join(' ');
-  const vParts=fullText.split(/(?=\[\d+\])/);
-  for(const vp of vParts){
-    const vp2=vp.trim(); if(!vp2) continue;
-    const vm=vp2.match(/^\[(\d+)\]\s*([\s\S]*)/);
-    if(vm) verses[+vm[1]]=vm[2].replace(/\s+/g,' ').trim();
-  }
-  return {verses, headings:{}, footnotes};
+  return{verses,headings:{},footnotes};
 }
-
-
-function render(koData, esvData, bk, ch){
-  const koVerses = koData.verses;
-  const koFootnotes = koData.footnotes||{};
-  const {verses:en, headings, footnotes} = esvData;
-  let h = '';
-
-  // Sticky column headers
-  h+=`<div class="col-headers">
-    <div class="col-hdr"><span class="clbl">개역개정판</span><span class="cref">${bk.ko} ${ch}장</span></div>
-    <div class="col-hdr"><span class="clbl">ESV</span><span class="cref">${bk.en} ${ch}</span></div>
-  </div>`;
-
-  // Chapter titles
-  h+=`<div class="title-row">
-    <div class="ko-side"><div class="ch-title">${bk.ko} ${ch}장</div></div>
-    <div class="en-side"><div class="ch-title">${bk.en} ${ch}</div></div>
-  </div>`;
-
-  // Verse rows — one grid row per verse number
-  koVerses.forEach(kv=>{
-    const num = kv.verse;
-    const enRaw = en[num] || '';
-
-    // Section heading — English side only
-    if(headings[num]){
-      h+=`<div class="shead-row">
-        <div class="ko-side"></div>
-        <div class="en-side"><div class="shead">${esc(headings[num])}</div></div>
-      </div>`;
+function render(koData,esvData,bk,ch){
+  const kv=koData.verses,kf=koData.footnotes||{};
+  const{verses:en,headings,footnotes}=esvData;
+  let h='<div class="col-headers"><div class="col-hdr"><span class="clbl">개역개정판</span><span class="cref">'+bk.ko+' '+ch+'장</span></div><div class="col-hdr"><span class="clbl">ESV</span><span class="cref">'+bk.en+' '+ch+'</span></div></div>';
+  h+='<div class="title-row"><div class="ko-side"><div class="ch-title">'+bk.ko+' '+ch+'장</div></div><div class="en-side"><div class="ch-title">'+bk.en+' '+ch+'</div></div></div>';
+  kv.forEach(function(v){
+    const n=v.verse,er=en[n]||'';
+    if(headings[n])h+='<div class="shead-row"><div class="ko-side"></div><div class="en-side"><div class="shead">'+esc(headings[n])+'</div></div></div>';
+    const eh=er.replace(/\((\d+)\)/g,function(_,x){return '<sup class="fn-ref" onclick="scrollToFn(\'fn-'+x+'\')">'+x+'</sup>';});
+    const kh=v.text.replace(/\(KN:(\d+)\)/g,function(_,x){return '<sup class="fn-ref" onclick="scrollToFn(\'ko-fn-'+x+'\')">'+x+'</sup>';});
+    h+='<div class="verse-row" id="vr-'+n+'"><div class="verse-cell ko-side"><span class="vn">'+n+'</span><span class="vt" style="font-size:'+fs+'px">'+kh+'</span></div><div class="verse-cell en-side"><span class="vn">'+n+'</span><span class="vt" style="font-size:'+fs+'px">'+eh+'</span></div></div>';
+  });
+  const vm={};
+  kv.forEach(function(v){var matches=[...(en[v.verse]||'').matchAll(/\((\d+)\)/g)];matches.forEach(function(m){vm[m[1]]=v.verse;});});
+  const kfk=Object.keys(kf).sort(function(a,b){return+a-+b;});
+  const efk=Object.keys(footnotes).sort(function(a,b){return+a-+b;});
+  if(kfk.length||efk.length){
+    let kh2='',eh2='';
+    if(kfk.length){
+      kh2='<div class="footnotes"><div class="fn-title">각주</div>';
+      kfk.forEach(function(k){kh2+='<div class="fn-item" id="ko-fn-'+k+'"><span class="fn-n" style="color:#2563eb;min-width:20px">'+k+'</span><span>'+esc(kf[k])+'</span></div>';});
+      kh2+='</div>';
     }
-
-    // Inline footnote refs → superscripts
-    const enHtml = enRaw.replace(/\((\d+)\)/g, (_,n)=>`<sup class="fn-ref" onclick="scrollToFn('fn-'+${n})" title="Go to footnote">${n}</sup>`);
-
-    // Replace (KN:N) markers with superscript refs
-    const koHtml = kv.text.replace(/\(KN:(\d+)\)/g, (_,n) =>
-      `<sup class="fn-ref" onclick="scrollToFn('ko-fn-'+${n})" title="각주 ${n}">${n}</sup>`
-    );
-    h+=`<div class="verse-row" id="vr-${num}">
-      <div class="verse-cell ko-side"><span class="vn">${num}</span><span class="vt" style="font-size:${fs}px">${koHtml}</span></div>
-      <div class="verse-cell en-side"><span class="vn">${num}</span><span class="vt" style="font-size:${fs}px">${enHtml}</span></div>
-    </div>`;
-  });
-
-  // Footnotes — English side only
-  // Build map of footnote number -> verse number
-  const fnVerseMap = {};
-  koVerses.forEach(kv=>{
-    const num = kv.verse;
-    const enRaw2 = en[num]||'';
-    const fnRefs = [...enRaw2.matchAll(/\((\d+)\)/g)];
-    fnRefs.forEach(m=>{ fnVerseMap[m[1]]=num; });
-  });
-
-  // Korean footnotes (left side)
-  const koFnKeys = Object.keys(koFootnotes).sort((a,b)=>+a-+b);
-  const enFnKeys = Object.keys(footnotes).sort((a,b)=>+a-+b);
-  if(koFnKeys.length || enFnKeys.length){
-    let koFnHtml = '';
-    if(koFnKeys.length){
-      koFnHtml = `<div class="footnotes"><div class="fn-title">각주</div>`;
-      koFnKeys.forEach(k=>{
-        koFnHtml+=`<div class="fn-item" id="ko-fn-${k}"><span class="fn-n" style="color:#2563eb;min-width:20px">${k}</span><span>${esc(koFootnotes[k])}</span></div>`;
+    if(efk.length){
+      eh2='<div class="footnotes"><div class="fn-title">Footnotes</div>';
+      efk.forEach(function(k){
+        var vn=vm[k];
+        eh2+=vn
+          ?'<div class="fn-item" id="fn-'+k+'"><button class="fn-back-btn" onclick="scrollToVerse('+vn+')">'+k+' &#8593;</button><span>'+esc(footnotes[k])+'</span></div>'
+          :'<div class="fn-item" id="fn-'+k+'"><span class="fn-n">'+k+'</span><span>'+esc(footnotes[k])+'</span></div>';
       });
-      koFnHtml+='</div>';
+      eh2+='</div>';
     }
-    let enFnHtml = '';
-    if(enFnKeys.length){
-      enFnHtml = `<div class="footnotes"><div class="fn-title">Footnotes</div>`;
-      enFnKeys.forEach(k=>{
-        const verseNum = fnVerseMap[k];
-        if(verseNum){
-          enFnHtml+=`<div class="fn-item" id="fn-${k}"><button class="fn-back-btn" onclick="scrollToVerse(${verseNum})" type="button">${k} ↑</button><span>${esc(footnotes[k])}</span></div>`;
-        } else {
-          enFnHtml+=`<div class="fn-item" id="fn-${k}"><span class="fn-n">${k}</span><span>${esc(footnotes[k])}</span></div>`;
-        }
-      });
-      enFnHtml+='</div>';
-    }
-    h += `<div class="fn-row"><div class="ko-side">${koFnHtml}</div><div class="en-side">${enFnHtml}</div></div>`;
+    h+='<div class="fn-row"><div class="ko-side">'+kh2+'</div><div class="en-side">'+eh2+'</div></div>';
   }
-
-  document.getElementById('content').innerHTML = h;
+  document.getElementById('content').innerHTML=h;
 }
-
-
-// Haptic feedback
-function haptic(type='light'){
-  if(!navigator.vibrate) return;
-  if(type==='light') navigator.vibrate(8);
-  else if(type==='medium') navigator.vibrate(15);
-  else if(type==='heavy') navigator.vibrate([20,10,20]);
-  else if(type==='select') navigator.vibrate(6);
-}
-
-// ---- Mobile nav ----
-let mobMode = null; // 'book' | 'chapter' | 'font'
-let mobPendingBook = null;
-
-function mobUpdateLabel(){
-  const bk = BOOKS[bi];
-  const c = ci;
-  document.getElementById('mob-passage-label').textContent = bk.ko + ' ' + c + '장';
-  const mbp = document.getElementById('mob-bp');
-  const mbn = document.getElementById('mob-bn');
-  if(mbp) mbp.disabled = (bi===0 && c===1);
-  if(mbn) mbn.disabled = (bi===BOOKS.length-1 && c===BOOKS[bi].ch);
-}
-
-function mobOpenPassage(){
-  window._sheetOpen = true;
-  attachSheetSwipe();
-  mobMode = 'book';
-  mobPendingBook = null;
-  document.getElementById('mob-sheet-title').textContent = 'Select book';
-  const body = document.getElementById('mob-sheet-body');
-  let h = '<div class="mob-book-grid">';
-  BOOKS.forEach((b,i) => {
-    h += `<div class="mob-book-item ${i===bi?'active':''}" onclick="mobSelectBook(${i})">
-      <div><div class="ko">${b.ko}</div><div class="en">${b.en}</div></div>
-    </div>`;
-  });
-  h += '</div>';
-  body.innerHTML = h;
-  document.getElementById('mob-sheet').classList.remove('hidden');
-  // Scroll active book into view
-  setTimeout(()=>{ body.querySelector('.active')?.scrollIntoView({block:'center'}); }, 50);
-}
-
-function mobSelectBook(idx){
-  mobPendingBook = idx;
-  document.getElementById('mob-sheet-title').textContent = BOOKS[idx].ko + ' — chapter';
-  const body = document.getElementById('mob-sheet-body');
-  let h = '<div class="mob-ch-grid">';
-  for(let i=1; i<=BOOKS[idx].ch; i++){
-    const active = (idx===bi && i===ci) ? 'active' : '';
-    h += `<div class="mob-ch-item ${active}" onclick="mobSelectChapter(${i})">${i}</div>`;
-  }
-  h += '</div>';
-  body.innerHTML = h;
-}
-
-function mobSelectChapter(ch){
-  bi = mobPendingBook;
-  ci = ch;
-  // Sync desktop selects
-  document.getElementById('bk').value = bi;
-  buildCh();
-  document.getElementById('ch').value = ci;
-  mobCloseSheet();
-  mobUpdateLabel();
-  load();
-}
-
-function mobOpenFont(){
-  window._sheetOpen = true;
-  attachSheetSwipe();
-  mobMode = 'font';
-  document.getElementById('mob-sheet-title').textContent = 'Font size';
-  const body = document.getElementById('mob-sheet-body');
-  body.innerHTML = `<div class="mob-font-sheet">
-    <div class="mob-font-row">
-      <button class="mob-font-btn" onclick="mobAdjF(-1)">−</button>
-      <div class="mob-font-preview" id="mob-font-preview">가 Aa</div>
-      <button class="mob-font-btn" onclick="mobAdjF(1)">+</button>
-    </div>
-    <div style="text-align:center;font-size:12px;color:#bbb;padding-bottom:8px">Current size: <span id="mob-fs-label">${fs}px</span></div>
-  </div>`;
-  document.getElementById('mob-sheet').classList.remove('hidden');
-}
-
-function mobAdjF(d){
-  fs = Math.min(22, Math.max(11, fs+d));
-  applyFs();
-  const lbl = document.getElementById('mob-fs-label');
-  if(lbl) lbl.textContent = fs + 'px';
-}
-
-function mobSheetBgClick(e){
-  if(e.target === document.getElementById('mob-sheet')) mobCloseSheet();
-}
-
-function mobCloseSheet(){
-  window._sheetOpen = false;
-  document.getElementById('mob-sheet').classList.add('hidden');
-  mobMode = null; mobPendingBook = null;
-}
-
-// Init mobile label
-mobUpdateLabel();
-
-// Swipe down to close bottom sheet — attach once on first open
-// Sheet swipe — attached once at page load, always works
-// Attach sheet swipe once on page load — pill is always in DOM
-function attachSheetSwipe(){}
-
-// ---- Swipe to change chapter (with elastic drag feedback) ----
+// Chapter swipe
 (function(){
-  const main = document.getElementById('main');
-  const content = document.getElementById('content');
-  let startX=0, startY=0, dragging=false, locked=false;
-
-  main.addEventListener('touchstart', e => {
-    // Don't interfere if sheet is open
-    if(window._sheetOpen) return;
-    startX = e.touches[0].clientX;
-    startY = e.touches[0].clientY;
-    dragging = false;
-    locked = false;
-  }, {passive: true});
-
-  main.addEventListener('touchmove', e => {
-    if(window._sheetOpen) return;
-    if(locked) return;
-    const dx = e.touches[0].clientX - startX;
-    const dy = e.touches[0].clientY - startY;
-    // Lock to vertical scroll if that's dominant
-    if(!dragging && Math.abs(dy) > Math.abs(dx) * 1.2){
-      locked = true; return;
-    }
-    if(Math.abs(dx) > 8){
-      dragging = true;
-    }
-    if(dragging){
-      // Elastic resistance: full drag near start, diminishing returns
-      const resistance = 0.35;
-      const offset = dx * resistance;
-      content.style.transform = `translateX(${offset}px)`;
-      content.style.transition = 'none';
-    }
-  }, {passive: true});
-
-  main.addEventListener('touchend', e => {
-    if(window._sheetOpen) return;
-    if(!dragging){
-      content.style.transform = '';
-      return;
-    }
-    const dx = e.changedTouches[0].clientX - startX;
-    const dy = e.changedTouches[0].clientY - startY;
-    dragging = false;
-
-    if(Math.abs(dx) > 100 && Math.abs(dx) > Math.abs(dy) * 1.5){
-      // Animate out in swipe direction then load
-      const dir = dx < 0 ? -1 : 1;
-      content.style.transition = 'transform 0.18s ease-in, opacity 0.18s ease-in';
-      content.style.transform = `translateX(${dir * -80}px)`;
-      content.style.opacity = '0';
-      setTimeout(() => {
-        content.style.transform = '';
-        content.style.transition = 'none';
-        content.style.opacity = '';
-        haptic('medium');
-        if(dx < 0) step(1); else step(-1);
-      }, 180);
+  const main=document.getElementById('main');
+  const content=document.getElementById('content');
+  let sx=0,sy=0,drag=false,locked=false;
+  main.addEventListener('touchstart',function(e){
+    if(!document.getElementById('mob-sheet').classList.contains('hidden'))return;
+    sx=e.touches[0].clientX;sy=e.touches[0].clientY;drag=false;locked=false;
+  },{passive:true});
+  main.addEventListener('touchmove',function(e){
+    if(!document.getElementById('mob-sheet').classList.contains('hidden'))return;
+    if(locked)return;
+    var dx=e.touches[0].clientX-sx,dy=e.touches[0].clientY-sy;
+    if(!drag&&Math.abs(dy)>Math.abs(dx)*1.2){locked=true;return;}
+    if(Math.abs(dx)>8)drag=true;
+    if(drag){content.style.transform='translateX('+(dx*0.35)+'px)';content.style.transition='none';}
+  },{passive:true});
+  main.addEventListener('touchend',function(e){
+    if(!document.getElementById('mob-sheet').classList.contains('hidden'))return;
+    if(!drag){content.style.transform='';return;}
+    var dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;
+    drag=false;
+    if(Math.abs(dx)>100&&Math.abs(dx)>Math.abs(dy)*1.5){
+      var dir=dx<0?-1:1;
+      content.style.transition='transform 0.18s ease-in,opacity 0.18s ease-in';
+      content.style.transform='translateX('+(dir*-80)+'px)';
+      content.style.opacity='0';
+      setTimeout(function(){
+        content.style.transform='';content.style.transition='none';content.style.opacity='';
+        if(navigator.vibrate)navigator.vibrate(15);
+        if(dx<0)step(1);else step(-1);
+      },180);
     } else {
-      // Snap back
-      content.style.transition = 'transform 0.25s cubic-bezier(0.25,0.46,0.45,0.94)';
-      content.style.transform = '';
-      setTimeout(() => { content.style.transition = ''; }, 260);
+      content.style.transition='transform 0.25s cubic-bezier(0.25,0.46,0.45,0.94)';
+      content.style.transform='';
+      setTimeout(function(){content.style.transition='';},260);
     }
-  }, {passive: true});
+  },{passive:true});
 })();
-
-function scrollToVerse(num){
-  const el = document.getElementById('vr-'+num);
-  const main = document.getElementById('main');
-  if(el && main){
-    const elTop = el.getBoundingClientRect().top;
-    const mainTop = main.getBoundingClientRect().top;
-    main.scrollTop += (elTop - mainTop) - 20;
-  }
-}
-function scrollToFn(id){
-  const el = document.getElementById(id);
-  const main = document.getElementById('main');
-  if(el && main){
-    const elTop = el.getBoundingClientRect().top;
-    const mainTop = main.getBoundingClientRect().top;
-    main.scrollTop += (elTop - mainTop) - 20;
-  }
-}
-
+function scrollToVerse(n){var el=document.getElementById('vr-'+n),m=document.getElementById('main');if(el&&m)m.scrollTop+=el.getBoundingClientRect().top-m.getBoundingClientRect().top-20;}
+function scrollToFn(id){var el=document.getElementById(id),m=document.getElementById('main');if(el&&m)m.scrollTop+=el.getBoundingClientRect().top-m.getBoundingClientRect().top-20;}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-document.addEventListener('keydown',e=>{
-  if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT') return;
-  if(e.key==='ArrowRight') step(1);
-  if(e.key==='ArrowLeft') step(-1);
-  if(e.key==='Enter') load();
+document.addEventListener('keydown',function(e){
+  if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;
+  if(e.key==='ArrowRight')step(1);
+  if(e.key==='ArrowLeft')step(-1);
+  if(e.key==='Enter')load();
 });
 </script>
 </body>
