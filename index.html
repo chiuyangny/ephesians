@@ -247,54 +247,68 @@ async function fetchEsv(bk,ch){
   const d=await r.json();
   if(!d.passages||!d.passages[0]) throw new Error('No ESV data');
 
-  const txt = d.passages[0];
+  const txt=d.passages[0];
   const verses={}, headings={}, footnotes={};
 
-  // 1. Split off footnotes — strip everything from first (N) footnote line
-  // Also strip any 'Footnotes' heading line
-  const fnIdx = txt.search(/\n\(\d+\)/);
-  const passageTxt = (fnIdx>-1 ? txt.slice(0,fnIdx) : txt)
-    .replace(/\n\s*Footnotes?\s*\n/gi,'\n')  // remove Footnotes heading
-    .replace(/\bFootnotes?\b/gi,'');           // remove inline Footnotes text
-  const fnTxt = fnIdx>-1 ? txt.slice(fnIdx) : '';
-  const fnRe2 = /\((\d+)\)\s*([^\n(]+)/g;
-  let fnm;
-  while((fnm=fnRe2.exec(fnTxt))!==null) footnotes[fnm[1]]=fnm[2].trim();
-
-  // 2. Split on [N] verse markers — they appear inline within paragraphs
-  //    e.g. "[1] text text [2] more text [3] more"
-  //    We also need to capture headings which appear on their own lines BEFORE verses
-  let pendingHead = null;
-  const lines = passageTxt.split('\n');
-
-  // Collect lines, tagging headings
-  const tagged = [];
-  for(const raw of lines){
-    const l = raw.trim();
-    if(!l) continue;
-    if(/^\[\d+\]/.test(l) || l.includes('[')) tagged.push(l);
-    else if(!/^\d+$/.test(l)) tagged.push('\x00HEAD\x00'+l);
+  // Step 1: separate footnote body lines (lines starting with "(N)")
+  // from the passage. Everything after first "(N)" line is footnotes.
+  const allLines=txt.split('
+');
+  const passageLines=[];
+  const fnLines=[];
+  let inFn=false;
+  for(const line of allLines){
+    if(!inFn && /^\s*\(\d+\)/.test(line)) inFn=true;
+    if(inFn) fnLines.push(line);
+    else passageLines.push(line);
   }
 
-  // Join and split on [N] markers anywhere
-  const full = tagged.join(' ');
-  const parts = full.split(/(?=\[\d+\])/);
+  // Step 2: parse footnotes from fnLines
+  for(const line of fnLines){
+    const m=line.match(/\((\d+)\)\s*(.+)/);
+    if(m) footnotes[m[1]]=m[2].trim();
+  }
+
+  // Step 3: parse passage lines into verses + headings
+  // passage may have headings on their own lines (no [N] prefix)
+  // and verse content either starting with [N] or continuing inline
+  let pendingHead=null;
+
+  // Join all passage lines into one string, then split on [N] markers
+  // First tag heading-only lines so we can associate them with next verse
+  const taggedParts=[];
+  for(const raw of passageLines){
+    const l=raw.trim();
+    if(!l) continue;
+    // Skip the word "Footnotes" appearing as a section header
+    if(/^footnotes?$/i.test(l)) continue;
+    // If line contains a verse marker, it's content
+    if(l.includes('[')) taggedParts.push(l);
+    else taggedParts.push('HEADING:'+l+':ENDHEADING');
+  }
+
+  // Split on [N] markers to get individual verses
+  const full=taggedParts.join(' ');
+  const parts=full.split(/(?=\[\d+\])/);
 
   for(const part of parts){
-    const p = part.trim(); if(!p) continue;
-    // Extract any heading embedded before this verse
-    const headMatch = p.match(/\x00HEAD\x00([^\x00[]*)/);
-    const clean = p.replace(/\x00HEAD\x00[^\x00[]*/g,'').trim();
-    const vm = clean.match(/^\[(\d+)\]\s*([\s\S]*)/);
+    const p=part.trim(); if(!p) continue;
+    // Extract heading if present
+    const hm=p.match(/HEADING:([^:]+):ENDHEADING/);
+    const head=hm?hm[1].trim():'';
+    // Remove heading tags
+    const clean=p.replace(/HEADING:[^:]*:ENDHEADING/g,'').trim();
+    // Match verse number and text
+    const vm=clean.match(/^\[(\d+)\]\s*([\s\S]*)/);
     if(vm){
-      const num = +vm[1];
-      const hText = headMatch ? headMatch[1].trim() : '';
-      if(hText && !/^footnotes?$/i.test(hText)) headings[num] = hText;
-      verses[num] = vm[2].replace(/\s+/g,' ').trim();
+      const num=+vm[1];
+      if(head) headings[num]=head;
+      verses[num]=vm[2].replace(/\s+/g,' ').trim();
     }
   }
-  return {verses, headings, footnotes};
+  return {verses,headings,footnotes};
 }
+
 
 function render(koVerses, esvData, bk, ch){
   const {verses:en, headings, footnotes} = esvData;
