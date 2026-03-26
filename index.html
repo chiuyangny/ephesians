@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -94,11 +95,11 @@ footer{border-top:1px solid #e8e5e0;color:#bbb;background:var(--bg);font-size:10
 .mob-icon-btn{background:#efecea;border:1px solid #d8d4ce;border-radius:8px;font:500 14px inherit;color:#444;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .mob-icon-btn:disabled{opacity:.35;cursor:not-allowed}
 /* Sheet */
-.mob-sheet{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.4);display:flex;align-items:flex-end}
+.mob-sheet{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.4);display:flex;flex-direction:column;justify-content:flex-end}
 .mob-sheet.hidden{display:none}
-.mob-sheet-inner{background:var(--bg);border-radius:16px 16px 0 0;width:100%;max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
+.mob-sheet-inner{background:var(--bg);border-radius:0;width:100%;max-height:calc(85vh - 44px);display:flex;flex-direction:column;overflow:hidden}
 /* Handle: touch-action:none is THE key — tells browser to skip scroll handling and give all touch events to JS */
-.mob-handle{width:100%;height:44px;display:flex;align-items:center;justify-content:center;flex-shrink:0;touch-action:none;cursor:grab;background:transparent}
+.mob-handle{width:100%;height:44px;display:flex;align-items:center;justify-content:center;flex-shrink:0;touch-action:none;cursor:grab;background:var(--bg);border-radius:16px 16px 0 0;z-index:10}
 .mob-handle::after{content:"";display:block;width:40px;height:4px;background:#d0cdc8;border-radius:2px}
 .mob-sheet-hdr{display:flex;align-items:center;justify-content:space-between;padding:0 20px 12px;flex-shrink:0;border-bottom:1px solid #e8e5e0}
 .mob-sheet-hdr span{font-size:14px;font-weight:500;color:#222}
@@ -148,8 +149,8 @@ footer{border-top:1px solid #e8e5e0;color:#bbb;background:var(--bg);font-size:10
   </div>
 </nav>
 <div id="mob-sheet" class="mob-sheet hidden">
+  <div class="mob-handle" id="mob-handle"></div>
   <div class="mob-sheet-inner">
-    <div class="mob-handle" id="mob-handle"></div>
     <div class="mob-sheet-hdr">
       <span id="mob-sheet-title"></span>
       <button class="mob-sheet-close" onclick="sheetClose()">&#10005;</button>
@@ -167,7 +168,7 @@ const BOOKS=[{ko:"창세기",en:"Genesis",n:1,ch:50},{ko:"출애굽기",en:"Exod
 let bi=42,ci=3,fs=15,pendingBook=null;
 (function(){
   const s=document.getElementById('bk');
-  BOOKS.forEach((b,i)=>{const o=document.createElement('option');o.value=i;o.textContent=b.ko+'  .  '+b.en;s.appendChild(o);});
+  BOOKS.forEach((b,i)=>{const o=document.createElement('option');o.value=i;o.textContent=b.ko+' · '+b.en;s.appendChild(o);});
   s.value=bi;buildCh();document.getElementById('ch').value=ci;
   applyFs();
   document.getElementById('fminus').addEventListener('click',()=>{fs=Math.max(11,fs-1);applyFs();});
@@ -223,7 +224,7 @@ function sheetOpen(mode){
 }
 function sheetSelectBook(idx){
   pendingBook=idx;
-  document.getElementById('mob-sheet-title').textContent=BOOKS[idx].ko+' &#8212; &#51109; &#49440;&#53469;';
+  document.getElementById('mob-sheet-title').textContent=BOOKS[idx].ko+' — 장 선택';
   let h='<div class="mob-ch-grid">';
   for(let i=1;i<=BOOKS[idx].ch;i++)h+='<div class="mob-ch-item '+(idx===bi&&i===ci?'active':'')+'" onclick="sheetSelectCh('+i+')">'+i+'</div>';
   h+='</div>';
