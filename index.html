@@ -160,7 +160,7 @@ footer{border-top:1px solid #e8e5e0;color:#bbb;background:var(--bg);font-size:10
 <script>
 const WORKER='https://bibleread.pauljkim22.workers.dev';
 const BOOKS=[{ko:"창세기",en:"Genesis",n:1,ch:50},{ko:"출애굽기",en:"Exodus",n:2,ch:40},{ko:"레위기",en:"Leviticus",n:3,ch:27},{ko:"민수기",en:"Numbers",n:4,ch:36},{ko:"신명기",en:"Deuteronomy",n:5,ch:34},{ko:"여호수아",en:"Joshua",n:6,ch:24},{ko:"사사기",en:"Judges",n:7,ch:21},{ko:"룻기",en:"Ruth",n:8,ch:4},{ko:"사무엘상",en:"1 Samuel",n:9,ch:31},{ko:"사무엘하",en:"2 Samuel",n:10,ch:24},{ko:"열왕기상",en:"1 Kings",n:11,ch:22},{ko:"열왕기하",en:"2 Kings",n:12,ch:25},{ko:"역대상",en:"1 Chronicles",n:13,ch:29},{ko:"역대하",en:"2 Chronicles",n:14,ch:36},{ko:"에스라",en:"Ezra",n:15,ch:10},{ko:"느헤미야",en:"Nehemiah",n:16,ch:13},{ko:"에스더",en:"Esther",n:17,ch:10},{ko:"욥기",en:"Job",n:18,ch:42},{ko:"시편",en:"Psalms",n:19,ch:150},{ko:"잠언",en:"Proverbs",n:20,ch:31},{ko:"전도서",en:"Ecclesiastes",n:21,ch:12},{ko:"아가",en:"Song of Solomon",n:22,ch:8},{ko:"이사야",en:"Isaiah",n:23,ch:66},{ko:"예레미야",en:"Jeremiah",n:24,ch:52},{ko:"예레미야애가",en:"Lamentations",n:25,ch:5},{ko:"에스겔",en:"Ezekiel",n:26,ch:48},{ko:"다니엘",en:"Daniel",n:27,ch:12},{ko:"호세아",en:"Hosea",n:28,ch:14},{ko:"요엘",en:"Joel",n:29,ch:3},{ko:"아모스",en:"Amos",n:30,ch:9},{ko:"오바댜",en:"Obadiah",n:31,ch:1},{ko:"요나",en:"Jonah",n:32,ch:4},{ko:"미가",en:"Micah",n:33,ch:7},{ko:"나훔",en:"Nahum",n:34,ch:3},{ko:"하박국",en:"Habakkuk",n:35,ch:3},{ko:"스바냐",en:"Zephaniah",n:36,ch:3},{ko:"학개",en:"Haggai",n:37,ch:2},{ko:"스가랴",en:"Zechariah",n:38,ch:14},{ko:"말라기",en:"Malachi",n:39,ch:4},{ko:"마태복음",en:"Matthew",n:40,ch:28},{ko:"마가복음",en:"Mark",n:41,ch:16},{ko:"누가복음",en:"Luke",n:42,ch:24},{ko:"요한복음",en:"John",n:43,ch:21},{ko:"사도행전",en:"Acts",n:44,ch:28},{ko:"로마서",en:"Romans",n:45,ch:16},{ko:"고린도전서",en:"1 Corinthians",n:46,ch:16},{ko:"고린도후서",en:"2 Corinthians",n:47,ch:13},{ko:"갈라디아서",en:"Galatians",n:48,ch:6},{ko:"에베소서",en:"Ephesians",n:49,ch:6},{ko:"빌립보서",en:"Philippians",n:50,ch:4},{ko:"골로새서",en:"Colossians",n:51,ch:4},{ko:"데살로니가전서",en:"1 Thessalonians",n:52,ch:5},{ko:"데살로니가후서",en:"2 Thessalonians",n:53,ch:3},{ko:"디모데전서",en:"1 Timothy",n:54,ch:6},{ko:"디모데후서",en:"2 Timothy",n:55,ch:4},{ko:"디도서",en:"Titus",n:56,ch:3},{ko:"빌레몬서",en:"Philemon",n:57,ch:1},{ko:"히브리서",en:"Hebrews",n:58,ch:13},{ko:"야고보서",en:"James",n:59,ch:5},{ko:"베드로전서",en:"1 Peter",n:60,ch:5},{ko:"베드로후서",en:"2 Peter",n:61,ch:3},{ko:"요한일서",en:"1 John",n:62,ch:5},{ko:"요한이서",en:"2 John",n:63,ch:1},{ko:"요한삼서",en:"3 John",n:64,ch:1},{ko:"유다서",en:"Jude",n:65,ch:1},{ko:"요한계시록",en:"Revelation",n:66,ch:22}];
-let bi=42,ci=3,fs=15,pendingBook=null;
+let bi=42,ci=3,fs=15,pendingBook=null,loaded=false;
 (function(){
   const s=document.getElementById('bk');
   BOOKS.forEach((b,i)=>{const o=document.createElement('option');o.value=i;o.textContent=b.ko+'  .  '+b.en;s.appendChild(o);});
@@ -223,7 +223,7 @@ function sheetOpen(mode){
     document.getElementById('mob-sheet-title').textContent='Select book';
     pendingBook=null;
     let h='<div class="mob-book-grid">';
-    BOOKS.forEach((b,i)=>{h+='<div class="mob-book-item '+(i===bi?'active':'')+'" onclick="sheetSelectBook('+i+')"><div class="ko">'+b.ko+'</div><div class="en">'+b.en+'</div></div>';});
+    BOOKS.forEach((b,i)=>{h+='<div class="mob-book-item '+(loaded&&i===bi?'active':'')+'" onclick="sheetSelectBook('+i+')"><div class="ko">'+b.ko+'</div><div class="en">'+b.en+'</div></div>';});
     h+='</div>';
     body.innerHTML=h;
     setTimeout(()=>body.querySelector('.active')?.scrollIntoView({block:'center'}),50);
@@ -262,7 +262,7 @@ async function load(){
   if(kr.status==='rejected'){document.getElementById('content').innerHTML='<div class="errbox"><b>Error:</b> '+esc(kr.reason?.message||'실패')+'</div>';return;}
   if(er.status==='rejected'){document.getElementById('content').innerHTML='<div class="errbox"><b>ESV Error:</b> '+esc(er.reason?.message||'Failed')+'</div>';return;}
   render(kr.value,er.value,bk,ci);
-  document.getElementById('main').scrollTop=0;updateLabel();
+  loaded=true;document.getElementById('main').scrollTop=0;updateLabel();
 }
 async function fetchKo(bk,ch){
   const r=await fetch(WORKER+'/nkrv/'+bk.n+'/'+ch);
