@@ -279,18 +279,19 @@ async function fetchKo(bk,ch){
   return{verses:d.verses,footnotes:d.footnotes||{}};
 }
 async function fetchEsv(bk,ch){
-  const r=await fetch(WORKER+'/esv/?q='+encodeURIComponent(bk.en+' '+ch));
+  var esvQ=bk.en+' '+ch;if(bk.ch===1)esvQ=bk.en+' 1:1-999';
+  const r=await fetch(WORKER+'/esv/?q='+encodeURIComponent(esvQ));
   if(!r.ok)throw new Error('ESV proxy error '+r.status);
   const d=await r.json();
   if(!d.passages||!d.passages[0])throw new Error('No ESV data');
   const txt=d.passages[0],verses={},footnotes={};
   const aL=txt.split('\n'),pL=[],fL=[];
   let inFn=false;
-  for(const l of aL){if(!inFn&&/^\s*\(\d+\)/.test(l))inFn=true;if(inFn)fL.push(l);else pL.push(l);}
+  for(const l of aL){if(!inFn&&/^\s*\(\d+\)\s/.test(l)&&!l.match(/^\s*\(\d+\)\s*\[/))inFn=true;if(inFn)fL.push(l);else pL.push(l);}
   for(const l of fL){const m=l.match(/\((\d+)\)\s*(.+)/);if(m)footnotes[m[1]]=m[2].trim();}
   for(const vp of pL.join(' ').split(/(?=\[\d+\])/)){
     const p=vp.trim();if(!p)continue;
-    const m=p.match(/^\[(\d+)\]\s*([\s\S]*)/);if(m)verses[+m[1]]=m[2].replace(/\s+/g,' ').trim();
+    const m=p.match(/^\[(\d+)\]\s*([\s\S]*)/);if(m)verses[+m[1]]=m[2].replace(/\s+/g,' ').replace(/\s*Footnotes?\s*$/i,'').trim();
   }
   return{verses,headings:{},footnotes};
 }
