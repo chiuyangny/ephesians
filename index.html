@@ -56,6 +56,8 @@ main::-webkit-scrollbar-thumb { background: #d8d4ce; border-radius: 4px; }
 
 .shead-row { display: grid; grid-template-columns: 1fr 1fr; padding: 20px 0 4px; }
 .shead-row .ko-side { border-right: 1px solid #e8e5e0; }
+.fn-row { display: grid; grid-template-columns: 1fr 1fr; }
+.fn-row .ko-side { border-right: 1px solid #e8e5e0; }
 .shead { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #bbb; }
 
 /* Each verse row: both sides same height */
@@ -248,32 +250,39 @@ async function fetchEsv(bk,ch){
 
   const txt=d.passages[0];
   const verses={}, headings={}, footnotes={};
-  let pendingHead=null, fnMode=false;
 
-  for(const raw of txt.split('\n')){
+  // Split footnotes from passage (footnotes appear as lines starting with (N))
+  const fnIdx=txt.search(/\n\(\d+\)/);
+  const passageTxt=fnIdx>-1?txt.slice(0,fnIdx):txt;
+  const fnTxt=fnIdx>-1?txt.slice(fnIdx):'';
+
+  // Parse footnotes
+  const fnRe=/\((\d+)\)\s*([^\n(]+)/g;
+  let fmatch;
+  while((fmatch=fnRe.exec(fnTxt))!==null) footnotes[fmatch[1]]=fmatch[2].trim();
+
+  // Collect heading lines separately, tag them
+  const rawLines=passageTxt.split('\n');
+  const taggedParts=[];
+  for(const raw of rawLines){
     const l=raw.trim(); if(!l) continue;
+    if(/^\[\d/.test(l)||l.includes('[')) taggedParts.push(l);
+    else if(!/^\d+$/.test(l)) taggedParts.push('__HEAD__'+l);
+  }
 
-    // Footnote lines start with (1) after all verses done
-    if(fnMode || (/^\(\d+\)/.test(l) && Object.keys(verses).length>0)){
-      fnMode=true;
-      const fm=l.match(/^\((\d+)\)\s*([\s\S]+)/);
-      if(fm) footnotes[fm[1]]=fm[2].trim();
-      continue;
-    }
-    // Verse line: starts with [N]
-    const vm=l.match(/^\[(\d+)\]\s*([\s\S]*)/);
+  // Split entire content on [N] markers — handles inline verse numbers in paragraphs
+  const joined=taggedParts.join(' ');
+  const parts=joined.split(/(?=\[\d+\])/);
+
+  for(const part of parts){
+    const p=part.trim(); if(!p) continue;
+    const hm=[...p.matchAll(/__HEAD__([^[_]+)/g)];
+    const clean=p.replace(/__HEAD__[^[_]*/g,'').trim();
+    const vm=clean.match(/^\[(\d+)\]\s*([\s\S]*)/);
     if(vm){
       const num=+vm[1];
-      if(pendingHead){headings[num]=pendingHead; pendingHead=null;}
-      // Accumulate — some verses may wrap
-      verses[num]=(verses[num]||'')+vm[2];
-    } else if(/^\[\d/.test(l)){
-      // continuation of split verse — append
-      const prev=Math.max(...Object.keys(verses).map(Number));
-      if(prev>0) verses[prev]+=' '+l;
-    } else if(!/^\d+$/.test(l)){
-      // heading line
-      pendingHead=l;
+      if(hm.length) headings[num]=hm[0][1].trim();
+      verses[num]=vm[2].replace(/\s+/g,' ').trim();
     }
   }
   return {verses, headings, footnotes};
@@ -317,12 +326,13 @@ function render(koVerses, esvData, bk, ch){
     </div>`;
   });
 
-  // Footnotes
+  // Footnotes — English side only
   const fnKeys=Object.keys(footnotes).sort((a,b)=>+a-+b);
   if(fnKeys.length){
-    h+=`<div class="footnotes"><div class="fn-title">Footnotes</div>`;
-    fnKeys.forEach(k=>{h+=`<div class="fn-item"><span class="fn-n">${k}</span><span>${esc(footnotes[k])}</span></div>`;});
-    h+='</div>';
+    let fnHtml='<div class="footnotes"><div class="fn-title">Footnotes</div>';
+    fnKeys.forEach(k=>{fnHtml+=`<div class="fn-item"><span class="fn-n">${k}</span><span>${esc(footnotes[k])}</span></div>`;});
+    fnHtml+='</div>';
+    h+='<div class="fn-row"><div class="ko-side"></div><div class="en-side">'+fnHtml+'</div></div>';
   }
 
   document.getElementById('content').innerHTML=h;
