@@ -16,12 +16,6 @@ header { height: 48px; padding: 0 20px; display: flex; align-items: center; just
 .logo-div { color: #ccc; }
 .logo-en { color: #888; font-weight: 400; }
 
-#esv-banner { background: #efecea; border-bottom: 1px solid #e8e5e0; padding: 10px 20px; display: none; align-items: center; gap: 10px; flex-shrink: 0; flex-wrap: wrap; font-size: 12px; color: #555; }
-#esv-banner.show { display: flex; }
-#esv-banner a { color: #2563eb; text-decoration: none; }
-#esv-banner input { border: 1px solid #d8d4ce; border-radius: 6px; font: 12px 'Courier New', monospace; padding: 5px 10px; outline: none; width: 260px; max-width: 100%; background: var(--bg); transition: border-color 0.15s; }
-#esv-banner input:focus { border-color: #2563eb; }
-#esv-banner .save-btn { background: #222; border: none; border-radius: 6px; color: #fff; cursor: pointer; font: 12px inherit; padding: 5px 14px; }
 
 nav { height: 44px; padding: 0 20px; display: flex; align-items: center; gap: 6px; flex-shrink: 0; background: var(--bg); border-bottom: 1px solid #e8e5e0; }
 .nl { font-size: 11px; color: #bbb; }
@@ -103,11 +97,6 @@ footer { border-top: 1px solid #e8e5e0; color: #bbb; background: var(--bg); font
   </div>
 </header>
 
-<div id="esv-banner">
-  <span>Get a free ESV token at <a href="https://api.esv.org" target="_blank">api.esv.org</a></span>
-  <input type="password" id="esv-input" placeholder="Paste token…">
-  <button class="save-btn" onclick="saveEsv()">Save</button>
-</div>
 
 <nav>
   <span class="nl">Book</span>
@@ -171,15 +160,13 @@ const BOOKS=[
   {ko:"요한계시록",en:"Revelation",n:66,ch:22},
 ];
 
-let esvKey=localStorage.getItem('esvKey')||'', bi=42, ci=3, fs=15;
+let bi=42, ci=3, fs=15;
 
 (function(){
   const s=document.getElementById('bk');
   BOOKS.forEach((b,i)=>{const o=document.createElement('option');o.value=i;o.textContent=b.ko+'  ·  '+b.en;s.appendChild(o);});
   s.value=bi; buildCh(); document.getElementById('ch').value=ci;
   applyFs();
-  if(!esvKey) document.getElementById('esv-banner').classList.add('show');
-  else document.getElementById('esv-input').value=esvKey;
   document.getElementById('fminus').addEventListener('click',()=>{fs=Math.max(11,fs-1);applyFs();});
   document.getElementById('fplus').addEventListener('click',()=>{fs=Math.min(22,fs+1);applyFs();});
 })();
@@ -188,13 +175,6 @@ function applyFs(){
   document.documentElement.style.setProperty('--fs',fs+'px');
   document.querySelectorAll('.vt').forEach(el=>el.style.fontSize=fs+'px');
 }
-function saveEsv(){
-  esvKey=document.getElementById('esv-input').value.trim();
-  if(!esvKey) return;
-  localStorage.setItem('esvKey',esvKey);
-  document.getElementById('esv-banner').classList.remove('show');
-}
-document.getElementById('esv-input').addEventListener('keydown',e=>{if(e.key==='Enter')saveEsv();});
 function onBook(){bi=+document.getElementById('bk').value;ci=1;buildCh();}
 function buildCh(){
   const s=document.getElementById('ch');s.innerHTML='';
@@ -209,7 +189,6 @@ function step(d){
 }
 
 async function load(){
-  if(!esvKey){document.getElementById('esv-banner').classList.add('show');document.getElementById('esv-input').focus();return;}
   bi=+document.getElementById('bk').value; ci=+document.getElementById('ch').value;
   const bk=BOOKS[bi];
   document.getElementById('bp').disabled=(bi===0&&ci===1);
@@ -234,18 +213,11 @@ async function fetchKo(bk,ch){
 }
 
 async function fetchEsv(bk,ch){
-  const tok=esvKey.startsWith('Token ')?esvKey:'Token '+esvKey;
-  const q=encodeURIComponent(bk.en+' '+ch);
-  // No headings — avoids all the heading/continuation ambiguity
-  const url='https://api.esv.org/v3/passage/text/?q='+q
-    +'&include-headings=false&include-footnotes=true&include-verse-numbers=true'
-    +'&include-short-copyright=false&include-passage-references=false'
-    +'&indent-paragraphs=0&indent-poetry=false&include-chapter-numbers=false'
-    +'&indent-psalm-doxology=false&line-length=0';
-  const r2=await fetch(url,{headers:{Authorization:tok}});
-  if(r2.status===401||r2.status===403) throw new Error('Invalid ESV token');
-  if(!r2.ok) throw new Error('ESV error '+r2.status);
-  const d=await r2.json();
+  const q=bk.en+' '+ch;
+  const url=WORKER+'/esv/?q='+encodeURIComponent(q);
+  const r=await fetch(url);
+  if(!r.ok) throw new Error('ESV proxy error '+r.status);
+  const d=await r.json();
   if(!d.passages||!d.passages[0]) throw new Error('No ESV data');
 
   const txt=d.passages[0];
@@ -270,10 +242,7 @@ async function fetchEsv(bk,ch){
   for(const vp of vParts){
     const vp2=vp.trim(); if(!vp2) continue;
     const vm=vp2.match(/^\[(\d+)\]\s*([\s\S]*)/);
-    if(vm){
-      const num=+vm[1];
-      verses[num]=vm[2].replace(/\s+/g,' ').trim();
-    }
+    if(vm) verses[+vm[1]]=vm[2].replace(/\s+/g,' ').trim();
   }
   return {verses, headings:{}, footnotes};
 }
