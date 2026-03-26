@@ -146,7 +146,8 @@ footer { border-top: 1px solid #e8e5e0; color: #bbb; background: var(--bg); font
   transition: opacity 0.2s;
 }
 .mob-sheet.hidden { display: none; }
-.mob-sheet-drag { width: 36px; height: 4px; background: #ccc; border-radius: 2px; margin: 10px auto 4px; flex-shrink: 0; }
+.mob-sheet-drag { width: 48px; height: 5px; background: #ccc; border-radius: 3px; margin: 12px auto 6px; flex-shrink: 0; touch-action: none; }
+.mob-sheet-hdr { touch-action: none; }
 .mob-sheet-inner {
   background: var(--bg); border-radius: 16px 16px 0 0;
   width: 100%; max-height: 85vh;
@@ -468,6 +469,15 @@ function render(koVerses, esvData, bk, ch){
 }
 
 
+// Haptic feedback
+function haptic(type='light'){
+  if(!navigator.vibrate) return;
+  if(type==='light') navigator.vibrate(8);
+  else if(type==='medium') navigator.vibrate(15);
+  else if(type==='heavy') navigator.vibrate([20,10,20]);
+  else if(type==='select') navigator.vibrate(6);
+}
+
 // ---- Mobile nav ----
 let mobMode = null; // 'book' | 'chapter' | 'font'
 let mobPendingBook = null;
@@ -566,33 +576,84 @@ let _sheetSwipeAttached = false;
 function attachSheetSwipe(){
   if(_sheetSwipeAttached) return;
   _sheetSwipeAttached = true;
-  const inner = document.getElementById('mob-sheet-inner');
-  if(!inner) return;
-  let sy = 0;
-  inner.addEventListener('touchstart', e => {
-    sy = e.touches[0].clientY;
-  }, {passive: true});
-  inner.addEventListener('touchend', e => {
-    const dy = e.changedTouches[0].clientY - sy;
-    if(dy > 60) mobCloseSheet();
-  }, {passive: true});
+  // Attach to drag bar and header — not the scrollable body
+  const targets = [
+    document.querySelector('.mob-sheet-drag'),
+    document.querySelector('.mob-sheet-hdr')
+  ].filter(Boolean);
+  targets.forEach(el => {
+    let sy = 0;
+    el.addEventListener('touchstart', e => {
+      sy = e.touches[0].clientY;
+    }, {passive: true});
+    el.addEventListener('touchend', e => {
+      const dy = e.changedTouches[0].clientY - sy;
+      if(dy > 40) mobCloseSheet();
+    }, {passive: true});
+  });
 }
 
-// ---- Swipe to change chapter ----
+// ---- Swipe to change chapter (with elastic drag feedback) ----
 (function(){
-  const el = document.getElementById('main');
-  let startX = 0, startY = 0;
-  el.addEventListener('touchstart', e => {
+  const main = document.getElementById('main');
+  const content = document.getElementById('content');
+  let startX=0, startY=0, dragging=false, locked=false;
+
+  main.addEventListener('touchstart', e => {
+    // Don't interfere if sheet is open
+    if(!document.getElementById('mob-sheet').classList.contains('hidden')) return;
     startX = e.touches[0].clientX;
     startY = e.touches[0].clientY;
+    dragging = false;
+    locked = false;
   }, {passive: true});
-  el.addEventListener('touchend', e => {
+
+  main.addEventListener('touchmove', e => {
+    if(locked) return;
+    const dx = e.touches[0].clientX - startX;
+    const dy = e.touches[0].clientY - startY;
+    // Lock to vertical scroll if that's dominant
+    if(!dragging && Math.abs(dy) > Math.abs(dx) * 1.2){
+      locked = true; return;
+    }
+    if(Math.abs(dx) > 8){
+      dragging = true;
+    }
+    if(dragging){
+      // Elastic resistance: full drag near start, diminishing returns
+      const resistance = 0.35;
+      const offset = dx * resistance;
+      content.style.transform = `translateX(${offset}px)`;
+      content.style.transition = 'none';
+    }
+  }, {passive: true});
+
+  main.addEventListener('touchend', e => {
+    if(!dragging){
+      content.style.transform = '';
+      return;
+    }
     const dx = e.changedTouches[0].clientX - startX;
     const dy = e.changedTouches[0].clientY - startY;
-    // Only trigger if horizontal swipe is dominant and long enough
-    if(Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5){
-      if(dx < 0) step(1);   // swipe left = next chapter
-      else       step(-1);  // swipe right = prev chapter
+    dragging = false;
+
+    if(Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.5){
+      // Animate out in swipe direction then load
+      const dir = dx < 0 ? -1 : 1;
+      content.style.transition = 'transform 0.18s ease-in, opacity 0.18s ease-in';
+      content.style.transform = `translateX(${dir * -80}px)`;
+      content.style.opacity = '0';
+      setTimeout(() => {
+        content.style.transform = '';
+        content.style.transition = 'none';
+        content.style.opacity = '';
+        if(dx < 0) step(1); else step(-1);
+      }, 180);
+    } else {
+      // Snap back
+      content.style.transition = 'transform 0.25s cubic-bezier(0.25,0.46,0.45,0.94)';
+      content.style.transform = '';
+      setTimeout(() => { content.style.transition = ''; }, 260);
     }
   }, {passive: true});
 })();
