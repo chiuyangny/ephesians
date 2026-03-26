@@ -4,126 +4,190 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>개역개정 · ESV</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500&display=swap" rel="stylesheet">
 <style>
+:root { --fs: 15px; --bg: #f7f5f2; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  background: #f9f8f6; color: #111;
+  background: var(--bg);
+  color: #111;
   display: flex; flex-direction: column; height: 100%;
   -webkit-font-smoothing: antialiased;
 }
+
+/* HEADER */
 header {
-  height: 48px; border-bottom: 1px solid #ebe9e4;
-  padding: 0 20px; display: flex; align-items: center;
-  justify-content: space-between; flex-shrink: 0; background: #f9f8f6;
+  height: 48px; padding: 0 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0; background: var(--bg);
+  border-bottom: 1px solid #e8e5e0;
 }
-.logo { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: #111; letter-spacing: -0.01em; }
-.logo-div { color: #ccc; font-weight: 300; }
+.logo { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: #222; }
+.logo-div { color: #ccc; }
 .logo-en { color: #888; font-weight: 400; }
 
+/* ESV BANNER */
 #esv-banner {
-  background: #f0ede8; border-bottom: 1px solid #ebe9e4;
+  background: #efecea; border-bottom: 1px solid #e8e5e0;
   padding: 10px 20px; display: none; align-items: center;
-  gap: 10px; flex-shrink: 0; flex-wrap: wrap;
-  font-size: 12px; color: #666;
+  gap: 10px; flex-shrink: 0; flex-wrap: wrap; font-size: 12px; color: #555;
 }
 #esv-banner.show { display: flex; }
 #esv-banner a { color: #2563eb; text-decoration: none; }
-#esv-banner a:hover { text-decoration: underline; }
 #esv-banner input {
-  border: 1px solid #dedad4; border-radius: 6px;
+  border: 1px solid #d8d4ce; border-radius: 6px;
   font: 12px 'Courier New', monospace; padding: 5px 10px;
   outline: none; width: 260px; max-width: 100%;
-  transition: border-color 0.15s; background: #f9f8f6;
+  background: var(--bg); transition: border-color 0.15s;
 }
 #esv-banner input:focus { border-color: #2563eb; }
 #esv-banner .save-btn {
-  background: #111; border: none; border-radius: 6px;
-  color: #fff; cursor: pointer; font: 12px inherit;
-  padding: 5px 14px;
+  background: #222; border: none; border-radius: 6px;
+  color: #fff; cursor: pointer; font: 12px inherit; padding: 5px 14px;
 }
 
+/* NAV */
 nav {
-  height: 44px; border-bottom: 1px solid #ebe9e4;
-  padding: 0 20px; display: flex; align-items: center;
-  gap: 6px; flex-shrink: 0; flex-wrap: wrap; background: #f9f8f6;
+  height: 44px; padding: 0 20px;
+  display: flex; align-items: center; gap: 6px;
+  flex-shrink: 0; background: var(--bg);
+  border-bottom: 1px solid #e8e5e0;
 }
 .nl { font-size: 11px; color: #bbb; }
 select {
-  appearance: none; background: #f9f8f6; border: 1px solid #e5e5e5;
-  border-radius: 6px; color: #111; cursor: pointer;
-  font: 13px inherit; padding: 5px 26px 5px 10px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath fill='%23aaa' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat; background-position: right 8px center;
-  outline: none; transition: border-color 0.15s;
+  appearance: none; background: #efecea;
+  border: 1px solid #d8d4ce; border-radius: 6px;
+  color: #111; cursor: pointer; font: 13px inherit;
+  padding: 5px 24px 5px 10px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath fill='%23999' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 7px center; outline: none;
 }
-select:focus { border-color: #111; }
-#bk { min-width: 180px; } #ch { min-width: 64px; }
+select:focus { border-color: #555; }
+#bk { min-width: 185px; } #ch { min-width: 64px; }
 .btn-read {
-  background: #111; border: none; border-radius: 6px;
-  color: #fff; cursor: pointer; font: 13px/1 inherit;
-  font-weight: 500; padding: 6px 18px; letter-spacing: -0.01em;
+  background: #222; border: none; border-radius: 6px;
+  color: #fff; cursor: pointer; font: 500 13px inherit;
+  padding: 6px 18px;
 }
-.btn-read:hover { opacity: 0.75; }
-.btn-read:disabled { opacity: 0.3; cursor: not-allowed; }
+.btn-read:hover { opacity: 0.8; }
+.btn-read:disabled { opacity: 0.35; cursor: not-allowed; }
 .btn-nav {
-  background: #f9f8f6; border: 1px solid #e5e5e5; border-radius: 6px;
-  color: #666; cursor: pointer; font-size: 14px;
-  padding: 5px 11px; line-height: 1; transition: background 0.1s;
+  background: #efecea; border: 1px solid #d8d4ce; border-radius: 6px;
+  color: #555; cursor: pointer; font-size: 14px;
+  padding: 5px 11px; line-height: 1;
 }
-.btn-nav:hover { background: #e8e4de; }
+.btn-nav:hover { background: #e4e0da; }
 .btn-nav:disabled { opacity: 0.3; cursor: not-allowed; }
 .fctl { margin-left: auto; display: flex; align-items: center; gap: 3px; }
 .fctl > span { font-size: 11px; color: #bbb; margin-right: 2px; }
 .fbtn {
-  background: #f9f8f6; border: 1px solid #e5e5e5; border-radius: 5px;
-  color: #888; cursor: pointer; font-size: 11px;
-  width: 24px; height: 24px; display: flex;
-  align-items: center; justify-content: center;
+  background: #efecea; border: 1px solid #d8d4ce; border-radius: 5px;
+  color: #666; cursor: pointer; font-size: 12px; font-weight: 500;
+  width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
+  user-select: none;
 }
-.fbtn:hover { background: #e8e4de; }
+.fbtn:hover { background: #e4e0da; }
+.fbtn:active { background: #d8d4ce; }
 
-main { flex: 1; overflow-y: auto; display: flex; align-items: flex-start; min-height: 0; }
-main::-webkit-scrollbar { width: 3px; }
-main::-webkit-scrollbar-thumb { background: #dedad4; border-radius: 3px; }
-.col { flex: 1; padding: 32px 28px 48px; min-width: 0; background: #f9f8f6; }
-.col.ko { border-right: 1px solid #ebe9e4; }
+/* MAIN — single scroller */
+main {
+  flex: 1; overflow-y: auto; min-height: 0;
+  background: var(--bg);
+}
+main::-webkit-scrollbar { width: 4px; }
+main::-webkit-scrollbar-thumb { background: #d8d4ce; border-radius: 4px; }
 
+/* Two-column header row (sticky) */
+.col-headers {
+  display: grid; grid-template-columns: 1fr 1fr;
+  position: sticky; top: 0; z-index: 10;
+  background: var(--bg); border-bottom: 1px solid #e8e5e0;
+}
 .col-hdr {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid #ebe9e4;
+  padding: 14px 28px;
+  display: flex; align-items: baseline; justify-content: space-between;
 }
-.clbl { font-size: 11px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; color: #bbb; }
+.col-hdr:first-child { border-right: 1px solid #e8e5e0; }
+.clbl { font-size: 10px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: #bbb; }
 .cref { font-size: 12px; color: #999; }
 
-.ch-title { font-size: 18px; font-weight: 500; color: #111; margin-bottom: 24px; letter-spacing: -0.02em; }
-.col.ko .ch-title { font-family: 'Noto Sans KR', sans-serif; font-weight: 500; letter-spacing: -0.03em; }
+/* Chapter title row */
+.title-row {
+  display: grid; grid-template-columns: 1fr 1fr;
+  padding: 28px 28px 16px;
+}
+.title-row .ko-side { border-right: 1px solid #e8e5e0; padding-right: 28px; }
+.title-row .en-side { padding-left: 28px; }
+.ch-title {
+  font-size: 17px; font-weight: 600; color: #222;
+  letter-spacing: -0.02em;
+}
+.ko-side .ch-title { font-family: 'Noto Sans KR', sans-serif; }
 
-.shead { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #ccc; margin: 24px 0 8px; }
-.verse { display: flex; gap: 12px; padding: 4px 0; border-radius: 4px; transition: background 0.1s; }
-.verse:hover { background: #f0ede8; margin: 0 -8px; padding: 4px 8px; }
-.vn { color: #ddd; font-size: 10px; font-weight: 500; min-width: 18px; text-align: right; padding-top: 5px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
-.vt { line-height: 1.85; flex: 1; color: #1a1a1a; }
-.col.ko .vt { font-family: 'Noto Sans KR', sans-serif; font-size: var(--fs); font-weight: 400; word-break: keep-all; }
-.col.en .vt { font-size: var(--fs); font-weight: 400; }
+/* Section headings */
+.shead-row {
+  display: grid; grid-template-columns: 1fr 1fr;
+  padding: 20px 28px 6px;
+}
+.shead-row .ko-side { border-right: 1px solid #e8e5e0; padding-right: 28px; }
+.shead-row .en-side { padding-left: 28px; }
+.shead { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #bbb; }
 
+/* Verse rows — side by side, same height */
+.verse-row {
+  display: grid; grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid #f0ede8;
+  transition: background 0.1s;
+}
+.verse-row:hover { background: #f0ede8; }
+.verse-row:last-child { border-bottom: none; }
+.verse-cell {
+  padding: 8px 28px;
+  display: flex; gap: 10px; align-items: flex-start;
+}
+.verse-cell.ko-side { border-right: 1px solid #e8e5e0; }
+.verse-cell.en-side { }
+.vn {
+  color: #ccc; font-size: 10px; font-weight: 600;
+  min-width: 18px; text-align: right;
+  flex-shrink: 0; font-variant-numeric: tabular-nums;
+  padding-top: 4px; line-height: 1;
+}
+.vt {
+  font-size: var(--fs); line-height: 1.85; color: #1c1c1c; flex: 1;
+}
+.ko-side .vt { font-family: 'Noto Sans KR', sans-serif; font-weight: 400; word-break: keep-all; letter-spacing: -0.02em; }
+.en-side .vt { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; font-weight: 400; }
+
+/* Footnotes section */
+.footnotes {
+  padding: 24px 28px 40px;
+  font-size: 12px; color: #888; line-height: 1.7;
+  border-top: 1px solid #e8e5e0;
+  margin-top: 8px;
+}
+.footnotes strong { color: #555; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; display: block; margin-bottom: 10px; }
+.fn-item { display: flex; gap: 6px; margin-bottom: 4px; }
+.fn-num { color: #94a3b8; font-size: 9px; font-weight: 600; padding-top: 3px; flex-shrink: 0; }
+sup.fn-ref { font-size: 9px; color: #94a3b8; cursor: default; margin-left: 1px; vertical-align: super; line-height: 0; }
+
+/* States */
 .ph { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 72px 20px; color: #bbb; text-align: center; }
 .ph p { font-size: 13px; line-height: 1.6; }
-
-.ldg-wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 64px 20px; }
+.ldg { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 64px 20px; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.spinner { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #f0f0f0; border-top-color: #111; animation: spin 0.6s linear infinite; }
+.spinner { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #e8e5e0; border-top-color: #555; animation: spin 0.6s linear infinite; }
 .ldg-txt { font-size: 12px; color: #bbb; }
-.errbox { background: #fff5f5; border: 1px solid #fecaca; border-radius: 6px; color: #dc2626; padding: 10px 14px; font-size: 13px; line-height: 1.5; margin: 8px 0; }
+.errbox { background: #fff5f5; border: 1px solid #fecaca; border-radius: 6px; color: #dc2626; padding: 10px 14px; font-size: 13px; line-height: 1.5; margin: 16px 28px; }
 
-footer { border-top: 1px solid #ebe9e4; color: #bbb; background: #f9f8f6; font-size: 10px; padding: 8px 20px; text-align: center; flex-shrink: 0; }
+footer { border-top: 1px solid #e8e5e0; color: #bbb; background: var(--bg); font-size: 10px; padding: 8px 20px; text-align: center; flex-shrink: 0; }
 
 @media (max-width: 640px) {
-  .scroll-wrap { flex-direction: column; }
-  .col.ko { border-right: none; border-bottom: 1px solid #f0f0f0; }
-  .col { padding: 20px 16px 36px; }
+  .col-headers, .title-row, .shead-row, .verse-row { grid-template-columns: 1fr; }
+  .verse-cell.ko-side, .col-hdr:first-child, .title-row .ko-side, .shead-row .ko-side { border-right: none; border-bottom: 1px solid #e8e5e0; }
+  .title-row .en-side, .shead-row .en-side { padding-left: 0; margin-top: 4px; }
   .fctl { margin-left: 0; }
 }
 </style>
@@ -154,26 +218,15 @@ footer { border-top: 1px solid #ebe9e4; color: #bbb; background: #f9f8f6; font-s
   <button class="btn-nav" id="bn" onclick="step(1)" disabled>›</button>
   <div class="fctl">
     <span>A</span>
-    <button class="fbtn" onclick="adjF(-1)">−</button>
-    <button class="fbtn" onclick="adjF(1)">+</button>
+    <button class="fbtn" id="fminus" type="button">−</button>
+    <button class="fbtn" id="fplus" type="button">+</button>
   </div>
 </nav>
 
-<main>
-  <div class="col ko" id="cko">
-      <div class="col-hdr">
-        <span class="clbl">개역개정판</span>
-        <span class="cref" id="rko"></span>
-      </div>
-      <div id="tko"><div class="ph"><p>책과 장을 선택하고 Read를 누르세요</p></div></div>
-    </div>
-  <div class="col en" id="cen">
-      <div class="col-hdr">
-        <span class="clbl">ESV</span>
-        <span class="cref" id="ren"></span>
-      </div>
-      <div id="ten"><div class="ph"><p>Select a passage and press Read</p></div></div>
-    </div>
+<main id="main">
+  <div id="content">
+    <div class="ph"><p>책과 장을 선택하고 Read를 누르세요</p></div>
+  </div>
 </main>
 
 <footer>개역개정판 © 대한성서공회 &nbsp;·&nbsp; ESV® © 2001 Crossway · Used by permission</footer>
@@ -219,14 +272,29 @@ const BOOKS=[
 
 let esvKey=localStorage.getItem('esvKey')||'', bi=42, ci=3, fs=15;
 
+// Init
 (function(){
   const s=document.getElementById('bk');
   BOOKS.forEach((b,i)=>{const o=document.createElement('option');o.value=i;o.textContent=b.ko+'  ·  '+b.en;s.appendChild(o);});
   s.value=bi; buildCh(); document.getElementById('ch').value=ci;
-  document.documentElement.style.setProperty('--fs',fs+'px');
+  applyFs();
   if(!esvKey) document.getElementById('esv-banner').classList.add('show');
   else document.getElementById('esv-input').value=esvKey;
+
+  // Font buttons — attach here to guarantee they work
+  document.getElementById('fminus').addEventListener('click', function(e){
+    e.preventDefault(); fs=Math.max(11,fs-1); applyFs();
+  });
+  document.getElementById('fplus').addEventListener('click', function(e){
+    e.preventDefault(); fs=Math.min(22,fs+1); applyFs();
+  });
 })();
+
+function applyFs(){
+  document.documentElement.style.setProperty('--fs', fs+'px');
+  // Also directly update all rendered verse text
+  document.querySelectorAll('.vt').forEach(el=>{ el.style.fontSize=fs+'px'; });
+}
 
 function saveEsv(){
   esvKey=document.getElementById('esv-input').value.trim();
@@ -235,6 +303,7 @@ function saveEsv(){
   document.getElementById('esv-banner').classList.remove('show');
 }
 document.getElementById('esv-input').addEventListener('keydown',e=>{if(e.key==='Enter')saveEsv();});
+
 function onBook(){bi=+document.getElementById('bk').value;ci=1;buildCh();}
 function buildCh(){
   const s=document.getElementById('ch');s.innerHTML='';
@@ -247,7 +316,6 @@ function step(d){
   else{if(c<BOOKS[bi].ch)document.getElementById('ch').value=c+1;else if(bi<BOOKS.length-1){bi++;document.getElementById('bk').value=bi;ci=1;buildCh();}}
   load();
 }
-function adjF(d){fs=Math.min(22,Math.max(12,fs+d));document.documentElement.style.setProperty('--fs',fs+'px');}
 
 async function load(){
   if(!esvKey){document.getElementById('esv-banner').classList.add('show');document.getElementById('esv-input').focus();return;}
@@ -256,15 +324,17 @@ async function load(){
   document.getElementById('bp').disabled=(bi===0&&ci===1);
   document.getElementById('bn').disabled=(bi===BOOKS.length-1&&ci===bk.ch);
   document.getElementById('bload').disabled=true;
-  document.getElementById('rko').textContent=bk.ko+' '+ci+'장';
-  document.getElementById('ren').textContent=bk.en+' '+ci;
-  setLdg('tko','로드 중'); setLdg('ten','Loading');
+
+  document.getElementById('content').innerHTML=`<div class="ldg"><div class="spinner"></div><div class="ldg-txt">Loading…</div></div>`;
 
   const [kr,er]=await Promise.allSettled([fetchKo(bk,ci),fetchEsv(bk,ci)]);
   document.getElementById('bload').disabled=false;
-  if(kr.status==='fulfilled') renderKo(kr.value,bk,ci); else setErr('tko',kr.reason?.message||'실패');
-  if(er.status==='fulfilled') renderEsv(er.value,bk,ci); else setErr('ten',er.reason?.message||'Failed');
-  document.querySelector('main').scrollTop=0;
+
+  if(kr.status==='rejected'){document.getElementById('content').innerHTML=`<div class="errbox"><strong>Error:</strong> ${esc(kr.reason?.message||'실패')}</div>`;return;}
+  if(er.status==='rejected'){document.getElementById('content').innerHTML=`<div class="errbox"><strong>ESV Error:</strong> ${esc(er.reason?.message||'Failed')}</div>`;return;}
+
+  render(kr.value, er.value, bk, ci);
+  document.getElementById('main').scrollTop=0;
 }
 
 async function fetchKo(bk,ch){
@@ -273,65 +343,112 @@ async function fetchKo(bk,ch){
   const d=await r.json();
   if(d.error) throw new Error(d.error);
   if(!Array.isArray(d)||d.length===0) throw new Error('No verses');
-  return d;
-}
-function renderKo(v,bk,ch){
-  let h=`<div class="ch-title">${bk.ko} ${ch}장</div>`;
-  v.forEach(x=>{h+=`<div class="verse"><span class="vn">${x.verse}</span><span class="vt">${esc(x.text)}</span></div>`;});
-  document.getElementById('tko').innerHTML=h;
+  return d; // [{verse, text}, ...]
 }
 
 async function fetchEsv(bk,ch){
   const tok=esvKey.startsWith('Token ')?esvKey:'Token '+esvKey;
   const q=encodeURIComponent(bk.en+' '+ch);
-  // include-footnotes=false removes footnote text, but refs like (1) still appear in verse text
-  // Use include-verse-numbers=true and let the API strip footnotes completely
   const url=`https://api.esv.org/v3/passage/text/?q=${q}`
-    +`&include-headings=true`
-    +`&include-footnotes=true`
-    +`&include-verse-numbers=true`
-    +`&include-short-copyright=false`
-    +`&include-passage-references=false`
-    +`&indent-paragraphs=0`
-    +`&indent-poetry=false`
-    +`&include-chapter-numbers=false`;
+    +`&include-headings=true&include-footnotes=true&include-verse-numbers=true`
+    +`&include-short-copyright=false&include-passage-references=false`
+    +`&indent-paragraphs=0&indent-poetry=false&include-chapter-numbers=false`;
   const r=await fetch(url,{headers:{Authorization:tok}});
   if(r.status===401||r.status===403) throw new Error('Invalid ESV token');
   if(!r.ok) throw new Error('ESV error '+r.status);
   const d=await r.json();
-  if(!d.passages||!d.passages[0]) throw new Error('No data');
-  return d.passages[0];
-}
-function renderEsv(txt,bk,ch){
-  let h=`<div class="ch-title">${bk.en} ${ch}</div>`;
-  // Split into passage text and footnotes section (separated by blank line + footnotes)
-  const fnSplit = txt.split(/\n\n\(\d+\)/);
-  const passageText = fnSplit[0];
-  // Parse footnotes into a map: number -> text
-  const fnMap = {};
-  const fnMatches = [...txt.matchAll(/\((\d+)\)\s*([^\n(]+)/g)];
-  fnMatches.forEach(m => { fnMap[m[1]] = m[2].trim(); });
+  if(!d.passages||!d.passages[0]) throw new Error('No ESV data');
 
-  passageText.split('\n').forEach(raw=>{
-    const l=raw.trim(); if(!l) return;
-    const m=l.match(/^\[(\d+)\]\s*(.*)/);
-    if(m){
-      // Replace (n) refs with superscript spans that show tooltip
-      const verseText = m[2].replace(/\((\d+)\)/g, (_, n) => {
-        const note = fnMap[n] ? esc(fnMap[n]) : '';
-        return `<sup title="${note}" style="font-size:9px;color:#94a3b8;cursor:help;margin-left:1px">${n}</sup>`;
-      });
-      h+=`<div class="verse"><span class="vn">${m[1]}</span><span class="vt">${verseText}</span></div>`;
-    } else if(!/^\d+$/.test(l)){
-      h+=`<div class="shead">${esc(l)}</div>`;
+  // Parse the plain text response
+  const txt=d.passages[0];
+  const verses={}; // verse num -> text
+  const headings={}; // verse num -> heading before it
+  const footnotes={}; // fn number -> text
+  let pendingHeading=null;
+
+  const lines=txt.split('\n');
+  let inFootnotes=false;
+
+  for(const raw of lines){
+    const l=raw.trim(); if(!l) continue;
+
+    // Footnote section starts with "(1)" style lines after the passage
+    if(/^\(\d+\)/.test(l) && Object.keys(verses).length>0){
+      inFootnotes=true;
     }
+    if(inFootnotes){
+      const fm=l.match(/^\((\d+)\)\s*(.*)/);
+      if(fm) footnotes[fm[1]]=fm[2].trim();
+      continue;
+    }
+
+    const vm=l.match(/^\[(\d+)\]\s*(.*)/);
+    if(vm){
+      const num=+vm[1];
+      if(pendingHeading){headings[num]=pendingHeading;pendingHeading=null;}
+      verses[num]=vm[2];
+    } else if(!/^\d+$/.test(l)){
+      pendingHeading=l;
+    }
+  }
+  return {verses, headings, footnotes};
+}
+
+function render(koVerses, esvData, bk, ch){
+  const {verses:enVerses, headings, footnotes}=esvData;
+  let h='';
+
+  // Sticky column headers
+  h+=`<div class="col-headers">
+    <div class="col-hdr"><span class="clbl">개역개정판</span><span class="cref">${bk.ko} ${ch}장</span></div>
+    <div class="col-hdr"><span class="clbl">ESV</span><span class="cref">${bk.en} ${ch}</span></div>
+  </div>`;
+
+  // Chapter titles
+  h+=`<div class="title-row">
+    <div class="ko-side"><div class="ch-title">${bk.ko} ${ch}장</div></div>
+    <div class="en-side"><div class="ch-title">${bk.en} ${ch}</div></div>
+  </div>`;
+
+  // Verses side by side
+  koVerses.forEach((kv,i)=>{
+    const num=kv.verse;
+    const enText=enVerses[num]||'';
+
+    // Section heading before this verse?
+    if(headings[num]){
+      h+=`<div class="shead-row">
+        <div class="ko-side"></div>
+        <div class="en-side"><div class="shead">${esc(headings[num])}</div></div>
+      </div>`;
+    }
+
+    // Replace footnote refs (n) in ESV text with superscripts
+    const enHtml=enText.replace(/\((\d+)\)/g,(_,n)=>
+      `<sup class="fn-ref">${n}</sup>`
+    );
+
+    h+=`<div class="verse-row">
+      <div class="verse-cell ko-side"><span class="vn">${num}</span><span class="vt" style="font-size:${fs}px">${esc(kv.text)}</span></div>
+      <div class="verse-cell en-side"><span class="vn">${num}</span><span class="vt" style="font-size:${fs}px">${enHtml}</span></div>
+    </div>`;
   });
-  document.getElementById('ten').innerHTML=h;
+
+  // Footnotes at bottom
+  const fnKeys=Object.keys(footnotes);
+  if(fnKeys.length>0){
+    h+=`<div class="footnotes"><strong>Footnotes</strong>`;
+    fnKeys.forEach(k=>{
+      h+=`<div class="fn-item"><span class="fn-num">${k}</span><span>${esc(footnotes[k])}</span></div>`;
+    });
+    h+=`</div>`;
+  }
+
+  document.getElementById('content').innerHTML=h;
 }
 
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function setLdg(id,msg){document.getElementById(id).innerHTML=`<div class="ldg-wrap"><div class="spinner"></div><div class="ldg-txt">${msg}</div></div>`;}
-function setErr(id,msg){document.getElementById(id).innerHTML=`<div class="errbox"><strong>Error:</strong> ${esc(msg)}</div>`;}
+
 document.addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT') return;
   if(e.key==='ArrowRight') step(1);
