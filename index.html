@@ -173,6 +173,31 @@ let bi=42,ci=3,fs=15,pendingBook=null;
   document.getElementById('mob-sheet').addEventListener('click',function(e){
     if(e.target===this) sheetClose();
   });
+  // Swipe down on sheet inner to close — 150px threshold feels natural
+  var sheetInner=document.querySelector('.mob-sheet-inner');
+  var swy=0, swActive=false;
+  sheetInner.addEventListener('touchstart',function(e){
+    swy=e.touches[0].clientY; swActive=true;
+  },{passive:true});
+  sheetInner.addEventListener('touchmove',function(e){
+    if(!swActive) return;
+    var dy=e.touches[0].clientY - swy;
+    if(dy > 0) sheetInner.style.transform='translateY('+Math.min(dy,300)+'px)';
+  },{passive:true});
+  sheetInner.addEventListener('touchend',function(e){
+    if(!swActive) return;
+    swActive=false;
+    var dy=e.changedTouches[0].clientY - swy;
+    if(dy > 150){
+      sheetInner.style.transition='transform 0.2s ease';
+      sheetInner.style.transform='translateY(100%)';
+      setTimeout(function(){ sheetInner.style.transform=''; sheetInner.style.transition=''; sheetClose(); }, 200);
+    } else {
+      sheetInner.style.transition='transform 0.2s ease';
+      sheetInner.style.transform='';
+      setTimeout(function(){ sheetInner.style.transition=''; }, 200);
+    }
+  },{passive:true});
 })();
 function applyFs(){
   document.documentElement.style.setProperty('--fs',fs+'px');
