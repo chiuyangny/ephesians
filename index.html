@@ -236,96 +236,46 @@ async function fetchKo(bk,ch){
 async function fetchEsv(bk,ch){
   const tok=esvKey.startsWith('Token ')?esvKey:'Token '+esvKey;
   const q=encodeURIComponent(bk.en+' '+ch);
+  // No headings — avoids all the heading/continuation ambiguity
   const url='https://api.esv.org/v3/passage/text/?q='+q
-    +'&include-headings=true&include-footnotes=true&include-verse-numbers=true'
+    +'&include-headings=false&include-footnotes=true&include-verse-numbers=true'
     +'&include-short-copyright=false&include-passage-references=false'
     +'&indent-paragraphs=0&indent-poetry=false&include-chapter-numbers=false'
     +'&indent-psalm-doxology=false&line-length=0';
-  const r=await fetch(url,{headers:{Authorization:tok}});
-  if(r.status===401||r.status===403) throw new Error('Invalid ESV token');
-  if(!r.ok) throw new Error('ESV error '+r.status);
-  const d=await r.json();
+  const r2=await fetch(url,{headers:{Authorization:tok}});
+  if(r2.status===401||r2.status===403) throw new Error('Invalid ESV token');
+  if(!r2.ok) throw new Error('ESV error '+r2.status);
+  const d=await r2.json();
   if(!d.passages||!d.passages[0]) throw new Error('No ESV data');
 
   const txt=d.passages[0];
-  const verses={}, headings={}, footnotes={};
+  const verses={}, footnotes={};
 
-  // Step 1: split footnotes from passage
-  // Footnote lines start with "(N)" and appear after all verse content
+  // Separate footnotes (lines starting with "(N)") from passage
   const allLines=txt.split('\n');
-  const passageLines=[];
-  const fnLines=[];
+  const passageLines=[], fnLines=[];
   let inFn=false;
   for(const line of allLines){
     if(!inFn && /^\s*\(\d+\)/.test(line)) inFn=true;
-    if(inFn) fnLines.push(line);
-    else passageLines.push(line);
+    if(inFn) fnLines.push(line); else passageLines.push(line);
   }
-
-  // Step 2: parse footnotes
   for(const line of fnLines){
-    const m=line.match(/\((\d+)\)\s*(.+)/);
-    if(m) footnotes[m[1]]=m[2].trim();
+    const fm=line.match(/\((\d+)\)\s*(.+)/);
+    if(fm) footnotes[fm[1]]=fm[2].trim();
   }
 
-  // Step 3: parse verses and headings
-  // Key insight: a TRUE heading line is one that contains NO [N] verse marker
-  // AND is not a continuation of verse text.
-  // A continuation line (verse text wrapping) will be appended to the last verse.
-  // A heading is identified by being SHORT, ALL-CAPS-ish, or matching known patterns.
-  // Safest rule: a line is a heading ONLY if it contains no lowercase letters
-  // (ESV headings are title case or all-caps in the API output)
-  
-  let lastVerseNum=0;
-  let pendingHead=null;
-
-  for(const raw of passageLines){
-    const l=raw.trim();
-    if(!l) continue;
-
-    // Check if this line starts a new verse
-    const verseMatch=l.match(/^\[(\d+)\](.*)/);
-    if(verseMatch){
-      const num=+verseMatch[1];
-      if(pendingHead){ headings[num]=pendingHead; pendingHead=null; }
-      // The rest of this line may contain multiple [N] markers — split them
-      const rest='['+num+']'+verseMatch[2];
-      const parts=rest.split(/(?=\[\d+\])/);
-      for(const part of parts){
-        const pm=part.match(/^\[(\d+)\]\s*(.*)/);
-        if(pm){
-          const pnum=+pm[1];
-          verses[pnum]=(verses[pnum]||'')+pm[2].replace(/\s+/g,' ');
-          lastVerseNum=pnum;
-        }
-      }
-    } else {
-      // Not a verse line — is it a heading or a verse continuation?
-      // Heading rule: no [N] markers AND (all caps / title case / short)
-      // We detect headings as lines with no lowercase letters, OR lines that look like titles
-      const hasLower=/[a-z]/.test(l);
-      const looksLikeHeading=!hasLower || (l.length<80 && /^[A-Z][^.!?]*$/.test(l));
-      if(looksLikeHeading && lastVerseNum===0){
-        // Before any verses — must be a heading
-        pendingHead=l;
-      } else if(!hasLower && l.length<120){
-        // All caps short line = heading
-        pendingHead=l;
-      } else {
-        // Continuation of previous verse
-        if(lastVerseNum>0){
-          verses[lastVerseNum]=(verses[lastVerseNum]||'')+' '+l;
-        }
-      }
+  // Join all passage text and split on [N] markers wherever they appear
+  const fullText=passageLines.join(' ');
+  const vParts=fullText.split(/(?=\[\d+\])/);
+  for(const vp of vParts){
+    const vp2=vp.trim(); if(!vp2) continue;
+    const vm=vp2.match(/^\[(\d+)\]\s*([\s\S]*)/);
+    if(vm){
+      const num=+vm[1];
+      verses[num]=vm[2].replace(/\s+/g,' ').trim();
     }
   }
-
-  // Clean up verse text
-  for(const k of Object.keys(verses)){
-    verses[k]=verses[k].replace(/\s+/g,' ').trim();
-  }
-
-  return {verses,headings,footnotes};
+  return {verses, headings:{}, footnotes};
 }
 
 
