@@ -81,24 +81,25 @@ sup.fn-ref { font-size: 9px; color: #94a3b8; margin-left: 1px; vertical-align: s
 footer { border-top: 1px solid #e8e5e0; color: #bbb; background: var(--bg); font-size: 10px; padding: 8px 20px; text-align: center; flex-shrink: 0; }
 
 @media (max-width: 640px) {
-  /* Hide logo header entirely on mobile — save the space */
   header { display: none; }
-  /* Make nav more compact */
-  nav { padding: 5px 10px; gap: 5px; min-height: 0; }
-  .btn-read { padding: 5px 12px; font-size: 12px; }
-  .btn-nav { padding: 4px 9px; font-size: 13px; }
-  .nl { display: none; }
-  .fctl > span { display: none; }
-  #bk { max-width: 130px; }
-  #ch { width: 50px; }
-  .verse-cell { padding: 8px 12px; }
+  nav { padding: 6px 12px; min-height: 0; }
+  .verse-cell { padding: 8px 14px; }
   .col-hdr { padding: 10px 12px; }
   .col-headers { display: none; }
-  .title-row, .shead-row { padding: 16px 12px 4px; }
-  .fn-row .en-side, .footnotes { padding: 12px 12px 28px; }
+  .title-row, .shead-row { padding: 16px 14px 4px; }
   .col-headers, .title-row, .shead-row, .verse-row { grid-template-columns: 1fr; }
-  .verse-cell.ko-side, .col-hdr:first-child, .shead-row .ko-side, .title-row .ko-side { border-right: none; border-bottom: 1px solid #e8e5e0; }
-  .fctl { margin-left: 0; }
+
+  /* Fix 1: Remove divider between ko and en cells — use bottom border on en cell instead */
+  .verse-cell.ko-side { border-right: none !important; border-bottom: none !important; padding-bottom: 2px; }
+  .verse-cell.en-side { border-bottom: 1px solid #eeebe6; padding-top: 2px; }
+  .title-row .ko-side, .shead-row .ko-side { border-right: none !important; border-bottom: none !important; }
+  .title-row .en-side { padding-top: 0; }
+
+  /* Fix 2: Footnotes full width on mobile */
+  .fn-row { display: block; }
+  .fn-row .ko-side { display: none; }
+  .fn-row .en-side { padding: 16px 14px 32px; }
+  .footnotes { padding: 0; border-top: 1px solid #e8e5e0; }
 }
 
 /* Desktop/mobile visibility */
