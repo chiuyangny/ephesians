@@ -81,6 +81,14 @@ sup.fn-ref { font-size: 9px; color: #94a3b8; margin-left: 1px; vertical-align: s
 footer { border-top: 1px solid #e8e5e0; color: #bbb; background: var(--bg); font-size: 10px; padding: 8px 20px; text-align: center; flex-shrink: 0; }
 
 @media (max-width: 640px) {
+  /* Hide logo header entirely on mobile — save the space */
+  header { display: none; }
+  /* Make nav more compact */
+  nav { padding: 5px 10px; gap: 5px; min-height: 0; }
+  .btn-read { padding: 5px 12px; font-size: 12px; }
+  .btn-nav { padding: 4px 9px; font-size: 13px; }
+  .nl { display: none; }
+  .fctl > span { display: none; }
   #bk { max-width: 130px; }
   #ch { width: 50px; }
   .verse-cell { padding: 8px 12px; }
@@ -92,6 +100,106 @@ footer { border-top: 1px solid #e8e5e0; color: #bbb; background: var(--bg); font
   .verse-cell.ko-side, .col-hdr:first-child, .shead-row .ko-side, .title-row .ko-side { border-right: none; border-bottom: 1px solid #e8e5e0; }
   .fctl { margin-left: 0; }
 }
+
+/* Desktop/mobile visibility */
+.mob-nav { display: none; }
+@media (max-width: 640px) {
+  .desk-only { display: none !important; }
+  .mob-nav { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+}
+
+/* Mobile nav bar */
+.mob-nav-btn {
+  display: flex; align-items: center; gap: 6px;
+  background: #efecea; border: 1px solid #d8d4ce; border-radius: 8px;
+  font: 500 13px inherit; color: #222; padding: 7px 12px;
+  cursor: pointer; flex: 1; max-width: calc(100% - 110px);
+}
+.mob-nav-btn span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mob-nav-btn svg { flex-shrink: 0; color: #999; }
+.mob-nav-actions { display: flex; gap: 5px; flex-shrink: 0; }
+.mob-icon-btn.arrow { display: none; }
+.mob-icon-btn {
+  background: #efecea; border: 1px solid #d8d4ce; border-radius: 8px;
+  font: 500 14px inherit; color: #444; width: 34px; height: 34px;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.mob-icon-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.mob-icon-btn:active { background: #e0dbd4; }
+
+/* Bottom sheet */
+.mob-sheet {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(0,0,0,0.4);
+  display: flex; align-items: flex-end;
+  transition: opacity 0.2s;
+}
+.mob-sheet.hidden { display: none; }
+.mob-sheet-inner {
+  background: var(--bg); border-radius: 16px 16px 0 0;
+  width: 100%; max-height: 85vh;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.mob-sheet-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px 12px; border-bottom: 1px solid #e8e5e0;
+  flex-shrink: 0;
+}
+.mob-sheet-hdr span { font-size: 14px; font-weight: 500; color: #222; }
+.mob-sheet-close {
+  background: #efecea; border: none; border-radius: 50%;
+  width: 28px; height: 28px; font-size: 12px; color: #666;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+#mob-sheet-body { overflow-y: auto; flex: 1; }
+
+/* Book list in sheet */
+.mob-book-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+.mob-book-item {
+  padding: 13px 16px; font-size: 14px; color: #222;
+  border-bottom: 0.5px solid #f0ede8; cursor: pointer;
+  display: flex; align-items: center; gap: 6px;
+}
+.mob-book-item:active { background: #f0ede8; }
+.mob-book-item.active { color: #222; font-weight: 600; }
+.mob-book-item .ko { font-family: 'Noto Sans KR', sans-serif; font-size: 13px; }
+.mob-book-item .en { font-size: 11px; color: #999; }
+
+/* Chapter grid in sheet */
+.mob-ch-grid {
+  display: grid; grid-template-columns: repeat(6, 1fr);
+  gap: 6px; padding: 16px;
+}
+.mob-ch-item {
+  aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+  border-radius: 8px; font-size: 14px; color: #222;
+  background: #efecea; cursor: pointer; font-weight: 400;
+}
+.mob-ch-item:active { background: #d8d4ce; }
+.mob-ch-item.active { background: #222; color: #fff; font-weight: 500; }
+
+/* Font sheet */
+.mob-font-sheet {
+  padding: 8px 16px 24px;
+}
+.mob-font-row {
+  display: flex; align-items: center; gap: 16px; padding: 12px 0;
+}
+.mob-font-row span { font-size: 12px; color: #999; min-width: 28px; }
+.mob-font-btn {
+  background: #efecea; border: 1px solid #d8d4ce; border-radius: 8px;
+  font: 500 18px inherit; color: #222; width: 48px; height: 48px;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.mob-font-preview {
+  flex: 1; font-size: 15px; color: #555; text-align: center;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+
 </style>
 </head>
 <body>
@@ -106,19 +214,44 @@ footer { border-top: 1px solid #e8e5e0; color: #bbb; background: var(--bg); font
 
 
 <nav>
-  <span class="nl">Book</span>
-  <select id="bk" onchange="onBook()"></select>
-  <span class="nl">Ch.</span>
-  <select id="ch"></select>
-  <button class="btn-nav" id="bp" onclick="step(-1)" disabled>‹</button>
-  <button class="btn-read" id="bload" onclick="load()">Read</button>
-  <button class="btn-nav" id="bn" onclick="step(1)" disabled>›</button>
-  <div class="fctl">
+  <!-- Desktop nav (hidden on mobile) -->
+  <span class="nl desk-only">Book</span>
+  <select id="bk" class="desk-only" onchange="onBook()"></select>
+  <span class="nl desk-only">Ch.</span>
+  <select id="ch" class="desk-only"></select>
+  <button class="btn-nav desk-only" id="bp" onclick="step(-1)" disabled>‹</button>
+  <button class="btn-read desk-only" id="bload" onclick="load()">Read</button>
+  <button class="btn-nav desk-only" id="bn" onclick="step(1)" disabled>›</button>
+  <div class="fctl desk-only">
     <span>A</span>
     <button class="fbtn" id="fminus" type="button">−</button>
     <button class="fbtn" id="fplus" type="button">+</button>
   </div>
+
+  <!-- Mobile nav (hidden on desktop) -->
+  <div class="mob-nav">
+    <button class="mob-nav-btn" id="mob-passage-btn" onclick="mobOpenPassage()">
+      <span id="mob-passage-label">Genesis 1</span>
+      <svg width="10" height="6" viewBox="0 0 10 6"><path fill="currentColor" d="M0 0l5 6 5-6z"/></svg>
+    </button>
+    <div class="mob-nav-actions">
+      <button class="mob-icon-btn arrow" id="mob-bp" onclick="step(-1)" disabled>‹</button>
+      <button class="mob-icon-btn arrow" id="mob-bn" onclick="step(1)" disabled>›</button>
+      <button class="mob-icon-btn" onclick="mobOpenFont()">A</button>
+    </div>
+  </div>
 </nav>
+
+<!-- Mobile passage picker sheet -->
+<div id="mob-sheet" class="mob-sheet hidden" onclick="mobSheetBgClick(event)">
+  <div class="mob-sheet-inner">
+    <div class="mob-sheet-hdr">
+      <span id="mob-sheet-title">Select passage</span>
+      <button class="mob-sheet-close" onclick="mobCloseSheet()">✕</button>
+    </div>
+    <div id="mob-sheet-body"></div>
+  </div>
+</div>
 
 <main id="main">
   <div id="content">
@@ -208,6 +341,7 @@ async function load(){
   if(er.status==='rejected'){document.getElementById('content').innerHTML=`<div class="errbox"><b>ESV Error:</b> ${esc(er.reason?.message||'Failed')}</div>`;return;}
   render(kr.value,er.value,bk,ci);
   document.getElementById('main').scrollTop=0;
+  mobUpdateLabel();
 }
 
 async function fetchKo(bk,ch){
@@ -305,6 +439,116 @@ function render(koVerses, esvData, bk, ch){
   document.getElementById('content').innerHTML = h;
 }
 
+
+// ---- Mobile nav ----
+let mobMode = null; // 'book' | 'chapter' | 'font'
+let mobPendingBook = null;
+
+function mobUpdateLabel(){
+  const bk = BOOKS[bi];
+  const c = ci;
+  document.getElementById('mob-passage-label').textContent = bk.ko + ' ' + c + '장';
+  const mbp = document.getElementById('mob-bp');
+  const mbn = document.getElementById('mob-bn');
+  if(mbp) mbp.disabled = (bi===0 && c===1);
+  if(mbn) mbn.disabled = (bi===BOOKS.length-1 && c===BOOKS[bi].ch);
+}
+
+function mobOpenPassage(){
+  mobMode = 'book';
+  mobPendingBook = null;
+  document.getElementById('mob-sheet-title').textContent = 'Select book';
+  const body = document.getElementById('mob-sheet-body');
+  let h = '<div class="mob-book-grid">';
+  BOOKS.forEach((b,i) => {
+    h += `<div class="mob-book-item ${i===bi?'active':''}" onclick="mobSelectBook(${i})">
+      <div><div class="ko">${b.ko}</div><div class="en">${b.en}</div></div>
+    </div>`;
+  });
+  h += '</div>';
+  body.innerHTML = h;
+  document.getElementById('mob-sheet').classList.remove('hidden');
+  // Scroll active book into view
+  setTimeout(()=>{ body.querySelector('.active')?.scrollIntoView({block:'center'}); }, 50);
+}
+
+function mobSelectBook(idx){
+  mobPendingBook = idx;
+  document.getElementById('mob-sheet-title').textContent = BOOKS[idx].ko + ' — chapter';
+  const body = document.getElementById('mob-sheet-body');
+  let h = '<div class="mob-ch-grid">';
+  for(let i=1; i<=BOOKS[idx].ch; i++){
+    const active = (idx===bi && i===ci) ? 'active' : '';
+    h += `<div class="mob-ch-item ${active}" onclick="mobSelectChapter(${i})">${i}</div>`;
+  }
+  h += '</div>';
+  body.innerHTML = h;
+}
+
+function mobSelectChapter(ch){
+  bi = mobPendingBook;
+  ci = ch;
+  // Sync desktop selects
+  document.getElementById('bk').value = bi;
+  buildCh();
+  document.getElementById('ch').value = ci;
+  mobCloseSheet();
+  mobUpdateLabel();
+  load();
+}
+
+function mobOpenFont(){
+  mobMode = 'font';
+  document.getElementById('mob-sheet-title').textContent = 'Font size';
+  const body = document.getElementById('mob-sheet-body');
+  body.innerHTML = `<div class="mob-font-sheet">
+    <div class="mob-font-row">
+      <button class="mob-font-btn" onclick="mobAdjF(-1)">−</button>
+      <div class="mob-font-preview" id="mob-font-preview">가 Aa</div>
+      <button class="mob-font-btn" onclick="mobAdjF(1)">+</button>
+    </div>
+    <div style="text-align:center;font-size:12px;color:#bbb;padding-bottom:8px">Current size: <span id="mob-fs-label">${fs}px</span></div>
+  </div>`;
+  document.getElementById('mob-sheet').classList.remove('hidden');
+}
+
+function mobAdjF(d){
+  fs = Math.min(22, Math.max(11, fs+d));
+  applyFs();
+  const lbl = document.getElementById('mob-fs-label');
+  if(lbl) lbl.textContent = fs + 'px';
+}
+
+function mobSheetBgClick(e){
+  if(e.target === document.getElementById('mob-sheet')) mobCloseSheet();
+}
+
+function mobCloseSheet(){
+  document.getElementById('mob-sheet').classList.add('hidden');
+  mobMode = null; mobPendingBook = null;
+}
+
+// Init mobile label
+mobUpdateLabel();
+
+// ---- Swipe to change chapter ----
+(function(){
+  const el = document.getElementById('main');
+  let startX = 0, startY = 0;
+  el.addEventListener('touchstart', e => {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+  }, {passive: true});
+  el.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - startX;
+    const dy = e.changedTouches[0].clientY - startY;
+    // Only trigger if horizontal swipe is dominant and long enough
+    if(Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5){
+      if(dx < 0) step(1);   // swipe left = next chapter
+      else       step(-1);  // swipe right = prev chapter
+    }
+  }, {passive: true});
+})();
 
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 document.addEventListener('keydown',e=>{
