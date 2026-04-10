@@ -217,6 +217,15 @@ body.dark .fn-popup{background:#2a2a2a;border-color:#444;color:#ccc;box-shadow:0
   .prog-chapters{grid-template-columns:repeat(10,1fr)}
   .prog-books{grid-template-columns:repeat(4,1fr)}
 }
+
+.votd-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 28px;min-height:60vh;text-align:center;gap:16px}
+.votd-ref{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#bbb}
+.votd-ko{font-family:'Noto Sans KR',sans-serif;font-size:17px;line-height:1.8;color:#1c1c1c;max-width:480px;word-break:keep-all}
+.votd-en{font-size:15px;line-height:1.8;color:#555;max-width:480px;font-style:italic}
+.votd-read-btn{margin-top:8px;background:#222;border:none;border-radius:8px;color:#fff;cursor:pointer;font:500 13px inherit;padding:8px 20px}
+.votd-read-btn:hover{opacity:.8}
+body.dark .votd-ko{color:#e8e5e0}
+body.dark .votd-en{color:#999}
 </style>
 </head>
 <body>
@@ -232,7 +241,7 @@ body.dark .fn-popup{background:#2a2a2a;border-color:#444;color:#ccc;box-shadow:0
     <button class="fbtn" id="fminus" type="button">&#8722;</button>
     <button class="fbtn" id="fplus" type="button">+</button>
     <button class="fbtn" id="desk-dark-btn" onclick="toggleDark(this)" style="font-size:11px">◐</button>
-    <button class="fbtn" onclick="sheetOpen('progress')" title="Reading Progress" style="font-size:11px">☑</button>
+    <button class="fbtn" onclick="sheetOpen('progress')" title="읽기 진도" style="font-size:11px">☑</button>
   </div>
   <!-- Mobile -->
   <div class="mob-nav">
@@ -278,6 +287,7 @@ let bi=42,ci=3,fs=15,pendingBook=null,loaded=false,langOrder="ko-en",darkMode=fa
     });
   }
   updateLabel();
+  if(window.innerWidth<=640) loadVotd();
   document.getElementById('mob-sheet').addEventListener('click',function(e){
     if(e.target===this) sheetClose();
   });
@@ -455,9 +465,17 @@ function progAttachObserver(){
 var progView = 'overview'; // 'overview' | 'book'
 var progViewBook = 0;
 
+
+function progReset(){
+  if(confirm('Reset all reading progress? This cannot be undone.')){
+    localStorage.removeItem(PROGRESS_KEY);
+    progShowOverview();
+  }
+}
+
 function progShowOverview(){
   progView='overview';
-  document.getElementById('mob-sheet-title').textContent='Reading Progress';
+  document.getElementById('mob-sheet-title').textContent='진도 Reading Progress';
   var data=progLoad();
   var OT=BOOKS.slice(0,39), NT=BOOKS.slice(39);
   function bookStats(books,startIdx){
@@ -472,20 +490,21 @@ function progShowOverview(){
   var totalRead=otS.read+ntS.read, totalCh=otS.total+ntS.total;
 
   var html='<div class="prog-section">';
-  html+='<div class="prog-summary"><span><b>'+totalRead+'</b> / '+totalCh+' chapters</span><span><b>'+Math.round(totalRead/totalCh*100)+'%</b> of Bible</span></div>';
+  html+='<div style="display:flex;justify-content:flex-end;padding-bottom:8px"><button onclick="progReset()" style="background:#efecea;border:1px solid #d8d4ce;color:#666;font:500 12px inherit;cursor:pointer;padding:4px 10px;border-radius:6px">Reset All</button></div>';
+  html+='<div class="prog-summary"><span><b>'+totalRead+'</b> / '+totalCh+' 장 chapters</span><span><b>'+Math.round(totalRead/totalCh*100)+'%</b> of 성경 Bible</span></div>';
   // Bars
   html+='<div class="prog-testament">';
-  html+='<div class="prog-testament-title">Old Testament</div>';
+  html+='<div class="prog-testament-title">구약 Old Testament</div>';
   html+='<div class="prog-bar-row"><span class="prog-bar-label">'+otS.read+'/'+otS.total+'</span><div class="prog-bar-track"><div class="prog-bar-fill" style="width:'+Math.round(otS.read/otS.total*100)+'%"></div></div><span class="prog-bar-pct">'+Math.round(otS.read/otS.total*100)+'%</span></div>';
   html+='</div>';
   html+='<div class="prog-testament">';
-  html+='<div class="prog-testament-title">New Testament</div>';
+  html+='<div class="prog-testament-title">신약 New Testament</div>';
   html+='<div class="prog-bar-row"><span class="prog-bar-label">'+ntS.read+'/'+ntS.total+'</span><div class="prog-bar-track"><div class="prog-bar-fill" style="width:'+Math.round(ntS.read/ntS.total*100)+'%"></div></div><span class="prog-bar-pct">'+Math.round(ntS.read/ntS.total*100)+'%</span></div>';
   html+='</div>';
   html+='</div>';
 
   // Book grid
-  html+='<div class="prog-testament-title" style="padding:0 16px 6px;font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#bbb">Books</div>';
+  
   html+='<div class="prog-books">';
   BOOKS.forEach(function(b,i){
     var readCh=0;
@@ -522,6 +541,42 @@ function progShowBook(bookIdx){
   html+='</div>';
   html+='<div style="padding:8px 16px;font-size:11px;color:#bbb">● Auto-detected &nbsp; Tap to toggle manual</div>';
   document.getElementById('mob-sheet-body').innerHTML=html;
+}
+
+// Verse of the Day
+async function loadVotd(){
+  var wrap = document.getElementById('content');
+  wrap.innerHTML = '<div class="ldg"><div class="spinner"></div><div class="ldg-txt">Loading…</div></div>';
+  try {
+    var r = await fetch(WORKER+'/votd');
+    var d = await r.json();
+    if(!d||!d[0]) throw new Error('no data');
+    var v = d[0];
+    var ref = v.bookname+' '+v.chapter+':'+v.verse;
+    // Also fetch Korean for same verse
+    var bookIdx = BOOKS.findIndex(function(b){ return b.en===v.bookname; });
+    var koText = '';
+    if(bookIdx>=0){
+      try{
+        var kr = await fetch(WORKER+'/nkrv/'+BOOKS[bookIdx].n+'/'+v.chapter,{cache:'no-store'});
+        var kd = await kr.json();
+        var verses = Array.isArray(kd)?kd:(kd.verses||[]);
+        var kv = verses.find(function(x){return x.verse===+v.verse;});
+        if(kv) koText = kv.text.replace(/\(KN:\d+\)/g,'');
+      }catch(e){}
+    }
+    var html = '<div class="votd-wrap">';
+    html += '<div class="votd-ref">'+ref+'</div>';
+    if(koText) html += '<div class="votd-ko">'+koText+'</div>';
+    html += '<div class="votd-en">'+v.text+'</div>';
+    if(bookIdx>=0){
+      html += '<button class="votd-read-btn" onclick="bi='+bookIdx+';ci='+v.chapter+';loaded=true;updateLabel();load()">Read '+ref+'</button>';
+    }
+    html += '</div>';
+    document.getElementById('content').innerHTML = html;
+  } catch(e){
+    document.getElementById('content').innerHTML = '';
+  }
 }
 
 function sheetOpen(mode){
