@@ -65,9 +65,6 @@ sup.fn-ref{font-size:9px;color:#2563eb;margin-left:1px;vertical-align:super;line
 .ldg-txt{font-size:12px;color:#bbb}
 .errbox{background:#fff5f5;border:1px solid #fecaca;border-radius:6px;color:#dc2626;padding:10px 14px;font-size:13px;line-height:1.5;margin:16px 28px}
 footer{border-top:1px solid #e8e5e0;color:#bbb;background:var(--bg);font-size:10px;padding:8px 20px;text-align:center}
-.desk-hide{display:none}
-@media(max-width:640px){
-  .desk-hide{display:flex!important}
 
   header{display:none}
   nav{padding:6px 12px;min-height:0}
@@ -157,7 +154,7 @@ footer{border-top:1px solid #e8e5e0;color:#bbb;background:var(--bg);font-size:10
     </button>
     <div class="mob-nav-actions">
       <button class="mob-icon-btn" onclick="sheetOpen('font')">A</button>
-      <button class="mob-icon-btn desk-hide" id="mob-lang-btn" onclick="toggleLangOrder()">한</button>
+      <button class="mob-icon-btn" id="mob-lang-btn" onclick="toggleLangOrder()">한</button>
     </div>
   </div>
 </nav>
