@@ -166,14 +166,15 @@ body.dark main::-webkit-scrollbar-thumb{background:#444}
   <div class="logo"><span>krengbible.com</span></div>
 </header>
 <nav>
+  <!-- Desktop -->
   <input id="passage-input" class="desk-only" type="text" placeholder="" autocomplete="off" spellcheck="false">
-  <button class="fbtn desk-only" id="lang-toggle" onclick="toggleLang()" title="Swap language order">⇄</button>
   <div class="fctl desk-only">
     <span>A</span>
     <button class="fbtn" id="fminus" type="button">&#8722;</button>
     <button class="fbtn" id="fplus" type="button">+</button>
-    <button class="fbtn" id="desk-dark-btn" onclick="toggleDark(this)" style="font-size:11px">☀</button>
+    <button class="fbtn" id="desk-dark-btn" onclick="toggleDark(this)" style="font-size:11px">◐</button>
   </div>
+  <!-- Mobile -->
   <div class="mob-nav">
     <button class="mob-nav-btn" id="mob-passage-btn" onclick="sheetOpen('passage')">
       <span id="mob-passage-label">책 선택 / Select Book</span>
@@ -182,7 +183,7 @@ body.dark main::-webkit-scrollbar-thumb{background:#444}
     <div class="mob-nav-actions">
       <button class="mob-icon-btn" onclick="sheetOpen('font')">A</button>
       <button class="mob-icon-btn" id="mob-lang-btn" onclick="toggleLangOrder(this)">한</button>
-      <button class="mob-icon-btn" id="mob-dark-btn" onclick="toggleDark(this)">☀</button>
+      <button class="mob-icon-btn" id="mob-dark-btn" onclick="toggleDark(this)">◐</button>
     </div>
   </div>
 </nav>
@@ -336,7 +337,7 @@ function toggleDark(btn){
   document.body.classList.toggle('dark',darkMode);
   // Update all dark buttons
   document.querySelectorAll('#mob-dark-btn,#desk-dark-btn').forEach(function(b){
-    b.textContent=darkMode?'☾':'☀';
+    b.textContent=darkMode?'◑':'◐';
   });
 }
 
