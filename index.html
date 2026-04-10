@@ -133,7 +133,7 @@ footer{border-top:1px solid #e8e5e0;color:#bbb;background:var(--bg);font-size:10
 </header>
 <nav>
   <span class="nl desk-only">Book</span>
-  <select id="bk" class="desk-only" onchange="onBook();load()"></select>
+  <select id="bk" class="desk-only" onchange="onBook()"></select>
   <span class="nl desk-only">Ch.</span>
   <select id="ch" class="desk-only" onchange="load()"></select>
   <div class="fctl desk-only">
@@ -209,7 +209,7 @@ function applyFs(){
   document.querySelectorAll('.vt').forEach(el=>el.style.fontSize=fs+'px');
 }
 function updateLabel(){if(loaded)document.getElementById('mob-passage-label').textContent=BOOKS[bi].ko+' '+ci+'장';}
-function onBook(){bi=+document.getElementById('bk').value;ci=1;buildCh();}
+function onBook(){bi=+document.getElementById('bk').value;ci=1;buildCh();load();}
 function buildCh(){
   const s=document.getElementById('ch');s.innerHTML='';
   for(let i=1;i<=BOOKS[bi].ch;i++){const o=document.createElement('option');o.value=i;o.textContent=i;s.appendChild(o);}
