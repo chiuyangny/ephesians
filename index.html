@@ -444,7 +444,7 @@ function progShowBook(idx){
   document.getElementById('mob-sheet-title').textContent=langOrder==='en-ko'?b.en+' '+b.ko:b.ko+' '+b.en;
   var data=progLoad(),html='<div style="padding:12px 20px 4px"><button class="prog-back-btn" onclick="progShowOverview()">← Back</button></div><div class="prog-chapters">';
   for(var c=1;c<=b.ch;c++){var k=progKey(idx,c),entry=data[k],cls=entry?(entry.source==='auto'?'auto':'manual'):'unread';html+='<div class="prog-ch '+cls+'" onclick="progToggleManual('+idx+','+c+')" title="'+(entry?entry.date+' ('+entry.source+')':'Tap to mark read')+'">'+c+'</div>';}
-  html+='</div><div style="padding:8px 20px;font-size:11px;color:#bbb">● Auto-detected &nbsp; Tap to toggle manual</div>';
+  html+='</div><div style="padding:8px 20px;font-size:11px;color:#bbb">'+(langOrder==='ko-en'?'● 자동감지 &nbsp; 탭하여 수동 설정':'● Auto-detected &nbsp; Tap to toggle manual')+'</div>';
   document.getElementById('mob-sheet-body').innerHTML=html;
 }
 async function loadVotd(){
