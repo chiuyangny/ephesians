@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -178,8 +179,8 @@ body.dark .fn-popup{background:#2a2a2a;border-color:#444;color:#ccc}
 .votd-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 20px;min-height:60vh}
 .votd-card{background:#fff;border-radius:20px;padding:28px 24px 24px;max-width:420px;width:100%;box-shadow:0 2px 20px rgba(0,0,0,.07);display:flex;flex-direction:column}
 body.dark .votd-card{background:#242424;box-shadow:0 2px 20px rgba(0,0,0,.3)}
-.votd-label{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#2563eb;margin-bottom:18px}
-body.dark .votd-label{color:#60a5fa}
+.votd-label{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#93c5fd;margin-bottom:18px}
+body.dark .votd-label{color:#7dd3fc}
 .votd-ko-ref{font-family:'Noto Sans KR',sans-serif;font-size:11px;font-weight:600;color:#aaa;margin-bottom:5px}
 .votd-ko{font-family:'Noto Sans KR',sans-serif;font-size:18px;line-height:1.85;color:#1c1c1c;word-break:keep-all;margin-bottom:20px}
 body.dark .votd-ko{color:#e8e5e0}
@@ -231,6 +232,7 @@ body.dark .confirm-btn.cancel{background:#333;color:#bbb}
 .confirm-btn.ok{background:#222;color:#fff}
 body.dark .confirm-btn.ok{background:#e8e5e0;color:#111}
 </style>
+
 </head>
 <body>
 <header><div class="logo"><span>krengbible.com</span></div></header>
@@ -571,7 +573,11 @@ function hlCopy(){
   var txt=texts.join(' ');
   navigator.clipboard.writeText(txt).then(function(){
     var btn=document.getElementById('hl-copy-btn');
-    if(btn){btn.textContent='✓';setTimeout(function(){btn.textContent='⎘';},1200);}
+    if(btn){
+      var orig=btn.innerHTML;
+      btn.innerHTML='<span style="font-size:16px;color:#2563eb">✓</span>';
+      setTimeout(function(){btn.innerHTML=orig;},1200);
+    }
   }).catch(function(){});
   hlHideToolbar();
 }
