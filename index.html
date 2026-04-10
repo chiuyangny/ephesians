@@ -49,7 +49,7 @@ main::-webkit-scrollbar-thumb:hover{background:#999590}
 .verse-row:hover{background:#f0ede8}
 .verse-cell{padding:5px 28px;display:flex;gap:10px;align-items:baseline}
 .verse-cell.ko-side{border-right:1px solid #e8e5e0}
-.vn{color:#ccc;font-size:10px;font-weight:600;min-width:16px;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums;padding-top:2px}
+.vn{color:#999;font-size:10px;font-weight:600;min-width:16px;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums;padding-top:2px}
 .vt{line-height:1.85;color:#1c1c1c;flex:1}
 .ko-side .vt{font-family:'Noto Sans KR',sans-serif;font-weight:400;word-break:keep-all;letter-spacing:-.02em}
 .en-side .vt{font-family:'DM Sans',-apple-system,sans-serif;font-weight:400}
@@ -206,6 +206,10 @@ body.dark .prog-back-btn{color:#60a5fa}
   transition:opacity .15s;
 }
 body.dark .fn-popup{background:#2a2a2a;border-color:#444;color:#ccc;box-shadow:0 4px 16px rgba(0,0,0,.4)}
+
+@media(max-width:640px){
+  .verse-cell.en-side .vn{display:none}
+}
 </style>
 </head>
 <body>
@@ -378,7 +382,7 @@ function applyLangOrder(){
   if(langOrder==='en-ko'){
     var s = document.createElement('style');
     s.id = styleId;
-    s.textContent = '.verse-cell.ko-side{order:2;box-shadow:0 1px 0 0 var(--div);padding-top:4px!important;padding-bottom:6px!important} .verse-cell.en-side{order:1;border-bottom:none!important;padding-top:6px!important;padding-bottom:4px!important} .verse-row{display:flex;flex-direction:column} .title-row .ko-side{order:2} .title-row .en-side{order:1} .title-row{display:flex;flex-direction:column} .fn-row{display:flex!important;flex-direction:column} .fn-row .ko-side{order:2!important} .fn-row .en-side{order:1!important}';
+    s.textContent = '.verse-cell.ko-side{order:2;box-shadow:0 1px 0 0 var(--div);padding-top:4px!important;padding-bottom:6px!important} .verse-cell.en-side{order:1;border-bottom:none!important;padding-top:6px!important;padding-bottom:4px!important} .verse-row{display:flex;flex-direction:column} .title-row .ko-side{order:2} .title-row .en-side{order:1} .title-row{display:flex;flex-direction:column} .fn-row{display:flex!important;flex-direction:column} .fn-row .ko-side{order:2!important} .fn-row .en-side{order:1!important} .verse-cell.en-side .vn{display:block!important} .verse-cell.ko-side .vn{display:none!important}';
     document.head.appendChild(s);
   }
 }
@@ -426,7 +430,8 @@ function progToggleManual(bi,ci){
 var progObserver = null;
 function progAttachObserver(){
   if(progObserver){ progObserver.disconnect(); progObserver=null; }
-  var lastVerse = document.querySelector('.verse-row:last-of-type');
+  var allVerses = document.querySelectorAll('.verse-row');
+  var lastVerse = allVerses[allVerses.length-1];
   if(!lastVerse||!loaded) return;
   progObserver = new IntersectionObserver(function(entries){
     entries.forEach(function(e){
@@ -603,41 +608,25 @@ function render(koData,esvData,bk,ch){
   });
   const vm={};
   kv.forEach(function(v){var matches=[...(en[v.verse]||'').matchAll(/\((\d+)\)/g)];matches.forEach(function(m){vm[m[1]]=v.verse;});});
-  const kfk=Object.keys(kf).sort(function(a,b){return+a-+b;});
-  const efk=Object.keys(footnotes).sort(function(a,b){return+a-+b;});
-  if(kfk.length||efk.length){
-    let kh2='',eh2='';
-    if(kfk.length){
-      kh2='<div class="footnotes"><div class="fn-title">각주</div>';
-      var koFnVm={};
-      kv.forEach(function(x){
-        var matches=x.text.match(/\(KN:(\d+)\)/g)||[];
-        matches.forEach(function(m){var n=m.replace(/[^\d]/g,'');koFnVm[n]=x.verse;});
-      });
-      kfk.forEach(function(k){
-        var vn=koFnVm[k];
-        kh2+='<div class="fn-item" id="ko-fn-'+k+'">'
-          +(vn?'<button class="fn-back-btn" onclick="scrollToVerse('+vn+')">'+k+' ↑</button>'
-              :'<button class="fn-back-btn" style="cursor:default">'+k+' ↑</button>')
-          +'<span>'+esc(kf[k])+'</span></div>';
-      });
-      kh2+='</div>';
-    }
-    if(efk.length){
-      eh2='<div class="footnotes"><div class="fn-title">Footnotes</div>';
-      efk.forEach(function(k){
-        var vn=vm[k];
-        eh2+=vn
-          ?'<div class="fn-item" id="fn-'+k+'"><button class="fn-back-btn" onclick="scrollToVerse('+vn+')">'+k+' ↑</button><span>'+esc(footnotes[k])+'</span></div>'
-          :'<div class="fn-item" id="fn-'+k+'"><span class="fn-n">'+k+'</span><span>'+esc(footnotes[k])+'</span></div>';
-      });
-      eh2+='</div>';
-    }
-    h+='<div class="fn-row"><div class="ko-side">'+kh2+'</div><div class="en-side">'+eh2+'</div></div>';
-  }
+  // Store footnote data for popup use (no bottom section rendered)
+  var koFnVm={};
+  kv.forEach(function(x){
+    var matches=x.text.match(/\(KN:(\d+)\)/g)||[];
+    matches.forEach(function(m){var n=m.replace(/[^\d]/g,'');koFnVm[n]=x.verse;});
+  });
+  // Build hidden footnote elements for popup lookup
+  var fnHidden='<div style="display:none" id="fn-data">';
+  Object.keys(kf).forEach(function(k){
+    fnHidden+='<div id="ko-fn-'+k+'"><span></span><span>'+esc(kf[k])+'</span></div>';
+  });
+  Object.keys(footnotes).forEach(function(k){
+    fnHidden+='<div id="fn-'+k+'"><span></span><span>'+esc(footnotes[k])+'</span></div>';
+  });
+  fnHidden+='</div>';
+  h+=fnHidden;
   document.getElementById('content').innerHTML=h;
   if(langOrder==='en-ko') applyLangOrder();
-  setTimeout(progAttachObserver,100);
+  setTimeout(progAttachObserver,500);
 }
 (function(){
   const main=document.getElementById('main');
