@@ -391,6 +391,10 @@ function toggleLangOrder(btn){
   btn.textContent = langOrder==='ko-en' ? '한' : 'Eng';
   updateLabel();
   if(loaded) applyLangOrder();
+  if(!document.getElementById('mob-sheet').classList.contains('hidden')){
+    if(progView==='overview') progShowOverview();
+    else if(pendingBook===null&&document.getElementById('mob-sheet-title')) sheetOpen('passage');
+  }
 }
 function applyLangOrder(){
   // On mobile, rows are already single-column grid
