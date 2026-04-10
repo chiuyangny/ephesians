@@ -251,8 +251,8 @@ body.dark .votd-en{color:#999}
       <svg width="10" height="6" viewBox="0 0 10 6"><path fill="currentColor" d="M0 0l5 6 5-6z"/></svg>
     </button>
     <div class="mob-nav-actions">
-      <button class="mob-icon-btn" onclick="sheetOpen('font')">A</button>
       <button class="mob-icon-btn" id="mob-lang-btn" onclick="toggleLangOrder(this)">한</button>
+      <button class="mob-icon-btn" onclick="sheetOpen('font')">A</button>
       <button class="mob-icon-btn" id="mob-dark-btn" onclick="toggleDark(this)">◐</button>
       <button class="mob-icon-btn" id="mob-progress-btn" onclick="sheetOpen('progress')">☑</button>
     </div>
@@ -585,7 +585,7 @@ async function loadVotd(){
     html += '<div class="votd-ref" style="margin-top:12px">'+ref+'</div>';
     html += '<div class="votd-en">'+v.text+'</div>';
     if(bookIdx>=0){
-      html += '<button class="votd-read-btn" onclick="bi='+bookIdx+';ci='+v.chapter+';loaded=true;updateLabel();load()">Read '+ref+'</button>';
+      var chRef=v.bookname+' '+v.chapter;html += '<button class="votd-read-btn" onclick="bi='+bookIdx+';ci='+v.chapter+';loaded=true;updateLabel();load()">Read '+chRef+'</button>';
     }
     html += '</div>';
     document.getElementById('content').innerHTML = html;
@@ -605,7 +605,7 @@ function sheetOpen(mode){
     document.getElementById('mob-sheet-title').textContent=langOrder==='en-ko'?'Select Book / 책 선택':'책 선택 / Select Book';
     pendingBook=null;
     let h='<div class="mob-book-grid">';
-    BOOKS.forEach((b,i)=>{h+='<div class="mob-book-item '+(loaded&&i===bi?'active':'')+'" onclick="sheetSelectBook('+i+')"><div class="ko">'+b.ko+'</div><div class="en">'+b.en+'</div></div>';});
+    BOOKS.forEach((b,i)=>{var primary=langOrder==='en-ko'?b.en:b.ko;var secondary=langOrder==='en-ko'?b.ko:b.en;var primaryClass=langOrder==='en-ko'?'en':'ko';h+='<div class="mob-book-item '+(loaded&&i===bi?'active':'')+'" onclick="sheetSelectBook('+i+')"><div class="'+primaryClass+'">'+primary+'</div><div class="en" style="font-family:inherit">'+secondary+'</div></div>';});
     h+='</div>';
     body.innerHTML=h;
     setTimeout(()=>body.querySelector('.active')?.scrollIntoView({block:'center'}),50);
