@@ -177,17 +177,20 @@ body.dark .fn-popup{background:#2a2a2a;border-color:#444;color:#ccc}
 body.dark .votd-ko{color:#e8e5e0}
 body.dark .votd-en{color:#999}
 .verse-row.hl-selected .vt{text-decoration:underline;text-decoration-style:dotted;text-decoration-color:#aaa;text-underline-offset:3px}
-.hl-bar{position:fixed;bottom:0;left:0;right:0;z-index:300;background:#fff;border-top:1px solid #e8e5e0;padding:14px 24px 32px;display:flex;align-items:center;gap:14px;transform:translateY(100%);transition:transform 0.25s cubic-bezier(0.25,0.46,0.45,0.94)}
+.hl-bar{position:fixed;bottom:0;left:0;right:0;z-index:300;background:#fff;border-top:1px solid #e8e5e0;padding:10px 24px 22px;display:flex;align-items:center;gap:12px;transform:translateY(100%);transition:transform 0.25s cubic-bezier(0.25,0.46,0.45,0.94)}
 .hl-bar.visible{transform:translateY(0)}
 body.dark .hl-bar{background:#1e1e1e;border-top-color:#333}
-.hl-bar-swatches{display:flex;gap:14px;flex:1}
-.hl-bar-swatch{width:32px;height:32px;border-radius:50%;cursor:pointer;border:3px solid transparent;flex-shrink:0;transition:transform 0.1s}
+.hl-bar-handle{position:absolute;top:6px;left:50%;transform:translateX(-50%);width:36px;height:4px;background:#d8d4ce;border-radius:2px}
+body.dark .hl-bar-handle{background:#444}
+.hl-bar-swatches{display:flex;gap:12px;flex:1}
+.hl-bar-swatch{width:28px;height:28px;border-radius:50%;cursor:pointer;border:3px solid transparent;flex-shrink:0;transition:transform 0.1s}
 .hl-bar-swatch:active{transform:scale(1.15)}
 .hl-bar-swatch.active{border-color:#333}
 body.dark .hl-bar-swatch.active{border-color:#fff}
-.hl-bar-copy{background:none;border:none;font-size:24px;cursor:pointer;color:#555;padding:0 4px;line-height:1}
+.hl-bar-copy{background:none;border:none;cursor:pointer;color:#555;padding:0 4px;line-height:1;display:flex;align-items:center}
 body.dark .hl-bar-copy{color:#aaa}
-.hl-bar-clear{background:none;border:none;font-size:20px;cursor:pointer;color:#bbb;padding:0 4px;line-height:1}
+.hl-bar-copy svg{width:22px;height:22px}
+.hl-bar-clear{background:none;border:none;font-size:18px;cursor:pointer;color:#bbb;padding:0 4px;line-height:1}
 .hl-bar-clear:active{color:#dc2626}
 .verse-row.hl-y .vt{background:#fde047;border-radius:3px}
 .verse-row.hl-g .vt{background:#86efac;border-radius:3px}
@@ -258,6 +261,7 @@ body.dark .confirm-btn.ok{background:#e8e5e0;color:#111}
   </div>
 </div>
 <div id="hl-bar" class="hl-bar">
+  <div class="hl-bar-handle" id="hl-bar-handle"></div>
   <div class="hl-bar-swatches">
     <div class="hl-bar-swatch" style="background:#fde047" data-color="y" onclick="hlApply('y')"></div>
     <div class="hl-bar-swatch" style="background:#86efac" data-color="g" onclick="hlApply('g')"></div>
@@ -265,7 +269,11 @@ body.dark .confirm-btn.ok{background:#e8e5e0;color:#111}
     <div class="hl-bar-swatch" style="background:#d8b4fe" data-color="p" onclick="hlApply('p')"></div>
     <div class="hl-bar-swatch" style="background:#fca5a5" data-color="r" onclick="hlApply('r')"></div>
   </div>
-  <button class="hl-bar-copy" id="hl-copy-btn" onclick="hlCopy()">⎘</button>
+  <button class="hl-bar-copy" id="hl-copy-btn" onclick="hlCopy()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+    </svg>
+  </button>
   <button class="hl-bar-clear" onclick="hlApply(null)">✕</button>
 </div>
 <div id="fn-popup" class="fn-popup" style="opacity:0;display:none"></div>
@@ -565,6 +573,19 @@ function hlAttach(){
       hlShowToolbar(row,e);
     });
   });
+  // Swipe down to dismiss bar
+  var bar=document.getElementById('hl-bar');
+  var bsy=0,bsdrag=false;
+  bar.addEventListener('touchstart',function(e){bsy=e.touches[0].clientY;bsdrag=false;},{passive:true});
+  bar.addEventListener('touchmove',function(e){
+    var dy=e.touches[0].clientY-bsy;
+    if(dy>8){bsdrag=true;bar.style.transform='translateY('+dy+'px)';}
+  },{passive:true});
+  bar.addEventListener('touchend',function(e){
+    var dy=e.changedTouches[0].clientY-bsy;
+    bar.style.transform='';
+    if(dy>60) hlHideToolbar();
+  },{passive:true});
 }
 document.addEventListener('click',function(e){
   var bar=document.getElementById('hl-bar');
