@@ -389,6 +389,7 @@ function parseAndLoad(raw){
 function toggleLangOrder(btn){
   langOrder = langOrder==='ko-en' ? 'en-ko' : 'ko-en';
   btn.textContent = langOrder==='ko-en' ? '한' : 'Eng';
+  updateLabel();
   if(loaded) applyLangOrder();
 }
 function applyLangOrder(){
