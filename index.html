@@ -196,6 +196,9 @@ body.dark .hl-toolbar{background:#2a2a2a;border-color:#444}
 body.dark .hl-swatch.active{border-color:#fff}
 .hl-clear{background:none;border:none;font-size:13px;cursor:pointer;color:#999;padding:0 2px;line-height:1}
 .hl-clear:hover{color:#dc2626}
+.hl-copy{background:#efecea;border:1px solid #d8d4ce;border-radius:6px;font-size:14px;cursor:pointer;color:#444;width:28px;height:28px;display:flex;align-items:center;justify-content:center;padding:0}
+.hl-copy:hover{background:#e0dbd4}
+body.dark .hl-copy{background:#333;border-color:#555;color:#ccc}
 .confirm-modal{position:fixed;inset:0;z-index:400;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.4)}
 .confirm-modal.hidden{display:none}
 .confirm-box{background:#fff;border-radius:14px;padding:24px 20px 16px;max-width:300px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.15)}
@@ -260,7 +263,7 @@ body.dark .confirm-btn.ok{background:#e8e5e0;color:#111}
   <div class="hl-swatch" style="background:#d8b4fe" data-color="p" onclick="hlApply('p')"></div>
   <div class="hl-swatch" style="background:#fca5a5" data-color="r" onclick="hlApply('r')"></div>
   <div style="width:1px;background:#e8e5e0;margin:0 2px;align-self:stretch"></div>
-  <button class="hl-clear" id="hl-copy-btn" onclick="hlCopy()" title="Copy">⎘</button>
+  <button class="hl-copy" id="hl-copy-btn" onclick="hlCopy()" title="Copy">⎘</button>
   <button class="hl-clear" id="hl-clear-btn" onclick="hlApply(null)">✕</button>
 </div>
 <div id="fn-popup" class="fn-popup" style="opacity:0;display:none"></div>
