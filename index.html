@@ -65,7 +65,7 @@ sup.fn-ref{font-size:9px;color:#2563eb;margin-left:1px;vertical-align:super;line
 .ldg-txt{font-size:12px;color:#bbb}
 .errbox{background:#fff5f5;border:1px solid #fecaca;border-radius:6px;color:#dc2626;padding:10px 14px;font-size:13px;line-height:1.5;margin:16px 28px}
 footer{border-top:1px solid #e8e5e0;color:#bbb;background:var(--bg);font-size:10px;padding:8px 20px;text-align:center}
-
+@media(max-width:640px){
   header{display:none}
   nav{padding:6px 12px;min-height:0}
   .col-headers{display:none}
@@ -139,6 +139,8 @@ body.dark header,body.dark nav,body.dark main,body.dark footer{background:var(--
 body.dark header,body.dark nav,body.dark .col-headers{border-bottom-color:#333}
 body.dark .verse-cell.ko-side,body.dark .col-hdr:first-child,body.dark .fn-row .ko-side,body.dark .shead-row .ko-side{border-right-color:#333}
 body.dark .verse-cell.en-side{border-bottom-color:#333}
+body.dark .verse-cell.ko-side{border-bottom-color:#333}
+body.dark{--div:#333}
 body.dark .verse-row:hover{background:#242424}
 body.dark .vt{color:#d8d5d0}
 body.dark .ch-title{color:#e8e5e0}
@@ -327,7 +329,7 @@ function applyLangOrder(){
   if(langOrder==='en-ko'){
     var s = document.createElement('style');
     s.id = styleId;
-    s.textContent = '.verse-cell.ko-side{order:2;border-bottom:1px solid #e8e5e0!important} .verse-cell.en-side{order:1;border-bottom:none!important} .verse-row{display:flex;flex-direction:column} .title-row .ko-side{order:2} .title-row .en-side{order:1} .title-row{display:flex;flex-direction:column}';
+    s.textContent = '.verse-cell.ko-side{order:2;border-bottom:1px solid var(--div)!important} .verse-cell.en-side{order:1;border-bottom:none!important} .verse-row{display:flex;flex-direction:column} .title-row .ko-side{order:2} .title-row .en-side{order:1} .title-row{display:flex;flex-direction:column}';
     document.head.appendChild(s);
   }
 }
