@@ -1,557 +1,127 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>krengbible.com</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
-<style>
-:root{--fs:15px;--bg:#f7f5f2;--ko-order:1;--en-order:2;--div:#e8e5e0}
-*{box-sizing:border-box;margin:0;padding:0;max-width:100%}
-html,body{height:100%;overflow-x:hidden}html{overscroll-behavior-y:none}body{overscroll-behavior-y:none}
-body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:#111;display:flex;flex-direction:column;height:100%;-webkit-font-smoothing:antialiased}
-header{height:48px;padding:0 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--bg);border-bottom:1px solid #e8e5e0}
-.logo{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:#222}
-nav{min-height:44px;padding:6px 12px;display:flex;align-items:center;gap:6px;flex-shrink:0;background:var(--bg);border-bottom:1px solid #e8e5e0;flex-wrap:wrap;max-width:100%}
-.fctl{margin-left:auto;display:flex;align-items:center;gap:3px}
-.fctl>span{font-size:11px;color:#bbb;margin-right:2px}
-.fbtn{background:#efecea;border:1px solid #d8d4ce;border-radius:5px;color:#666;cursor:pointer;font-size:12px;font-weight:500;width:26px;height:26px;display:flex;align-items:center;justify-content:center;user-select:none}
-main{flex:1;overflow-y:scroll;overflow-x:hidden;min-height:0;background:var(--bg);max-width:100%;scrollbar-gutter:stable}
-main::-webkit-scrollbar{width:10px}
-main::-webkit-scrollbar-track{background:#eae7e2}
-main::-webkit-scrollbar-thumb{background:#b8b4ae;border-radius:10px;border:2px solid #eae7e2}
-main::-webkit-scrollbar-thumb:hover{background:#999590}
-.col-headers{display:none}
-.title-row{display:grid;grid-template-columns:1fr 1fr;padding:20px 0 12px}
-.ko-side{padding:0 28px;border-right:1px solid #e8e5e0}
-.en-side{padding:0 28px}
-.ch-title{font-size:17px;font-weight:600;color:#222;letter-spacing:-.02em}
-.ko-side .ch-title{font-family:'Noto Sans KR',sans-serif}
-.shead-row{display:grid;grid-template-columns:1fr 1fr;padding:20px 0 4px}
-.shead-row .ko-side{border-right:1px solid #e8e5e0}
-.fn-row{display:grid;grid-template-columns:1fr 1fr}
-.fn-row .ko-side{border-right:1px solid #e8e5e0}
-.shead{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#bbb}
-.verse-row{display:grid;grid-template-columns:1fr 1fr}
-.verse-row:hover{background:#f0ede8}
-.verse-cell{padding:5px 28px;display:flex;gap:10px;align-items:baseline}
-.verse-cell.ko-side{border-right:1px solid #e8e5e0}
-.vn{color:#999;font-size:10px;font-weight:600;min-width:16px;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums;padding-top:2px;cursor:pointer}
-.vt{line-height:1.85;color:#1c1c1c;flex:1}
-.ko-side .vt{font-family:'Noto Sans KR',sans-serif;font-weight:400;word-break:keep-all;letter-spacing:-.02em}
-.en-side .vt{font-family:'DM Sans',-apple-system,sans-serif;font-weight:400}
-sup.fn-ref{font-size:9px;color:#2563eb;margin-left:1px;vertical-align:super;line-height:0;cursor:pointer;padding:0 1px}
-.ldg{display:flex;flex-direction:column;align-items:center;gap:12px;padding:64px 20px}
-@keyframes spin{to{transform:rotate(360deg)}}
-.spinner{width:20px;height:20px;border-radius:50%;border:2px solid #e8e5e0;border-top-color:#555;animation:spin .6s linear infinite}
-.ldg-txt{font-size:12px;color:#bbb}
-.errbox{background:#fff5f5;border:1px solid #fecaca;border-radius:6px;color:#dc2626;padding:10px 14px;font-size:13px;line-height:1.5;margin:16px 28px}
-footer{border-top:1px solid #e8e5e0;color:#bbb;background:var(--bg);font-size:10px;padding:8px 20px;text-align:center}
-@media(max-width:640px){
-  header{display:none}
-  nav{padding:6px 12px;min-height:0}
-  .title-row,.shead-row,.verse-row{grid-template-columns:1fr}
-  .verse-cell{padding:6px 14px}
-  .verse-cell.ko-side{border-right:0!important;border-bottom:none!important;padding-bottom:2px}
-  .verse-cell.en-side{padding-top:2px;border-bottom:1px solid #e8e5e0}
-  .title-row{padding:16px 14px 4px}
-  .title-row .ko-side{border-right:0!important;border-bottom:none!important;padding-bottom:4px}
-  .title-row .en-side{padding-top:0}
-  .shead-row{padding:12px 14px 2px}
-  .shead-row .ko-side{display:none}
-  .fn-row{display:block!important}
-  .fn-row .ko-side{display:block!important;border-right:none!important;padding:0!important}
-  .fn-row .en-side{padding:0!important}
-  .verse-cell.en-side .vn{visibility:hidden}
-}
-.mob-nav{display:none!important}
-@media(max-width:640px){
-  .desk-only{display:none!important}
-  .mob-nav{display:flex!important;align-items:center;justify-content:space-between;width:100%}
-}
-.mob-nav-btn{display:flex;align-items:center;gap:6px;background:#efecea;border:1px solid #d8d4ce;border-radius:8px;font-size:13px;font-weight:700;color:#222;padding:7px 12px;font-family:inherit;cursor:pointer;flex:0 1 auto}
-.mob-nav-btn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mob-nav-btn svg{flex-shrink:0;color:#999}
-.mob-nav-actions{display:flex;gap:5px;flex-shrink:0}
-.mob-icon-btn{background:#efecea;border:1px solid #d8d4ce;border-radius:8px;font:500 14px inherit;color:#444;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer}
-.mob-sheet{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.4);display:flex;align-items:flex-end}
-.mob-sheet.hidden{display:none}
-.mob-sheet-inner{background:var(--bg);border-radius:16px 16px 0 0;width:100%;max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
-.mob-sheet-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 20px 12px 24px;flex-shrink:0;border-bottom:1px solid #e8e5e0}
-.mob-sheet-hdr span{font-size:14px;font-weight:500;color:#222}
-.mob-sheet-close{background:#efecea;border:none;border-radius:50%;width:36px;height:36px;min-width:36px;font-size:15px;color:#444;display:flex;align-items:center;justify-content:center;cursor:pointer;font-weight:500;flex-shrink:0;margin-right:4px}
-#mob-sheet-body{overflow-y:auto;flex:1}
-.mob-book-grid{display:grid;grid-template-columns:1fr 1fr}
-.mob-book-item{padding:13px 16px;font-size:14px;color:#222;border-bottom:.5px solid #f0ede8;cursor:pointer}
-.mob-book-item:active{background:#f0ede8}
-.mob-book-item.active{font-weight:600}
-.mob-book-item .ko{font-family:'Noto Sans KR',sans-serif;font-size:13px}
-.mob-book-item .en{font-size:11px;color:#999}
-.mob-ch-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;padding:16px}
-.mob-ch-item{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;color:#222;background:#efecea;cursor:pointer}
-.mob-ch-item:active{background:#d8d4ce}
-.mob-ch-item.active{background:#222;color:#fff;font-weight:500}
-.mob-font-sheet{padding:16px 16px 32px}
-.mob-font-row{display:flex;align-items:center;gap:16px;padding:12px 0}
-.mob-font-btn{background:#efecea;border:1px solid #d8d4ce;border-radius:8px;font:500 18px inherit;color:#222;width:56px;height:56px;display:flex;align-items:center;justify-content:center;cursor:pointer}
-.mob-font-preview{flex:1;font-size:15px;color:#555;text-align:center}
-.edge-nav{position:fixed;top:50%;transform:translateY(-50%);z-index:50;display:none}
-.edge-nav.left{left:0}.edge-nav.right{right:0}
-.edge-btn{background:rgba(255,255,255,0.85);border:1px solid #e8e5e0;color:#555;font-size:20px;width:36px;height:80px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s;backdrop-filter:blur(4px)}
-.edge-btn:hover{background:#fff;color:#111}
-.edge-btn:disabled{opacity:0.2;cursor:not-allowed}
-.edge-nav.left .edge-btn{border-radius:0 8px 8px 0;border-left:none}
-.edge-nav.right .edge-btn{border-radius:8px 0 0 8px;border-right:none}
-@media(min-width:641px){
-  .edge-nav{display:block}
-  .mob-sheet{align-items:center;justify-content:center;background:rgba(0,0,0,.5)}
-  .mob-sheet-inner{border-radius:12px;max-height:80vh;max-width:560px;width:100%}
-  .prog-chapters{grid-template-columns:repeat(10,1fr)!important}
-  .prog-books{grid-template-columns:repeat(4,1fr)!important}
-}
-#passage-input{flex:1;max-width:400px;background:#efecea;border:1px solid #d8d4ce;border-radius:6px;color:#111;font:14px inherit;padding:6px 12px;outline:none;min-width:0}
-#passage-input:focus{border-color:#555;background:#fff}
-#passage-input::placeholder{color:#bbb}
-.ko-side{order:var(--ko-order)}.en-side{order:var(--en-order)}
-body.dark{--bg:#1a1a1a;--div:#333;color:#e8e5e0}
-body.dark header,body.dark nav,body.dark main,body.dark footer{background:var(--bg)}
-body.dark header,body.dark nav{border-bottom-color:#333}
-body.dark .ko-side{border-right-color:#333}
-body.dark .verse-cell.en-side{border-bottom-color:#333}
-body.dark .logo{color:#e8e5e0}
-body.dark .verse-row:hover{background:#242424}
-body.dark .vt{color:#d8d5d0}
-body.dark .ch-title{color:#e8e5e0}
-body.dark select,body.dark .fbtn,body.dark .mob-nav-btn,body.dark .mob-icon-btn,body.dark .mob-font-btn,body.dark .mob-sheet-close{background:#2a2a2a;border-color:#444;color:#ccc}
-body.dark .mob-book-item{color:#d8d5d0;border-bottom-color:#2a2a2a}
-body.dark .mob-book-item:active{background:#2a2a2a}
-body.dark .mob-ch-item{background:#2a2a2a;color:#d8d5d0}
-body.dark .mob-sheet-inner,body.dark #mob-sheet-body{background:#1a1a1a}
-body.dark .mob-sheet-hdr{border-bottom-color:#333}
-body.dark .mob-sheet-hdr span{color:#e8e5e0}
-body.dark .mob-ch-item.active{background:#e8e5e0;color:#111}
-body.dark #passage-input{background:#2a2a2a;border-color:#444;color:#e8e5e0}
-body.dark #passage-input::placeholder{color:#555}
-body.dark .edge-btn{background:rgba(30,30,30,0.85);border-color:#444;color:#aaa}
-body.dark main::-webkit-scrollbar-track{background:#222}
-body.dark main::-webkit-scrollbar-thumb{background:#444}
-.prog-section{padding:16px}
-.prog-testament{margin-bottom:20px}
-.prog-testament-title{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#bbb;margin-bottom:10px}
-.prog-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-.prog-bar-label{font-size:12px;color:#777;width:60px;flex-shrink:0}
-.prog-bar-track{flex:1;height:6px;background:#efecea;border-radius:3px;overflow:hidden}
-.prog-bar-fill{height:100%;background:#2563eb;border-radius:3px;transition:width 0.3s}
-.prog-bar-pct{font-size:11px;color:#bbb;width:32px;text-align:right;flex-shrink:0}
-.prog-books{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;padding:16px}
-.prog-book{padding:10px 12px;background:#efecea;border-radius:8px;cursor:pointer}
-.prog-book:active{background:#e0dbd4}
-.prog-book.complete{background:#dbeafe}
-.prog-book.partial{background:#eff6ff}
-.prog-book-name{font-size:12px;font-weight:500;color:#222}
-.ko-book-primary{font-size:14px;font-weight:500}
-.prog-book-ko{font-family:'Noto Sans KR',sans-serif;font-size:11px;color:#666;margin-top:1px}
-.prog-book-pct{font-size:10px;color:#2563eb;margin-top:3px}
-.prog-chapters{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;padding:16px}
-.prog-ch{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:6px;font-size:12px;cursor:pointer;position:relative}
-.prog-ch.unread{background:#efecea;color:#555}
-.prog-ch.auto{background:#2563eb;color:#fff}
-.prog-ch.manual{background:#1d4ed8;color:#fff}
-.prog-ch.auto::after{content:'';position:absolute;bottom:3px;right:3px;width:4px;height:4px;background:rgba(255,255,255,.6);border-radius:50%}
-.prog-back-btn{background:none;border:none;color:#2563eb;font:500 13px inherit;cursor:pointer;padding:4px 0}
-body.dark .prog-book{background:#2a2a2a}
-body.dark .prog-book.complete{background:#1e3a5f}
-body.dark .prog-book.partial{background:#1a2f4a}
-body.dark .prog-book-name{color:#e8e5e0}
-body.dark .prog-book-ko{color:#999}
-body.dark .prog-ch.unread{background:#2a2a2a;color:#999}
-body.dark .prog-bar-track{background:#2a2a2a}
-body.dark .prog-back-btn{color:#60a5fa}
-.fn-popup{position:fixed;z-index:200;background:#fff;border:1px solid #e8e5e0;border-radius:8px;padding:10px 14px;max-width:280px;font-size:12px;color:#444;line-height:1.6;box-shadow:0 4px 16px rgba(0,0,0,.12);pointer-events:none;transition:opacity .15s}
-body.dark .fn-popup{background:#2a2a2a;border-color:#444;color:#ccc}
-.votd-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 28px;min-height:60vh;text-align:center;gap:16px}
-.votd-ref{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#555}
-.votd-ko{font-family:'Noto Sans KR',sans-serif;font-size:17px;line-height:1.8;color:#1c1c1c;max-width:480px;word-break:keep-all}
-.votd-en{font-size:15px;line-height:1.8;color:#1c1c1c;max-width:480px;font-style:italic}
-.votd-read-btn{margin-top:8px;background:#222;border:none;border-radius:8px;color:#fff;cursor:pointer;font:500 13px inherit;padding:8px 20px}
-body.dark .votd-ko{color:#e8e5e0}
-body.dark .votd-en{color:#999}
-.verse-row.hl-y{background:#fde047!important}
-.verse-row.hl-g{background:#86efac!important}
-.verse-row.hl-b{background:#93c5fd!important}
-.verse-row.hl-p{background:#d8b4fe!important}
-.verse-row.hl-r{background:#fca5a5!important}
-body.dark .verse-row.hl-y{background:#854d0e!important}
-body.dark .verse-row.hl-g{background:#166534!important}
-body.dark .verse-row.hl-b{background:#1e40af!important}
-body.dark .verse-row.hl-p{background:#6b21a8!important}
-body.dark .verse-row.hl-r{background:#991b1b!important}
-.hl-toolbar{position:fixed;z-index:300;background:#fff;border:1px solid #e8e5e0;border-radius:10px;padding:6px 8px;display:flex;gap:6px;align-items:center;box-shadow:0 4px 16px rgba(0,0,0,.12)}
-body.dark .hl-toolbar{background:#2a2a2a;border-color:#444}
-.hl-swatch{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent;flex-shrink:0}
-.hl-swatch:active{transform:scale(1.2)}
-.hl-swatch.active{border-color:#333}
-body.dark .hl-swatch.active{border-color:#fff}
-.hl-clear{background:none;border:none;font-size:13px;cursor:pointer;color:#999;padding:0 2px;line-height:1}
-.hl-clear:hover{color:#dc2626}
-.confirm-modal{position:fixed;inset:0;z-index:400;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.4)}
-.confirm-modal.hidden{display:none}
-.confirm-box{background:#fff;border-radius:14px;padding:24px 20px 16px;max-width:300px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.15)}
-body.dark .confirm-box{background:#2a2a2a}
-.confirm-msg{font-size:14px;line-height:1.6;color:#222;margin-bottom:20px}
-body.dark .confirm-msg{color:#e8e5e0}
-.confirm-btns{display:flex;gap:8px;justify-content:flex-end}
-.confirm-btn{border:none;border-radius:8px;font:500 13px inherit;cursor:pointer;padding:8px 18px}
-.confirm-btn.cancel{background:#efecea;color:#555}
-body.dark .confirm-btn.cancel{background:#333;color:#bbb}
-.confirm-btn.ok{background:#222;color:#fff}
-body.dark .confirm-btn.ok{background:#e8e5e0;color:#111}
-</style>
-</head>
-<body>
-<header><div class="logo"><span>krengbible.com</span></div></header>
-<nav>
-  <input id="passage-input" class="desk-only" type="text" placeholder="" autocomplete="off" spellcheck="false">
-  <button class="fbtn desk-only" onclick="toggleLangOrder(null)">⇄</button>
-  <div class="fctl desk-only">
-    <span>A</span>
-    <button class="fbtn" id="fminus" type="button">&#8722;</button>
-    <button class="fbtn" id="fplus" type="button">+</button>
-    <button class="fbtn" id="desk-dark-btn" onclick="toggleDark(this)" style="font-size:11px">◐</button>
-    <button class="fbtn" onclick="sheetOpen('progress')" title="읽기 진도" style="font-size:11px">☑</button>
-  </div>
-  <div class="mob-nav">
-    <button class="mob-nav-btn" id="mob-passage-btn" onclick="sheetOpen('passage')">
-      <span id="mob-passage-label">책 선택 / Select Book</span>
-      <svg width="10" height="6" viewBox="0 0 10 6"><path fill="currentColor" d="M0 0l5 6 5-6z"/></svg>
-    </button>
-    <div class="mob-nav-actions">
-      <button class="mob-icon-btn" id="mob-lang-btn" onclick="toggleLangOrder(this)">한</button>
-      <button class="mob-icon-btn" onclick="sheetOpen('font')">A</button>
-      <button class="mob-icon-btn" id="mob-dark-btn" onclick="toggleDark(this)">◐</button>
-      <button class="mob-icon-btn" onclick="sheetOpen('progress')">☑</button>
-    </div>
-  </div>
-</nav>
-<div id="mob-sheet" class="mob-sheet hidden">
-  <div class="mob-sheet-inner">
-    <div class="mob-sheet-hdr">
-      <span id="mob-sheet-title"></span>
-      <button class="mob-sheet-close" onclick="sheetClose()">&#10005;</button>
-    </div>
-    <div id="mob-sheet-body"></div>
-  </div>
-</div>
-<div id="confirm-modal" class="confirm-modal hidden" onclick="if(event.target===this)confirmCancel()">
-  <div class="confirm-box">
-    <div class="confirm-msg" id="confirm-msg"></div>
-    <div class="confirm-btns">
-      <button class="confirm-btn cancel" id="confirm-cancel-btn" onclick="confirmCancel()">취소</button>
-      <button class="confirm-btn ok" id="confirm-ok-btn" onclick="confirmOk()">초기화</button>
-    </div>
-  </div>
-</div>
-<div id="hl-toolbar" class="hl-toolbar" style="display:none">
-  <div class="hl-swatch" style="background:#fde047" data-color="y" onclick="hlApply('y')"></div>
-  <div class="hl-swatch" style="background:#86efac" data-color="g" onclick="hlApply('g')"></div>
-  <div class="hl-swatch" style="background:#93c5fd" data-color="b" onclick="hlApply('b')"></div>
-  <div class="hl-swatch" style="background:#d8b4fe" data-color="p" onclick="hlApply('p')"></div>
-  <div class="hl-swatch" style="background:#fca5a5" data-color="r" onclick="hlApply('r')"></div>
-  <button class="hl-clear" id="hl-clear-btn" onclick="hlApply(null)">✕</button>
-</div>
-<div id="fn-popup" class="fn-popup" style="opacity:0;display:none"></div>
-<main id="main">
-  <div id="content"></div>
-  <footer>개역개정판 &copy; 대한성서공회 &nbsp;&middot;&nbsp; ESV&reg; &copy; 2001 Crossway &middot; Used by permission</footer>
-</main>
-<script>
-const WORKER='https://bibleread.pauljkim22.workers.dev';
-const BOOKS=[{ko:"창세기",en:"Genesis",n:1,ch:50},{ko:"출애굽기",en:"Exodus",n:2,ch:40},{ko:"레위기",en:"Leviticus",n:3,ch:27},{ko:"민수기",en:"Numbers",n:4,ch:36},{ko:"신명기",en:"Deuteronomy",n:5,ch:34},{ko:"여호수아",en:"Joshua",n:6,ch:24},{ko:"사사기",en:"Judges",n:7,ch:21},{ko:"룻기",en:"Ruth",n:8,ch:4},{ko:"사무엘상",en:"1 Samuel",n:9,ch:31},{ko:"사무엘하",en:"2 Samuel",n:10,ch:24},{ko:"열왕기상",en:"1 Kings",n:11,ch:22},{ko:"열왕기하",en:"2 Kings",n:12,ch:25},{ko:"역대상",en:"1 Chronicles",n:13,ch:29},{ko:"역대하",en:"2 Chronicles",n:14,ch:36},{ko:"에스라",en:"Ezra",n:15,ch:10},{ko:"느헤미야",en:"Nehemiah",n:16,ch:13},{ko:"에스더",en:"Esther",n:17,ch:10},{ko:"욥기",en:"Job",n:18,ch:42},{ko:"시편",en:"Psalms",n:19,ch:150},{ko:"잠언",en:"Proverbs",n:20,ch:31},{ko:"전도서",en:"Ecclesiastes",n:21,ch:12},{ko:"아가",en:"Song of Solomon",n:22,ch:8},{ko:"이사야",en:"Isaiah",n:23,ch:66},{ko:"예레미야",en:"Jeremiah",n:24,ch:52},{ko:"예레미야애가",en:"Lamentations",n:25,ch:5},{ko:"에스겔",en:"Ezekiel",n:26,ch:48},{ko:"다니엘",en:"Daniel",n:27,ch:12},{ko:"호세아",en:"Hosea",n:28,ch:14},{ko:"요엘",en:"Joel",n:29,ch:3},{ko:"아모스",en:"Amos",n:30,ch:9},{ko:"오바댜",en:"Obadiah",n:31,ch:1},{ko:"요나",en:"Jonah",n:32,ch:4},{ko:"미가",en:"Micah",n:33,ch:7},{ko:"나훔",en:"Nahum",n:34,ch:3},{ko:"하박국",en:"Habakkuk",n:35,ch:3},{ko:"스바냐",en:"Zephaniah",n:36,ch:3},{ko:"학개",en:"Haggai",n:37,ch:2},{ko:"스가랴",en:"Zechariah",n:38,ch:14},{ko:"말라기",en:"Malachi",n:39,ch:4},{ko:"마태복음",en:"Matthew",n:40,ch:28},{ko:"마가복음",en:"Mark",n:41,ch:16},{ko:"누가복음",en:"Luke",n:42,ch:24},{ko:"요한복음",en:"John",n:43,ch:21},{ko:"사도행전",en:"Acts",n:44,ch:28},{ko:"로마서",en:"Romans",n:45,ch:16},{ko:"고린도전서",en:"1 Corinthians",n:46,ch:16},{ko:"고린도후서",en:"2 Corinthians",n:47,ch:13},{ko:"갈라디아서",en:"Galatians",n:48,ch:6},{ko:"에베소서",en:"Ephesians",n:49,ch:6},{ko:"빌립보서",en:"Philippians",n:50,ch:4},{ko:"골로새서",en:"Colossians",n:51,ch:4},{ko:"데살로니가전서",en:"1 Thessalonians",n:52,ch:5},{ko:"데살로니가후서",en:"2 Thessalonians",n:53,ch:3},{ko:"디모데전서",en:"1 Timothy",n:54,ch:6},{ko:"디모데후서",en:"2 Timothy",n:55,ch:4},{ko:"디도서",en:"Titus",n:56,ch:3},{ko:"빌레몬서",en:"Philemon",n:57,ch:1},{ko:"히브리서",en:"Hebrews",n:58,ch:13},{ko:"야고보서",en:"James",n:59,ch:5},{ko:"베드로전서",en:"1 Peter",n:60,ch:5},{ko:"베드로후서",en:"2 Peter",n:61,ch:3},{ko:"요한일서",en:"1 John",n:62,ch:5},{ko:"요한이서",en:"2 John",n:63,ch:1},{ko:"요한삼서",en:"3 John",n:64,ch:1},{ko:"유다서",en:"Jude",n:65,ch:1},{ko:"요한계시록",en:"Revelation",n:66,ch:22}];
-let bi=42,ci=3,fs=15,pendingBook=null,loaded=false,langOrder="ko-en",darkMode=false;
-(function(){
-  applyFs();
-  document.getElementById('fminus').addEventListener('click',()=>{fs=Math.max(11,fs-1);applyFs();});
-  document.getElementById('fplus').addEventListener('click',()=>{fs=Math.min(22,fs+1);applyFs();});
-  const inp=document.getElementById('passage-input');
-  if(inp) inp.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();parseAndLoad(inp.value.trim());}});
-  updateLabel();
-  if(window.innerWidth<=640) loadVotd();
-  document.getElementById('mob-sheet').addEventListener('click',function(e){if(e.target===this)sheetClose();});
-  var si=document.querySelector('.mob-sheet-inner'),sh=document.querySelector('.mob-sheet-hdr'),swy=0,swa=false;
-  sh.addEventListener('touchstart',function(e){swy=e.touches[0].clientY;swa=true;},{passive:true});
-  sh.addEventListener('touchmove',function(e){if(!swa)return;var dy=e.touches[0].clientY-swy;if(dy>0)si.style.transform='translateY('+Math.min(dy,300)+'px)';},{passive:true});
-  sh.addEventListener('touchend',function(e){if(!swa)return;swa=false;var dy=e.changedTouches[0].clientY-swy;if(dy>100){si.style.transition='transform 0.2s ease';si.style.transform='translateY(100%)';setTimeout(function(){si.style.transform='';si.style.transition='';sheetClose();},200);}else{si.style.transition='transform 0.2s ease';si.style.transform='';setTimeout(function(){si.style.transition='';},200);}},{passive:true});
-  sh.addEventListener('touchcancel',function(){swa=false;si.style.transform='';},{passive:true});
-})();
-function applyFs(){document.documentElement.style.setProperty('--fs',fs+'px');document.querySelectorAll('.vt').forEach(el=>el.style.fontSize=fs+'px');}
-function updateLabel(){
-  var lbl=loaded?(langOrder==='en-ko'?BOOKS[bi].en+' '+ci+' / '+BOOKS[bi].ko+' '+ci+'장':BOOKS[bi].ko+' '+ci+'장 / '+BOOKS[bi].en+' '+ci):(langOrder==='en-ko'?'Select Book / 책 선택':'책 선택 / Select Book');
-  document.getElementById('mob-passage-label').textContent=lbl;
-}
-function step(d){
-  if(d===-1){if(ci>1)ci--;else if(bi>0){bi--;ci=BOOKS[bi].ch;}}
-  else{if(ci<BOOKS[bi].ch)ci++;else if(bi<BOOKS.length-1){bi++;ci=1;}}
-  load();
-}
-function parseAndLoad(raw){
-  if(!raw)return;
-  const cleaned=raw.trim().replace(/:/g,' ');
-  const parts=cleaned.match(/^(.+?)\s+(\d+)(?:\s+(\d+))?$/);
-  if(!parts)return;
-  const bookQuery=parts[1].trim().toLowerCase(),chNum=parseInt(parts[2]),koQuery=parts[1].trim();
-  const idx=BOOKS.findIndex(b=>{
-    const enL=b.en.toLowerCase(),enNS=enL.replace(/\s+/g,''),bqNS=bookQuery.replace(/\s+/g,'');
-    if(enL.startsWith(bookQuery))return true;
-    if(enNS.startsWith(bqNS))return true;
-    if(b.ko.startsWith(koQuery))return true;
-    if(koQuery.length<=3&&b.ko.startsWith(koQuery))return true;
-    const initials=b.en.split(' ').map(w=>w[0].toLowerCase()).join('');
-    if(initials.startsWith(bookQuery))return true;
-    if(enL.slice(0,bookQuery.length)===bookQuery&&bookQuery.length>=2)return true;
-    return false;
-  });
-  if(idx===-1){const inp=document.getElementById('passage-input');if(inp){inp.style.borderColor='#dc2626';setTimeout(()=>{inp.style.borderColor='';},1000);}return;}
-  bi=idx;ci=Math.min(Math.max(1,chNum),BOOKS[idx].ch);load();
-}
-function toggleLangOrder(btn){
-  langOrder=langOrder==='ko-en'?'en-ko':'ko-en';
-  if(btn)btn.textContent=langOrder==='ko-en'?'한':'Eng';
-  updateLabel();
-  if(loaded)applyLangOrder();
-  if(!document.getElementById('mob-sheet').classList.contains('hidden')){
-    if(progView==='overview')progShowOverview();
-    else if(pendingBook===null)sheetOpen('passage');
+export default {
+  async fetch(request, env) {
+    const cors = {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, OPTIONS",
+      "Cache-Control": "public, max-age=86400"
+    };
+    if (request.method === "OPTIONS") return new Response(null, { headers: cors });
+    const url = new URL(request.url);
+    const path = url.pathname;
+
+    if (path.startsWith('/esv/')) {
+      const q = url.searchParams.get('q');
+      if (!q) return new Response(JSON.stringify({error:'missing q'}), {status:400, headers:{...cors,"Content-Type":"application/json"}});
+      const esvUrl = 'https://api.esv.org/v3/passage/text/?q=' + encodeURIComponent(q)
+        + '&include-headings=false&include-footnotes=true&include-verse-numbers=true'
+        + '&include-short-copyright=false&include-passage-references=false'
+        + '&indent-paragraphs=0&indent-poetry=false&include-chapter-numbers=false'
+        + '&indent-psalm-doxology=false&line-length=0';
+      const esvResp = await fetch(esvUrl, { headers: { Authorization: 'Token ' + env.ESV_TOKEN } });
+      const data = await esvResp.json();
+      return new Response(JSON.stringify(data), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    if (path.startsWith('/votd')) {
+      const votdResp = await fetch('https://labs.bible.org/api/?passage=votd&type=json', {
+        headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/json" }
+      });
+      const votdData = await votdResp.json();
+      return new Response(JSON.stringify(votdData), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    let bookNum, chapter;
+    const m  = path.match(/\/nkrv\/(\d+)\/(\d+)/);
+    const m2 = path.match(/^\/(\d+)\/(\d+)/);
+    if (m)       { bookNum = +m[1];  chapter = +m[2]; }
+    else if (m2) { bookNum = +m2[1]; chapter = +m2[2]; }
+    else return new Response(JSON.stringify({error:"Use /nkrv/{book}/{chapter}"}), {status:400, headers:{...cors,"Content-Type":"application/json"}});
+
+    const CODES = [
+      "gen","exo","lev","num","deu","jos","jdg","rut",
+      "1sa","2sa","1ki","2ki","1ch","2ch","ezr","neh",
+      "est","job","psa","pro","ecc","sng","isa","jer",
+      "lam","ezk","dan","hos","jol","amo","oba","jon",
+      "mic","nam","hab","zep","hag","zec","mal",
+      "mat","mrk","luk","jhn","act","rom","1co","2co",
+      "gal","eph","php","col","1th","2th","1ti","2ti",
+      "tit","phm","heb","jas","1pe","2pe","1jn","2jn",
+      "3jn","jud","rev"
+    ];
+
+    const book = CODES[bookNum - 1];
+    const fetchUrl = `https://www.bskorea.or.kr/bible/korbibReadpage.php?version=GAE&book=${book}&chap=${chapter}`;
+
+    try {
+      const resp = await fetch(fetchUrl, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+          "Accept-Language": "ko-KR,ko;q=0.9",
+          "Referer": "https://www.bskorea.or.kr/"
+        }
+      });
+      if (!resp.ok) throw new Error("bskorea returned " + resp.status);
+      const html = await resp.text();
+
+      const divTextMap = {};
+      const d2Re = /<div\b[^>]*\bid=['"]?(D_\d+_\d+)['"]?[^>]*>/gi;
+      let d2Match;
+      while ((d2Match = d2Re.exec(html)) !== null) {
+        const divId = d2Match[1];
+        const start = d2Re.lastIndex;
+        const end = html.indexOf('</div>', start);
+        if (end === -1) continue;
+        const body = html.slice(start, end);
+        const fnText = body
+          .replace(/<[^>]+>/g, '')
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .trim();
+        if (fnText) divTextMap[divId] = fnText;
+      }
+
+      const footnotes = {};
+      const popRe = /clickPopUp\('([^']+)'[^)]*\)[^<]*<font[^>]*>(\d+)\)<\/font>/gi;
+      let popMatch;
+      while ((popMatch = popRe.exec(html)) !== null) {
+        const divId = popMatch[1];
+        const fnNum = popMatch[2];
+        if (fnNum && divId && divTextMap[divId]) footnotes[fnNum] = divTextMap[divId];
+      }
+
+      const verses = [];
+      const parts = html.split('<span class="number">');
+      for (let i = 1; i < parts.length; i++) {
+        const part = parts[i];
+        const numMatch = part.match(/^(\d+)/);
+        if (!numMatch) continue;
+        const num = parseInt(numMatch[1]);
+        const afterClose = part.replace(/^\d+(?:&nbsp;)+<\/span>/, '');
+        const end = afterClose.indexOf('</span>');
+        const raw = end > -1 ? afterClose.substring(0, end) : afterClose;
+        let text = raw
+          .replace(/<div[^>]*>[\s\S]*?<\/div>/gi, '')
+          .replace(/<[^>]+>/g, '')
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/\s+/g, ' ')
+          .trim();
+        text = text.replace(/[ㄱ-ㅎ]\)\s*/g, '');
+        text = text.replace(/(\d+)\)\s*/g, '(KN:$1)');
+        if (text.length > 1) verses.push({ verse: num, text });
+      }
+
+      if (verses.length === 0) {
+        return new Response(JSON.stringify({error:"parse_failed", html_length: html.length}), {headers:{...cors,"Content-Type":"application/json"}});
+      }
+
+      return new Response(JSON.stringify({ verses, footnotes }), {headers:{...cors,"Content-Type":"application/json"}});
+    } catch (e) {
+      return new Response(JSON.stringify({error: e.message}), {status:500, headers:{...cors,"Content-Type":"application/json"}});
+    }
   }
-}
-function applyLangOrder(){
-  var sid='lang-order-style',ex=document.getElementById(sid);if(ex)ex.remove();
-  if(langOrder==='en-ko'){
-    var s=document.createElement('style');s.id=sid;
-    s.textContent='.verse-cell.ko-side{order:2;box-shadow:0 1px 0 0 var(--div);padding-top:4px!important;padding-bottom:6px!important}.verse-cell.en-side{order:1;border-bottom:none!important;padding-top:6px!important;padding-bottom:4px!important}.verse-row{display:flex;flex-direction:column}.title-row .ko-side{order:2}.title-row .en-side{order:1}.title-row{display:flex;flex-direction:column}.fn-row{display:flex!important;flex-direction:column}.fn-row .ko-side{order:2!important}.fn-row .en-side{order:1!important}.verse-cell.en-side .vn{visibility:visible!important}.verse-cell.ko-side .vn{visibility:hidden!important}';
-    document.head.appendChild(s);
-  }
-}
-function toggleDark(btn){
-  darkMode=!darkMode;
-  document.body.classList.toggle('dark',darkMode);
-  document.querySelectorAll('#mob-dark-btn,#desk-dark-btn').forEach(b=>b.textContent=darkMode?'◑':'◐');
-}
-var PROGRESS_KEY='krengbible_progress';
-function progLoad(){try{return JSON.parse(localStorage.getItem(PROGRESS_KEY)||'{}');}catch(e){return {};}}
-function progSave(d){try{localStorage.setItem(PROGRESS_KEY,JSON.stringify(d));}catch(e){}}
-function progKey(b,c){return b+'_'+c;}
-function progMarkRead(b,c,src){var d=progLoad(),k=progKey(b,c);if(!d[k]){d[k]={date:new Date().toISOString().slice(0,10),source:src};progSave(d);}}
-function progToggleManual(b,c){var d=progLoad(),k=progKey(b,c);if(d[k])delete d[k];else d[k]={date:new Date().toISOString().slice(0,10),source:'manual'};progSave(d);progShowBook(b);}
-var progObserver=null;
-function progAttachObserver(){
-  if(progObserver){progObserver.disconnect();progObserver=null;}
-  var rows=document.querySelectorAll('.verse-row'),last=rows[rows.length-1];
-  if(!last||!loaded)return;
-  progObserver=new IntersectionObserver(function(entries){entries.forEach(function(e){if(e.isIntersecting){progMarkRead(bi,ci,'auto');progObserver.disconnect();}});},{root:document.getElementById('main'),threshold:0.1});
-  progObserver.observe(last);
-}
-var progView='overview',progViewBook=0;
-var _confirmCb=null;
-function showConfirm(msg,cb){
-  var isKo=langOrder==='ko-en';
-  document.getElementById('confirm-msg').textContent=msg;
-  document.getElementById('confirm-cancel-btn').textContent=isKo?'취소':'Cancel';
-  document.getElementById('confirm-ok-btn').textContent=isKo?'초기화':'Reset';
-  document.getElementById('confirm-modal').classList.remove('hidden');
-  _confirmCb=cb;
-}
-function confirmOk(){document.getElementById('confirm-modal').classList.add('hidden');if(_confirmCb)_confirmCb();_confirmCb=null;}
-function confirmCancel(){document.getElementById('confirm-modal').classList.add('hidden');_confirmCb=null;}
-function progReset(){
-  var msg=langOrder==='ko-en'?'읽기 진도를 초기화할까요? 되돌릴 수 없습니다.':'Reset all reading progress? This cannot be undone.';
-  showConfirm(msg,function(){localStorage.removeItem(PROGRESS_KEY);progShowOverview();});
-}
-function progShowOverview(){
-  progView='overview';
-  document.getElementById('mob-sheet-title').textContent=langOrder==='en-ko'?'Reading Progress / 성경 읽기 진도':'성경 읽기 진도 / Reading Progress';
-  var data=progLoad(),OT=BOOKS.slice(0,39),NT=BOOKS.slice(39);
-  function bookStats(books,si){var t=0,r=0;books.forEach(function(b,i){t+=b.ch;for(var c=1;c<=b.ch;c++)if(data[progKey(si+i,c)])r++;});return{total:t,read:r};}
-  var otS=bookStats(OT,0),ntS=bookStats(NT,39);
-  var html='<div class="prog-section" style="padding-top:16px">';
-  html+='<div class="prog-testament"><div class="prog-testament-title">'+(langOrder==='en-ko'?'Old Testament / 구약':'구약 / Old Testament')+'</div>';
-  html+='<div class="prog-bar-row"><span class="prog-bar-label">'+otS.read+'/'+otS.total+'</span><div class="prog-bar-track"><div class="prog-bar-fill" style="width:'+Math.round(otS.read/otS.total*100)+'%"></div></div><span class="prog-bar-pct">'+Math.round(otS.read/otS.total*100)+'%</span></div></div>';
-  html+='<div class="prog-testament"><div class="prog-testament-title">'+(langOrder==='en-ko'?'New Testament / 신약':'신약 / New Testament')+'</div>';
-  html+='<div class="prog-bar-row"><span class="prog-bar-label">'+ntS.read+'/'+ntS.total+'</span><div class="prog-bar-track"><div class="prog-bar-fill" style="width:'+Math.round(ntS.read/ntS.total*100)+'%"></div></div><span class="prog-bar-pct">'+Math.round(ntS.read/ntS.total*100)+'%</span></div></div></div>';
-  html+='<div class="prog-books">';
-  BOOKS.forEach(function(b,i){
-    var rc=0;for(var c=1;c<=b.ch;c++)if(data[progKey(i,c)])rc++;
-    var cls=rc===b.ch?'complete':rc>0?'partial':'',pct=Math.round(rc/b.ch*100);
-    html+='<div class="prog-book '+cls+'" onclick="progShowBook('+i+')">';
-    if(langOrder==='en-ko'){html+='<div class="prog-book-name ko-book-primary">'+b.en+'</div><div class="prog-book-ko">'+b.ko+'</div>';}
-    else{html+='<div class="prog-book-name ko-book-primary">'+b.ko+'</div><div class="prog-book-ko">'+b.en+'</div>';}
-    if(rc>0)html+='<div class="prog-book-pct">'+rc+'/'+b.ch+' ('+pct+'%)</div>';
-    html+='</div>';
-  });
-  html+='</div>';
-  var rl=langOrder==='ko-en'?'초기화 / Reset All':'Reset All / 초기화';
-  html+='<div style="display:flex;justify-content:center;padding:16px"><button onclick="progReset()" style="background:#efecea;border:1px solid #d8d4ce;color:#666;font:500 12px inherit;cursor:pointer;padding:6px 20px;border-radius:6px;font-family:inherit">'+rl+'</button></div>';
-  document.getElementById('mob-sheet-body').innerHTML=html;
-}
-function progShowBook(idx){
-  progView='book';progViewBook=idx;
-  var b=BOOKS[idx];
-  document.getElementById('mob-sheet-title').textContent=langOrder==='en-ko'?b.en+' '+b.ko:b.ko+' '+b.en;
-  var data=progLoad(),html='<div style="padding:12px 16px 4px"><button class="prog-back-btn" onclick="progShowOverview()">← Back</button></div><div class="prog-chapters">';
-  for(var c=1;c<=b.ch;c++){var k=progKey(idx,c),entry=data[k],cls=entry?(entry.source==='auto'?'auto':'manual'):'unread';html+='<div class="prog-ch '+cls+'" onclick="progToggleManual('+idx+','+c+')" title="'+(entry?entry.date+' ('+entry.source+')':'Tap to mark read')+'">'+c+'</div>';}
-  html+='</div><div style="padding:8px 16px;font-size:11px;color:#bbb">● Auto-detected &nbsp; Tap to toggle manual</div>';
-  document.getElementById('mob-sheet-body').innerHTML=html;
-}
-async function loadVotd(){
-  var wrap=document.getElementById('content');
-  wrap.innerHTML='<div class="ldg"><div class="spinner"></div><div class="ldg-txt">Loading…</div></div>';
-  try{
-    var r=await fetch(WORKER+'/votd'),d=await r.json();
-    if(!d||!d[0])throw new Error('no data');
-    var v=d[0],ref=v.bookname+' '+v.chapter+':'+v.verse;
-    var bookIdx=BOOKS.findIndex(function(b){return b.en===v.bookname;}),koText='';
-    if(bookIdx>=0){try{var kr=await fetch(WORKER+'/nkrv/'+BOOKS[bookIdx].n+'/'+v.chapter,{cache:'no-store'}),kd=await kr.json(),verses=Array.isArray(kd)?kd:(kd.verses||[]),kv=verses.find(function(x){return x.verse===+v.verse;});if(kv)koText=kv.text.replace(/\(KN:\d+\)/g,'');}catch(e){}}
-    var koRef=bookIdx>=0?BOOKS[bookIdx].ko+' '+v.chapter+':'+v.verse:ref;
-    var html='<div class="votd-wrap">';
-    if(koText){html+='<div class="votd-ref">'+koRef+'</div><div class="votd-ko">'+koText+'</div>';}
-    html+='<div class="votd-ref" style="margin-top:12px">'+ref+'</div><div class="votd-en">'+v.text+'</div>';
-    if(bookIdx>=0){var chRef=v.bookname+' '+v.chapter;html+='<button class="votd-read-btn" onclick="bi='+bookIdx+';ci='+v.chapter+';loaded=true;updateLabel();load()">Read '+chRef+'</button>';}
-    html+='</div>';
-    document.getElementById('content').innerHTML=html;
-  }catch(e){document.getElementById('content').innerHTML='';}
-}
-function sheetOpen(mode){
-  document.getElementById('mob-sheet').classList.remove('hidden');
-  var body=document.getElementById('mob-sheet-body');
-  if(mode==='progress'){progShowOverview();return;}
-  if(mode==='passage'){
-    document.getElementById('mob-sheet-title').textContent=langOrder==='en-ko'?'Select Book / 책 선택':'책 선택 / Select Book';
-    pendingBook=null;
-    var h='<div class="mob-book-grid">';
-    BOOKS.forEach(function(b,i){var p=langOrder==='en-ko'?b.en:b.ko,s=langOrder==='en-ko'?b.ko:b.en;h+='<div class="mob-book-item '+(loaded&&i===bi?'active':'')+'" onclick="sheetSelectBook('+i+')"><div class="ko">'+p+'</div><div class="en">'+s+'</div></div>';});
-    h+='</div>';body.innerHTML=h;
-    setTimeout(()=>body.querySelector('.active')?.scrollIntoView({block:'center'}),50);
-  } else {
-    document.getElementById('mob-sheet-title').textContent=langOrder==='en-ko'?'Font Size / 글자 크기':'글자 크기 / Font Size';
-    body.innerHTML='<div class="mob-font-sheet"><div class="mob-font-row"><button class="mob-font-btn" onclick="adjFont(-1)">−</button><div class="mob-font-preview">가 Aa — '+fs+'px</div><button class="mob-font-btn" onclick="adjFont(1)">+</button></div></div>';
-  }
-}
-function sheetSelectBook(idx){
-  pendingBook=idx;
-  document.getElementById('mob-sheet-title').textContent=langOrder==='en-ko'?BOOKS[idx].en+' '+BOOKS[idx].ko:BOOKS[idx].ko+' '+BOOKS[idx].en;
-  var h='<div class="mob-ch-grid">';
-  for(var i=1;i<=BOOKS[idx].ch;i++)h+='<div class="mob-ch-item '+(idx===bi&&i===ci?'active':'')+'" onclick="sheetSelectCh('+i+')">'+i+'</div>';
-  h+='</div>';document.getElementById('mob-sheet-body').innerHTML=h;
-}
-function sheetSelectCh(ch){bi=pendingBook;ci=ch;loaded=true;sheetClose();updateLabel();load();}
-function sheetClose(){document.getElementById('mob-sheet').classList.add('hidden');pendingBook=null;}
-function adjFont(d){fs=Math.min(22,Math.max(11,fs+d));applyFs();var p=document.querySelector('.mob-font-preview');if(p)p.textContent='가 Aa — '+fs+'px';}
-async function load(){
-  var bk=BOOKS[bi];
-  var ebp=document.getElementById('edge-bp');if(ebp)ebp.disabled=(bi===0&&ci===1);
-  var ebn=document.getElementById('edge-bn');if(ebn)ebn.disabled=(bi===BOOKS.length-1&&ci===bk.ch);
-  document.getElementById('content').innerHTML='<div class="ldg"><div class="spinner"></div><div class="ldg-txt">Loading…</div></div>';
-  const [kr,er]=await Promise.allSettled([fetchKo(bk,ci),fetchEsv(bk,ci)]);
-  if(kr.status==='rejected'){document.getElementById('content').innerHTML='<div class="errbox"><b>Error:</b> '+esc(kr.reason?.message||'실패')+'</div>';return;}
-  if(er.status==='rejected'){document.getElementById('content').innerHTML='<div class="errbox"><b>ESV Error:</b> '+esc(er.reason?.message||'Failed')+'</div>';return;}
-  render(kr.value,er.value,bk,ci);
-  loaded=true;document.getElementById('main').scrollTop=0;updateLabel();
-  var inp=document.getElementById('passage-input');if(inp)inp.value=BOOKS[bi].en+' '+ci;
-}
-async function fetchKo(bk,ch){
-  var r=await fetch(WORKER+'/nkrv/'+bk.n+'/'+ch,{cache:'no-store'});
-  if(!r.ok)throw new Error('Worker error '+r.status);
-  var d=await r.json();if(d.error)throw new Error(d.error);
-  if(Array.isArray(d))return{verses:d,footnotes:{}};
-  if(!d.verses||d.verses.length===0)throw new Error('No verses');
-  return{verses:d.verses,footnotes:d.footnotes||{}};
-}
-async function fetchEsv(bk,ch){
-  var esvQ=bk.en+' '+ch;if(bk.ch===1)esvQ=bk.en+' 1:1-999';
-  var r=await fetch(WORKER+'/esv/?q='+encodeURIComponent(esvQ));
-  if(!r.ok)throw new Error('ESV proxy error '+r.status);
-  var d=await r.json();if(!d.passages||!d.passages[0])throw new Error('No ESV data');
-  var txt=d.passages[0],verses={},footnotes={},aL=txt.split('\n'),pL=[],fL=[],inFn=false;
-  for(var l of aL){if(!inFn&&/^\s*\(\d+\)\s/.test(l)&&!l.match(/^\s*\(\d+\)\s*\[/))inFn=true;if(inFn)fL.push(l);else pL.push(l);}
-  for(var l of fL){var m=l.match(/\((\d+)\)\s*(.+)/);if(m)footnotes[m[1]]=m[2].trim();}
-  for(var vp of pL.join(' ').split(/(?=\[\d+\])/)){var p=vp.trim();if(!p)continue;var m=p.match(/^\[(\d+)\]\s*([\s\S]*)/);if(m)verses[+m[1]]=m[2].replace(/\s+/g,' ').replace(/\s*Footnotes?\s*$/i,'').trim();}
-  return{verses,headings:{},footnotes};
-}
-function render(koData,esvData,bk,ch){
-  var kv=koData.verses,kf=koData.footnotes||{};
-  var en=esvData.verses,headings=esvData.headings,footnotes=esvData.footnotes;
-  var h='<div class="col-headers"></div>';
-  h+='<div class="title-row"><div class="ko-side"><div class="ch-title">'+bk.ko+' '+ch+'장</div></div><div class="en-side"><div class="ch-title">'+bk.en+' '+ch+'</div></div></div>';
-  kv.forEach(function(v){
-    var n=v.verse,er=en[n]||'';
-    if(headings[n])h+='<div class="shead-row"><div class="ko-side"></div><div class="en-side"><div class="shead">'+esc(headings[n])+'</div></div></div>';
-    var eh=er.replace(/\((\d+)\)/g,function(_,x){return '<sup class="fn-ref" onclick="showFnByRef(\'fn-'+x+'\',event)">'+x+'</sup>';});
-    var kh=v.text.replace(/\(KN:(\d+)\)/g,function(_,x){return '<sup class="fn-ref" onclick="showFnByRef(\'ko-fn-'+x+'\',event)">'+x+'</sup>';});
-    h+='<div class="verse-row" id="vr-'+n+'"><div class="verse-cell ko-side"><span class="vn">'+n+'</span><span class="vt" style="font-size:'+fs+'px">'+kh+'</span></div><div class="verse-cell en-side"><span class="vn">'+n+'</span><span class="vt" style="font-size:'+fs+'px">'+eh+'</span></div></div>';
-  });
-  var fnHidden='<div style="display:none" id="fn-data">';
-  Object.keys(kf).forEach(function(k){fnHidden+='<div id="ko-fn-'+k+'"><span></span><span>'+esc(kf[k])+'</span></div>';});
-  Object.keys(footnotes).forEach(function(k){fnHidden+='<div id="fn-'+k+'"><span></span><span>'+esc(footnotes[k])+'</span></div>';});
-  fnHidden+='</div>';h+=fnHidden;
-  document.getElementById('content').innerHTML=h;
-  if(langOrder==='en-ko')applyLangOrder();
-  setTimeout(progAttachObserver,500);
-  hlApplyAll();hlAttach();
-}
-(function(){
-  var main=document.getElementById('main'),content=document.getElementById('content');
-  var sx=0,sy=0,drag=false,locked=false;
-  main.addEventListener('touchstart',function(e){if(!document.getElementById('mob-sheet').classList.contains('hidden'))return;sx=e.touches[0].clientX;sy=e.touches[0].clientY;drag=false;locked=false;},{passive:true});
-  main.addEventListener('touchmove',function(e){if(!document.getElementById('mob-sheet').classList.contains('hidden'))return;if(locked)return;var dx=e.touches[0].clientX-sx,dy=e.touches[0].clientY-sy;if(!drag&&Math.abs(dy)>Math.abs(dx)*1.2){locked=true;return;}if(Math.abs(dx)>8)drag=true;if(drag){content.style.transform='translateX('+(dx*0.35)+'px)';content.style.transition='none';}},{passive:true});
-  main.addEventListener('touchend',function(e){if(!document.getElementById('mob-sheet').classList.contains('hidden'))return;if(!drag){content.style.transform='';return;}var dx=e.changedTouches[0].clientX-sx;drag=false;if(Math.abs(dx)>100){var dir=dx<0?-1:1;content.style.transition='transform 0.18s ease-in,opacity 0.18s ease-in';content.style.transform='translateX('+(dir*-80)+'px)';content.style.opacity='0';setTimeout(function(){content.style.transform='';content.style.transition='none';content.style.opacity='';if(navigator.vibrate)navigator.vibrate(15);if(dx<0)step(1);else step(-1);},180);}else{content.style.transition='transform 0.25s cubic-bezier(0.25,0.46,0.45,0.94)';content.style.transform='';setTimeout(function(){content.style.transition='';},260);}},{passive:true});
-})();
-(function(){
-  var popup=null,hideTimer=null;
-  function getPopup(){if(!popup)popup=document.getElementById('fn-popup');return popup;}
-  function showFnPopup(e,text){var p=getPopup();if(!p)return;clearTimeout(hideTimer);p.textContent=text;p.style.display='block';p.style.opacity='1';var x=e.clientX||(e.touches&&e.touches[0]&&e.touches[0].clientX)||0,y=e.clientY||(e.touches&&e.touches[0]&&e.touches[0].clientY)||0,pw=280,vw=window.innerWidth;var top=y-92;if(top<8)top=y+20;var left=x-pw/2;if(left<8)left=8;if(left+pw>vw-8)left=vw-pw-8;p.style.left=left+'px';p.style.top=top+'px';hideTimer=setTimeout(hideFnPopup,3000);}
-  function hideFnPopup(){var p=getPopup();if(p){p.style.opacity='0';setTimeout(function(){p.style.display='none';},150);}}
-  window.showFnByRef=function(id,e){e.preventDefault();e.stopPropagation();var el=document.getElementById(id);if(el){var span=el.querySelector('span:last-child'),text=span?span.textContent:'';if(text)showFnPopup(e,text);}};
-  document.getElementById('main').addEventListener('scroll',hideFnPopup,{passive:true});
-  document.addEventListener('click',function(e){if(!e.target.classList.contains('fn-ref'))hideFnPopup();});
-})();
-var HL_KEY='krengbible_hl',hlSelected=null;
-function hlLoad(){try{return JSON.parse(localStorage.getItem(HL_KEY)||'{}');}catch(e){return {};}}
-function hlSave(d){try{localStorage.setItem(HL_KEY,JSON.stringify(d));}catch(e){}}
-function hlKey(b,c,v){return b+'_'+c+'_'+v;}
-function hlApplyAll(){var data=hlLoad();document.querySelectorAll('.verse-row').forEach(function(row){var n=row.id.replace('vr-',''),k=hlKey(bi,ci,n);row.classList.remove('hl-y','hl-g','hl-b','hl-p','hl-r');if(data[k])row.classList.add('hl-'+data[k]);});}
-function hlApply(color){if(!hlSelected)return;var n=hlSelected.id.replace('vr-',''),k=hlKey(bi,ci,n),data=hlLoad();if(color)data[k]=color;else delete data[k];hlSave(data);hlSelected.classList.remove('hl-y','hl-g','hl-b','hl-p','hl-r');if(color)hlSelected.classList.add('hl-'+color);hlHideToolbar();}
-function hlShowToolbar(row,e){
-  hlSelected=row;var tb=document.getElementById('hl-toolbar');tb.style.display='flex';
-  var x=e.clientX||(e.touches&&e.touches[0]&&e.touches[0].clientX)||0,y=e.clientY||(e.touches&&e.touches[0]&&e.touches[0].clientY)||0;
-  var tw=180,vw=window.innerWidth,top=y-52;if(top<8)top=y+20;var left=x-tw/2;if(left<8)left=8;if(left+tw>vw-8)left=vw-tw-8;
-  tb.style.left=left+'px';tb.style.top=top+'px';
-  var data=hlLoad(),n=row.id.replace('vr-',''),cur=data[hlKey(bi,ci,n)]||null;
-  var clrBtn=document.getElementById('hl-clear-btn');if(clrBtn)clrBtn.title=langOrder==='ko-en'?'형광펜 지우기':'Remove highlight';
-  var koC={y:'노란색',g:'초록색',b:'파란색',p:'보라색',r:'빨간색'},enC={y:'Yellow',g:'Green',b:'Blue',p:'Purple',r:'Red'};
-  tb.querySelectorAll('.hl-swatch').forEach(function(s){s.classList.toggle('active',s.dataset.color===cur);s.title=langOrder==='ko-en'?koC[s.dataset.color]:enC[s.dataset.color];});
-}
-function hlHideToolbar(){var tb=document.getElementById('hl-toolbar');if(tb)tb.style.display='none';hlSelected=null;}
-function hlAttach(){
-  document.querySelectorAll('.verse-row').forEach(function(row){
-    var pressTimer=null;
-    row.addEventListener('touchstart',function(e){
-      var t=e.touches[0];
-      pressTimer=setTimeout(function(){pressTimer=null;hlShowToolbar(row,t);},500);
-    },{passive:true});
-    row.addEventListener('touchend',function(){clearTimeout(pressTimer);pressTimer=null;},{passive:true});
-    row.addEventListener('touchmove',function(){clearTimeout(pressTimer);pressTimer=null;},{passive:true});
-    row.querySelectorAll('.vn').forEach(function(vn){
-      vn.addEventListener('click',function(e){e.stopPropagation();hlShowToolbar(row,e);});
-    });
-  });
-}
-document.addEventListener('click',function(e){var tb=document.getElementById('hl-toolbar');if(tb&&!tb.contains(e.target)&&!e.target.classList.contains('vn'))hlHideToolbar();});
-document.addEventListener('touchstart',function(e){var tb=document.getElementById('hl-toolbar');if(tb&&tb.style.display!=='none'&&!tb.contains(e.target)&&!e.target.closest('.verse-row'))hlHideToolbar();},{passive:true});
-function scrollToVerse(n){var el=document.getElementById('vr-'+n),m=document.getElementById('main');if(el&&m)m.scrollTop+=el.getBoundingClientRect().top-m.getBoundingClientRect().top-20;}
-function scrollToFn(id){var el=document.getElementById(id),m=document.getElementById('main');if(el&&m)m.scrollTop+=el.getBoundingClientRect().top-m.getBoundingClientRect().top-20;}
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-document.addEventListener('keydown',function(e){if(e.target.tagName==='SELECT'||e.target.id==='passage-input')return;if(e.key==='ArrowRight')step(1);if(e.key==='ArrowLeft')step(-1);});
-</script>
-<div class="edge-nav left"><button class="edge-btn" id="edge-bp" onclick="step(-1)" disabled>&#8249;</button></div>
-<div class="edge-nav right"><button class="edge-btn" id="edge-bn" onclick="step(1)" disabled>&#8250;</button></div>
-</body>
-</html>
+};
