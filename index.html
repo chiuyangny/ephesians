@@ -37,7 +37,7 @@ main::-webkit-scrollbar-thumb:hover{background:#999590}
 .verse-cell{padding:5px 28px;display:flex;gap:10px;align-items:baseline}
 .verse-cell.ko-side{border-right:1px solid #e8e5e0}
 .vn{color:#999;font-size:10px;font-weight:600;min-width:16px;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums;padding-top:2px;cursor:pointer}
-.vt{line-height:1.85;color:#1c1c1c;flex:1}
+.vt{line-height:1.85;color:#1c1c1c;flex:1;user-select:none;-webkit-user-select:none}
 .ko-side .vt{font-family:'Noto Sans KR',sans-serif;font-weight:400;word-break:keep-all;letter-spacing:-.02em}
 .en-side .vt{font-family:'DM Sans',-apple-system,sans-serif;font-weight:400}
 sup.fn-ref{font-size:9px;color:#2563eb;margin-left:1px;vertical-align:super;line-height:0;cursor:pointer;padding:0 1px}
@@ -259,6 +259,8 @@ body.dark .confirm-btn.ok{background:#e8e5e0;color:#111}
   <div class="hl-swatch" style="background:#93c5fd" data-color="b" onclick="hlApply('b')"></div>
   <div class="hl-swatch" style="background:#d8b4fe" data-color="p" onclick="hlApply('p')"></div>
   <div class="hl-swatch" style="background:#fca5a5" data-color="r" onclick="hlApply('r')"></div>
+  <div style="width:1px;background:#e8e5e0;margin:0 2px;align-self:stretch"></div>
+  <button class="hl-clear" id="hl-copy-btn" onclick="hlCopy()" title="Copy">⎘</button>
   <button class="hl-clear" id="hl-clear-btn" onclick="hlApply(null)">✕</button>
 </div>
 <div id="fn-popup" class="fn-popup" style="opacity:0;display:none"></div>
@@ -520,6 +522,17 @@ function hlLoad(){try{return JSON.parse(localStorage.getItem(HL_KEY)||'{}');}cat
 function hlSave(d){try{localStorage.setItem(HL_KEY,JSON.stringify(d));}catch(e){}}
 function hlKey(b,c,v){return b+'_'+c+'_'+v;}
 function hlApplyAll(){var data=hlLoad();document.querySelectorAll('.verse-row').forEach(function(row){var n=row.id.replace('vr-',''),k=hlKey(bi,ci,n);row.classList.remove('hl-y','hl-g','hl-b','hl-p','hl-r');if(data[k])row.classList.add('hl-'+data[k]);});}
+function hlCopy(){
+  if(!hlSelected) return;
+  var texts=[];
+  hlSelected.querySelectorAll('.vt').forEach(function(vt){texts.push(vt.textContent.trim());});
+  var txt=texts.join(' ');
+  navigator.clipboard.writeText(txt).then(function(){
+    var btn=document.getElementById('hl-copy-btn');
+    if(btn){btn.textContent='✓';setTimeout(function(){btn.textContent='⎘';},1200);}
+  }).catch(function(){});
+  hlHideToolbar();
+}
 function hlApply(color){if(!hlSelected)return;var n=hlSelected.id.replace('vr-',''),k=hlKey(bi,ci,n),data=hlLoad();if(color)data[k]=color;else delete data[k];hlSave(data);hlSelected.classList.remove('hl-y','hl-g','hl-b','hl-p','hl-r');if(color)hlSelected.classList.add('hl-'+color);hlHideToolbar();}
 function hlShowToolbar(row,e){
   hlSelected=row;
