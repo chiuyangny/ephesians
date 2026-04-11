@@ -947,7 +947,6 @@ function renderBookIntro(d,bk){
   var gl=isEn?'Geographic Context':'지리적 배경';
   var title=isEn?bk.en+' — Introduction':bk.ko+' — 책 소개';
   var h='<div class="col-headers"></div>';
-  h+='<div style="padding:16px 20px 4px"><div style="font-size:18px;font-weight:700;color:#1b2a4a;font-family:\'Noto Sans KR\',sans-serif">'+title+'</div></div>';
   h+='<div class="intro-wrap">';
   // Overview
   h+='<div class="intro-section"><div class="intro-label">'+ol+'</div>';
@@ -978,7 +977,9 @@ function renderBookIntro(d,bk){
     h+='<div class="intro-map" id="intro-map"></div>';
     h+='<div class="intro-map-legend">';
     d.map_locations.forEach(function(loc,i){
-      h+='<div class="intro-map-legend-item"><span class="intro-map-legend-num">'+(i+1)+'</span><div class="intro-map-legend-text"><div class="intro-map-legend-name">'+esc(loc.name)+'</div><div class="intro-map-legend-desc">'+esc(isEn?loc.desc:(loc.desc_ko||loc.desc))+'</div></div></div>';
+      var name=esc(loc.name);
+      var desc=esc(isEn?loc.desc:(loc.desc_ko||loc.desc));
+      h+='<div class="intro-map-legend-item"><span class="intro-map-legend-num">'+(i+1)+'</span><div class="intro-map-legend-text"><div class="intro-map-legend-name">'+name+'</div><div class="intro-map-legend-desc">'+desc+'</div></div></div>';
     });
     h+='</div>';
   }
@@ -1009,9 +1010,10 @@ function renderBookIntro(d,bk){
       var bounds=[];
       locs.forEach(function(loc,i){
         var icon=L.divIcon({
-          className:'leaflet-num-marker',
-          html:'<div class="lnm">'+(i+1)+'</div>',
-          iconSize:[26,26],iconAnchor:[13,13]
+          html:'<div style="background:#1b2a4a;color:#fff;border-radius:50%;width:26px;height:26px;line-height:26px;text-align:center;font-size:11px;font-weight:700;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4);font-family:sans-serif">'+(i+1)+'</div>',
+          className:'',
+          iconSize:[26,26],
+          iconAnchor:[13,13]
         });
         L.marker([loc.lat,loc.lng],{icon:icon}).addTo(map);
         bounds.push([loc.lat,loc.lng]);
