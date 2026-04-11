@@ -24,10 +24,10 @@ main::-webkit-scrollbar-thumb:hover{background:#999590}
 .col-headers{display:none}
 .title-row{display:grid;grid-template-columns:1fr 1fr;padding:20px 0 12px}
 @media(max-width:640px){
-  .title-row{display:flex;flex-direction:row;align-items:baseline;gap:8px;padding:14px 14px 6px}
-  .title-row .ko-side,.title-row .en-side{padding:0;border:none!important}
+  .title-row{display:flex!important;flex-direction:row!important;align-items:baseline;gap:0;padding:14px 14px 6px}
+  .title-row .ko-side,.title-row .en-side{padding:0;border:none!important;order:unset!important}
   .title-row .ch-title{font-size:16px}
-  .title-row .ko-side .ch-title::after{content:' /';color:#ccc;font-weight:400;margin-right:6px}
+  .title-row .title-sep{color:#ccc;font-size:14px;margin:0 5px;flex-shrink:0}
 }
 .ko-side{padding:0 28px;border-right:1px solid #e8e5e0}
 .en-side{padding:0 28px}
@@ -390,7 +390,7 @@ function applyLangOrder(){
   var sid='lang-order-style',ex=document.getElementById(sid);if(ex)ex.remove();
   if(langOrder==='en-ko'){
     var s=document.createElement('style');s.id=sid;
-    s.textContent='.verse-cell.ko-side{order:2;box-shadow:0 1px 0 0 var(--div);padding-top:2px!important;padding-bottom:6px!important}.verse-cell.en-side{order:1;border-bottom:none!important;padding-top:6px!important;padding-bottom:2px!important}.verse-row{display:flex;flex-direction:column}.title-row .ko-side{order:2}.title-row .en-side{order:1}.title-row{display:flex;flex-direction:column}.fn-row{display:flex!important;flex-direction:column}.fn-row .ko-side{order:2!important}.fn-row .en-side{order:1!important}.verse-cell.en-side .vn{visibility:visible!important}.verse-cell.ko-side .vn{visibility:hidden!important}';
+    s.textContent='.verse-cell.ko-side{order:2;box-shadow:0 1px 0 0 var(--div);padding-top:2px!important;padding-bottom:6px!important}.verse-cell.en-side{order:1;border-bottom:none!important;padding-top:6px!important;padding-bottom:2px!important}.verse-row{display:flex;flex-direction:column}.fn-row{display:flex!important;flex-direction:column}.fn-row .ko-side{order:2!important}.fn-row .en-side{order:1!important}.verse-cell.en-side .vn{visibility:visible!important}.verse-cell.ko-side .vn{visibility:hidden!important}';
     document.head.appendChild(s);
   }
 }
@@ -553,7 +553,15 @@ function sheetOpen(mode){
     });
     h+='</div>';
     body.innerHTML=h;
-    setTimeout(function(){var a=body.querySelector('.mob-book-row.active');if(a)a.scrollIntoView({block:'center'});},50);
+    setTimeout(function(){
+      var active=body.querySelector('.mob-book-row.active');
+      if(active){
+        var activeGrid=active.querySelector('.mob-ch-grid');
+        // Scroll so active chapter is visible, not just the book header
+        if(activeGrid) activeGrid.scrollIntoView({block:'center'});
+        else active.scrollIntoView({block:'center'});
+      }
+    },50);
   } else {
     document.getElementById('mob-sheet-title').textContent=langOrder==='en-ko'?'Font Size / 글자 크기':'글자 크기 / Font Size';
     body.innerHTML='<div class="mob-font-sheet"><div class="mob-font-row"><button class="mob-font-btn" onclick="adjFont(-1)">−</button><div class="mob-font-preview">가 Aa — '+fs+'px</div><button class="mob-font-btn" onclick="adjFont(1)">+</button></div></div>';
@@ -628,7 +636,9 @@ function render(koData,esvData,bk,ch){
   var kv=koData.verses,kf=koData.footnotes||{};
   var en=esvData.verses,headings=esvData.headings,footnotes=esvData.footnotes;
   var h='<div class="col-headers"></div>';
-  h+='<div class="title-row"><div class="ko-side"><div class="ch-title">'+bk.ko+' '+ch+'장</div></div><div class="en-side"><div class="ch-title">'+bk.en+' '+ch+'</div></div></div>';
+  var koTitle='<div class="ko-side" style="order:'+(langOrder==='ko-en'?1:2)+'"><div class="ch-title">'+bk.ko+' '+ch+'장</div></div>';
+  var enTitle='<div class="en-side" style="order:'+(langOrder==='ko-en'?2:1)+'"><div class="ch-title">'+bk.en+' '+ch+'</div></div>';
+  h+='<div class="title-row">'+koTitle+'<span class="title-sep">/</span>'+enTitle+'</div>';
   kv.forEach(function(v){
     var n=v.verse,er=en[n]||'';
     if(headings[n])h+='<div class="shead-row"><div class="ko-side"></div><div class="en-side"><div class="shead">'+esc(headings[n])+'</div></div></div>';
