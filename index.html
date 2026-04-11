@@ -41,13 +41,13 @@ main::-webkit-scrollbar-thumb:hover{background:#999590}
 .shead{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#bbb}
 .verse-row{display:grid;grid-template-columns:1fr 1fr}
 .verse-row:hover{background:#f0ede8}
-.verse-cell{padding:2px 28px;display:flex;gap:3px;align-items:flex-start}
+.verse-cell{padding:2px 28px;display:flex;gap:3px;align-items:baseline}
 .verse-cell.ko-side{border-right:1px solid #e8e5e0}
 /* Verse dividers — inset line using pseudo-element, no layout impact */
 .verse-cell.en-side{border-bottom:none!important}
 .verse-row{position:relative}
 .verse-row+.verse-row::before{content:'';position:absolute;top:0;left:18px;right:18px;height:1px;background:#e8e5e0}
-.vn{color:#999;font-size:10px;font-weight:600;min-width:14px;text-align:left;flex-shrink:0;font-variant-numeric:tabular-nums;padding-top:4px;cursor:pointer}
+.vn{color:#999;font-size:10px;font-weight:600;min-width:14px;text-align:left;flex-shrink:0;font-variant-numeric:tabular-nums;padding-top:0;cursor:pointer}
 .vt{line-height:1.85;color:#1c1c1c;flex:1;user-select:none;-webkit-user-select:none}
 .ko-side .vt{font-family:'Noto Sans KR',sans-serif;font-weight:400;word-break:keep-all;letter-spacing:-.02em}
 .en-side .vt{font-family:'DM Sans',-apple-system,sans-serif;font-weight:400}
