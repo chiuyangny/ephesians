@@ -946,20 +946,16 @@ function renderBookIntro(d,bk){
   var bl=isEn?'Historical Background':'역사적 배경';
   var tl=isEn?'Key Themes':'핵심 주제';
   var gl=isEn?'Geographic Context':'지리적 배경';
-  var title=isEn?bk.en+' — Introduction':bk.ko+' — 책 소개';
   var h='<div class="col-headers"></div>';
   h+='<div class="intro-wrap">';
-  // Overview
   h+='<div class="intro-section"><div class="intro-label">'+ol+'</div>';
   if(isEn){h+='<div class="intro-en">'+esc(d.overview_en)+'</div><div class="intro-ko">'+esc(d.overview_ko)+'</div>';}
   else{h+='<div class="intro-ko">'+esc(d.overview_ko)+'</div><div class="intro-en">'+esc(d.overview_en)+'</div>';}
   h+='</div>';
-  // Background
   h+='<div class="intro-section"><div class="intro-label">'+bl+'</div>';
   if(isEn){h+='<div class="intro-en">'+esc(d.background_en)+'</div><div class="intro-ko">'+esc(d.background_ko)+'</div>';}
   else{h+='<div class="intro-ko">'+esc(d.background_ko)+'</div><div class="intro-en">'+esc(d.background_en)+'</div>';}
   h+='</div>';
-  // Themes
   h+='<div class="intro-section"><div class="intro-label">'+tl+'</div><div class="intro-themes">';
   var themes=isEn?d.themes_en:d.themes_ko;
   var themes2=isEn?d.themes_ko:d.themes_en;
@@ -970,7 +966,6 @@ function renderBookIntro(d,bk){
     h+='</div>';
   });}
   h+='</div></div>';
-  // Geo + Map
   h+='<div class="intro-section"><div class="intro-label">'+gl+'</div>';
   if(isEn){h+='<div class="intro-en">'+esc(d.geo_en)+'</div><div class="intro-ko">'+esc(d.geo_ko)+'</div>';}
   else{h+='<div class="intro-ko">'+esc(d.geo_ko)+'</div><div class="intro-en">'+esc(d.geo_en)+'</div>';}
@@ -980,16 +975,21 @@ function renderBookIntro(d,bk){
     d.map_locations.forEach(function(loc,i){
       var name=esc(loc.name);
       var nameKo=esc(loc.name_ko||loc.name);
-      var desc=esc(isEn?loc.desc:(loc.desc_ko||loc.desc));
+      var descPrimary=esc(isEn?loc.desc:(loc.desc_ko||loc.desc));
+      var descSecondary=esc(isEn?(loc.desc_ko||loc.desc):loc.desc);
       var displayName=isEn?name:(nameKo+(nameKo!==name?' ('+name+')':''));
-      h+='<div class="intro-map-legend-item"><span class="intro-map-legend-num">'+(i+1)+'</span><div class="intro-map-legend-text"><div class="intro-map-legend-name">'+displayName+'</div><div class="intro-map-legend-desc">'+desc+'</div></div></div>';
+      h+='<div class="intro-map-legend-item"><span class="intro-map-legend-num">'+(i+1)+'</span>'
+        +'<div class="intro-map-legend-text">'
+        +'<div class="intro-map-legend-name">'+displayName+'</div>'
+        +'<div class="intro-map-legend-desc">'+descPrimary+'</div>'
+        +'<div class="intro-map-legend-desc" style="color:#aaa;font-style:italic;margin-top:2px">'+descSecondary+'</div>'
+        +'</div></div>';
     });
     h+='</div>';
   }
   h+='</div>';
   h+='</div>';
   document.getElementById('content').innerHTML=h;
-  // Init Leaflet map
   if(d.map_locations&&d.map_locations.length&&window.L){
     setTimeout(function(){
       var mapEl=document.getElementById('intro-map');
@@ -1009,24 +1009,15 @@ function renderBookIntro(d,bk){
         attribution:'© OpenStreetMap © CartoDB',
         subdomains:'abcd'
       }).addTo(map);
-      var locs=d.map_locations;
       var bounds=[];
       locs.forEach(function(loc,i){
-        // Use circleMarker (pure SVG, no image) with a tooltip for the number
-        var circle=L.circleMarker([loc.lat,loc.lng],{
-          radius:13,
-          fillColor:'#1b2a4a',
-          fillOpacity:1,
-          color:'#fff',
-          weight:2
-        }).addTo(map);
-        // Add number label as permanent tooltip
-        circle.bindTooltip(String(i+1),{
-          permanent:true,
-          direction:'center',
-          className:'map-num-label',
-          offset:[0,0]
-        }).openTooltip();
+        var icon=L.divIcon({
+          className:'',
+          html:'<div class="lnm">'+(i+1)+'</div>',
+          iconSize:[26,26],
+          iconAnchor:[13,13]
+        });
+        L.marker([loc.lat,loc.lng],{icon:icon}).addTo(map);
         bounds.push([loc.lat,loc.lng]);
       });
       if(bounds.length>1)map.fitBounds(bounds,{padding:[30,30]});
