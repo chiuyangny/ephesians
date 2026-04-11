@@ -58,13 +58,13 @@ footer{border-top:1px solid #e8e5e0;color:#bbb;background:var(--bg);font-size:10
   header{display:none}
   nav{padding:6px 12px;min-height:0}
   .title-row,.shead-row,.verse-row{grid-template-columns:1fr}
-  .verse-cell{padding:6px 14px}
+  .verse-cell{padding:6px 20px}
   .verse-cell.ko-side{border-right:0!important;border-bottom:none!important;padding-bottom:2px}
   .verse-cell.en-side{padding-top:2px;border-bottom:1px solid #e8e5e0}
-  .title-row{padding:16px 14px 4px}
+  .title-row{padding:16px 20px 4px}
   .title-row .ko-side{border-right:0!important;border-bottom:none!important;padding-bottom:4px}
   .title-row .en-side{padding-top:0}
-  .shead-row{padding:12px 14px 2px}
+  .shead-row{padding:12px 20px 2px}
   .shead-row .ko-side{display:none}
   .fn-row{display:block!important}
   .fn-row .ko-side{display:block!important;border-right:none!important;padding:0!important}
@@ -211,7 +211,7 @@ body.dark .intro-theme-ko{color:#ccc}
 body.dark .intro-theme-en{color:#888}
 .intro-map{width:100%;height:220px;border-radius:12px;overflow:hidden;margin-top:8px;border:1px solid #e8e5e0}
 body.dark .intro-map{border-color:#333};gap:0;border-bottom:1px solid #e8e5e0;margin:0 14px;flex-shrink:0}
-.ch-tabs{display:flex;gap:0;border-bottom:1px solid #e8e5e0;padding:0 4px 0 20px;flex-shrink:0}
+.ch-tabs{display:flex;gap:0;border-bottom:1px solid #e8e5e0;padding:0 0 0 20px;flex-shrink:0}
 .ch-tab{background:none;border:none;font:500 13px inherit;color:#999;padding:8px 12px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;touch-action:manipulation}
 .ch-tab.active{color:#1b2a4a;border-bottom-color:#1b2a4a}
 body.dark .ch-tab.active{color:#e8e5e0;border-bottom-color:#e8e5e0}
@@ -589,21 +589,34 @@ async function loadVotd(){
     var bookIdx=BOOKS.findIndex(function(b){return b.en===v.bookname;}),koText='';
     if(bookIdx>=0){try{var kr=await fetch(WORKER+'/nkrv/'+BOOKS[bookIdx].n+'/'+v.chapter,{cache:'no-store'}),kd=await kr.json(),verses=Array.isArray(kd)?kd:(kd.verses||[]),kv=verses.find(function(x){return x.verse===+v.verse;});if(kv)koText=kv.text.replace(/\(KN:\d+\)/g,'');}catch(e){}}
     var koRef=bookIdx>=0?BOOKS[bookIdx].ko+' '+v.chapter+':'+v.verse:ref;
+    var isEn=langOrder==='en-ko';
     var html='<div class="votd-wrap"><div class="votd-card">';
-    html+='<div class="votd-label">오늘의 말씀 · Verse of the Day</div>';
-    if(koText){
-      html+='<div class="votd-ko-ref">'+koRef+'</div>';
-      html+='<div class="votd-ko">'+koText+'</div>';
-      html+='<div class="votd-divider"></div>';
+    html+='<div class="votd-label">'+(isEn?'Verse of the Day · 오늘의 말씀':'오늘의 말씀 · Verse of the Day')+'</div>';
+    if(isEn){
+      // English first
+      html+='<div class="votd-en-ref">'+ref+'</div>';
+      html+='<div class="votd-en" style="color:#1c1c1c;font-style:normal;margin-bottom:20px">'+v.text+'</div>';
+      if(koText){
+        html+='<div class="votd-divider"></div>';
+        html+='<div class="votd-ko-ref">'+koRef+'</div>';
+        html+='<div class="votd-ko" style="font-size:15px;color:#555;margin-bottom:24px">'+koText+'</div>';
+      }
+    } else {
+      // Korean first
+      if(koText){
+        html+='<div class="votd-ko-ref">'+koRef+'</div>';
+        html+='<div class="votd-ko">'+koText+'</div>';
+        html+='<div class="votd-divider"></div>';
+      }
+      html+='<div class="votd-en-ref">'+ref+'</div>';
+      html+='<div class="votd-en">'+v.text+'</div>';
     }
-    html+='<div class="votd-en-ref">'+ref+'</div>';
-    html+='<div class="votd-en">'+v.text+'</div>';
     if(bookIdx>=0){
       var chRef=v.bookname+' '+v.chapter;
       var koChRef=BOOKS[bookIdx].ko+' '+v.chapter+'장';
       html+='<button class="votd-read-btn" onclick="bi='+bookIdx+';ci='+v.chapter+';loaded=true;updateLabel();load()">'
-        +'<span class="votd-btn-ko" style="'+(langOrder==='en-ko'?'display:none':'')+'">'+koChRef+' 읽기 →</span>'
-        +'<span class="votd-btn-en" style="'+(langOrder==='ko-en'?'display:none':'')+'">Read '+chRef+' →</span>'
+        +'<span class="votd-btn-ko" style="'+(isEn?'display:none':'')+'">'+koChRef+' 읽기 →</span>'
+        +'<span class="votd-btn-en" style="'+(isEn?'':'display:none')+'">Read '+chRef+' →</span>'
         +'</button>';
     }
     html+='</div></div>';
