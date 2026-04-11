@@ -43,6 +43,8 @@ main::-webkit-scrollbar-thumb:hover{background:#999590}
 .verse-row:hover{background:#f0ede8}
 .verse-cell{padding:2px 28px;display:flex;gap:10px;align-items:baseline}
 .verse-cell.ko-side{border-right:1px solid #e8e5e0}
+/* #5: Remove verse divider lines entirely */
+.verse-cell.en-side{border-bottom:none!important}
 .vn{color:#999;font-size:10px;font-weight:600;min-width:16px;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums;padding-top:2px;cursor:pointer}
 .vt{line-height:1.85;color:#1c1c1c;flex:1;user-select:none;-webkit-user-select:none}
 .ko-side .vt{font-family:'Noto Sans KR',sans-serif;font-weight:400;word-break:keep-all;letter-spacing:-.02em}
@@ -60,7 +62,7 @@ footer{border-top:1px solid #e8e5e0;color:#bbb;background:var(--bg);font-size:10
   .title-row,.shead-row,.verse-row{grid-template-columns:1fr}
   .verse-cell{padding:6px 20px}
   .verse-cell.ko-side{border-right:0!important;border-bottom:none!important;padding-bottom:2px}
-  .verse-cell.en-side{padding-top:2px;border-bottom:1px solid #e8e5e0}
+  .verse-cell.en-side{padding-top:2px}
   .title-row{padding:16px 20px 4px}
   .title-row .ko-side{border-right:0!important;border-bottom:none!important;padding-bottom:4px}
   .title-row .en-side{padding-top:0}
@@ -85,8 +87,9 @@ body.dark .mob-passage-pill{color:#e8e5e0}
 body.dark .desk-icon-btn{color:#999}
 body.dark .desk-icon-btn:hover{color:#e8e5e0}
 .mob-nav-actions{display:flex;gap:5px;flex-shrink:0}
-.mob-icon-btn{background:none;border:none;font:500 14px inherit;color:#555;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer}
-body.dark .mob-icon-btn{color:#aaa}
+/* #6: Fix dark mode square boxes on nav icons */
+.mob-icon-btn{background:none;border:none;font:500 14px inherit;color:#555;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-appearance:none;appearance:none}
+body.dark .mob-icon-btn{color:#aaa;background:none!important}
 .mob-sheet{position:fixed;inset:0;z-index:1100;background:rgba(0,0,0,.4);display:flex;align-items:flex-end}
 .mob-sheet.hidden{display:none}
 .mob-sheet-inner{background:var(--bg);border-radius:16px 16px 0 0;width:100%;max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
@@ -109,7 +112,7 @@ body.dark .mob-book-row-hdr .ko{color:#e8e5e0}
 body.dark .mob-book-row-hdr .en{color:#666}
 .mob-ch-item{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;color:#222;background:#efecea;cursor:pointer}
 .mob-ch-item:active{background:#d8d4ce}
-.mob-ch-item.active{background:#222;color:#fff;font-weight:500}
+.mob-ch-item.active{background:#1b2a4a;color:#fff;font-weight:500}
 .mob-font-sheet{padding:16px 16px 32px}
 .mob-font-row{display:flex;align-items:center;gap:16px;padding:12px 0}
 button{touch-action:manipulation}
@@ -137,12 +140,11 @@ body.dark{--bg:#1a1a1a;--div:#333;color:#e8e5e0}
 body.dark header,body.dark nav,body.dark main,body.dark footer{background:var(--bg)}
 body.dark header,body.dark nav{border-bottom-color:#333}
 body.dark .ko-side{border-right-color:#333}
-body.dark .verse-cell.en-side{border-bottom-color:#333}
 body.dark .logo{color:#e8e5e0}
 body.dark .verse-row:hover{background:#242424}
 body.dark .vt{color:#d8d5d0}
 body.dark .ch-title{color:#e8e5e0}
-body.dark select,body.dark .fbtn,body.dark .mob-icon-btn,body.dark .mob-font-btn,body.dark .mob-sheet-close{background:#2a2a2a;border-color:#444;color:#ccc}
+body.dark select,body.dark .fbtn,body.dark .mob-font-btn,body.dark .mob-sheet-close{background:#2a2a2a;border-color:#444;color:#ccc}
 body.dark .mob-book-item{color:#d8d5d0;border-bottom-color:#2a2a2a}
 body.dark .mob-book-item:active{background:#2a2a2a}
 body.dark .mob-ch-item{background:#2a2a2a;color:#d8d5d0}
@@ -156,10 +158,11 @@ body.dark #intro-dropdown{background:#2a2a2a;border-color:#444}
 body.dark .edge-btn{background:rgba(30,30,30,0.85);border-color:#444;color:#aaa}
 body.dark main::-webkit-scrollbar-track{background:#222}
 body.dark main::-webkit-scrollbar-thumb{background:#444}
+/* #8: Progress bars use dark navy to match chapter grids */
 .prog-books{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;padding:4px 20px 8px}
 .prog-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
 .prog-bar-track{flex:1;height:6px;background:#efecea;border-radius:3px;overflow:hidden}
-.prog-bar-fill{height:100%;background:#2563eb;border-radius:3px;transition:width 0.3s}
+.prog-bar-fill{height:100%;background:#1b2a4a;border-radius:3px;transition:width 0.3s}
 .prog-book-list{display:flex;flex-direction:column}
 .prog-book-row{border-bottom:.5px solid #f0ede8;cursor:pointer}
 .prog-book-row-hdr{display:flex;align-items:center;padding:10px 20px;gap:12px}
@@ -169,30 +172,38 @@ body.dark main::-webkit-scrollbar-thumb{background:#444}
 .prog-book-row-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .prog-book-row-pct{font-size:11px;color:#555;min-width:28px;text-align:right}
 .prog-book-mini-bar{width:48px;height:3px;background:#efecea;border-radius:2px;overflow:hidden}
-.prog-book-mini-fill{height:100%;background:#2563eb;border-radius:2px}
+.prog-book-mini-fill{height:100%;background:#1b2a4a;border-radius:2px}
 .prog-book-row-chevron2{color:#ccc;transition:transform 0.2s}
 .prog-book-row-chevron2.open{transform:rotate(180deg)}
-.prog-book-row.complete .prog-book-row-primary{color:#2563eb}
-.prog-testament-title{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#555;margin-bottom:6px}
+.prog-book-row.complete .prog-book-row-primary{color:#1b2a4a}
+.prog-testament-title{font-size:11px;font-weight:600;letter-spacing:.04em;color:#555;margin-bottom:6px}
 .prog-bar-label{font-size:12px;color:#555;width:60px;flex-shrink:0}
 .prog-bar-pct{font-size:11px;color:#555;width:32px;text-align:right;flex-shrink:0}
 body.dark .prog-book-row{border-bottom-color:#2a2a2a}
 body.dark .prog-book-row-primary{color:#e8e5e0}
-body.dark .prog-book-row.complete .prog-book-row-primary{color:#60a5fa}
+body.dark .prog-book-row.complete .prog-book-row-primary{color:#8899bb}
 body.dark .prog-book-mini-bar{background:#333}
 body.dark .prog-testament-title{color:#aaa}
 body.dark .prog-bar-label{color:#aaa}
 body.dark .prog-bar-pct{color:#aaa}
+body.dark .prog-bar-track{background:#2a2a2a}
 .prog-chapters{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;padding:16px 20px}
 .prog-ch{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:6px;font-size:12px;cursor:pointer;position:relative}
 .prog-ch.unread{background:#efecea;color:#555}
 .prog-ch.auto{background:#1b2a4a;color:#fff}
 .prog-ch.manual{background:#1b2a4a;color:#fff}
 .prog-ch.auto::after{content:'';position:absolute;bottom:3px;right:3px;width:4px;height:4px;background:rgba(255,255,255,.6);border-radius:50%}
-.prog-back-btn{background:none;border:none;color:#2563eb;font:500 13px inherit;cursor:pointer;padding:4px 0}
+.prog-back-btn{background:none;border:none;color:#1b2a4a;font:500 13px inherit;cursor:pointer;padding:4px 0}
 body.dark .prog-ch.unread{background:#2a2a2a;color:#999}
-body.dark .prog-bar-track{background:#2a2a2a}
-body.dark .prog-back-btn{color:#60a5fa}
+body.dark .prog-back-btn{color:#8899bb}
+/* Shared text styles for intro and commentary — #2 font consistency */
+.section-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#1b2a4a;margin-bottom:8px}
+body.dark .section-label{color:#8899bb}
+.text-ko{font-family:'Noto Sans KR',sans-serif;font-size:15px;line-height:1.85;color:#1c1c1c;margin-bottom:6px;word-break:keep-all;letter-spacing:-.02em}
+.text-en{font-size:14px;line-height:1.75;color:#555;margin-bottom:6px}
+body.dark .text-ko{color:#e8e5e0}
+body.dark .text-en{color:#999}
+/* Keep these for backward compat */
 .intro-wrap{padding:20px 20px 40px;max-width:680px}
 .intro-section{margin-bottom:24px}
 .intro-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#1b2a4a;margin-bottom:8px}
@@ -212,18 +223,6 @@ body.dark .intro-theme-ko{color:#ccc}
 body.dark .intro-theme-en{color:#888}
 .intro-map{width:100%;height:260px;border-radius:12px;overflow:hidden;margin-top:8px;border:1px solid #e8e5e0;position:relative;z-index:1}
 body.dark .intro-map{border-color:#333}
-header{display:none!important}
-.desk-only{display:none!important}
-.mob-nav{display:flex!important;align-items:center;justify-content:space-between;width:100%}
-.edge-nav{display:none!important}
-.title-row,.shead-row,.verse-row{grid-template-columns:1fr!important}
-.verse-cell{padding:6px 20px!important}
-.verse-cell.ko-side{border-right:0!important;border-bottom:none!important;padding-bottom:2px!important}
-.verse-cell.en-side{padding-top:2px!important;border-bottom:1px solid #e8e5e0!important}
-.ko-side{border-right:0!important}
-.mob-sheet{align-items:flex-end!important}
-.mob-sheet-inner{border-radius:16px 16px 0 0!important;max-height:85vh!important;max-width:100%!important}
-.prog-chapters{grid-template-columns:repeat(6,1fr)!important}
 .leaflet-div-icon{background:none!important;border:none!important;box-shadow:none!important;}
 .intro-map-legend{margin-top:12px;display:flex;flex-direction:column;gap:8px}
 .intro-map-legend-item{display:flex;align-items:flex-start;gap:10px}
@@ -232,24 +231,27 @@ header{display:none!important}
 body.dark .intro-map-legend-name{color:#e8e5e0}
 .intro-map-legend-desc{font-size:12px;color:#666;line-height:1.5}
 body.dark .intro-map-legend-desc{color:#999}
-.ch-tabs{display:flex;gap:0;border-bottom:1px solid #e8e5e0;padding:0 0 0 20px;flex-shrink:0}
-.ch-tab{background:none;border:none;font:500 13px inherit;color:#999;padding:8px 12px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;touch-action:manipulation}
-.ch-tab.active{color:#1b2a4a;border-bottom-color:#1b2a4a}
+/* #6: Tab bar — remove full-width border, keep only active underline */
+.ch-tabs{display:flex;gap:0;padding:0 0 0 20px;flex-shrink:0;border-bottom:none}
+.ch-tab{background:none;border:none;font:500 13px inherit;color:#999;padding:8px 12px;cursor:pointer;border-bottom:2px solid transparent;touch-action:manipulation}
+.ch-tab.active{color:#1b2a4a;border-bottom:2px solid #1b2a4a}
 body.dark .ch-tab.active{color:#e8e5e0;border-bottom-color:#e8e5e0}
-.commentary-wrap{padding:20px 20px 40px;max-width:680px}.commentary-section{margin-bottom:24px}
-.commentary-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#1b2a4a;margin-bottom:6px}
-body.dark .commentary-label{color:#8899bb}
-.commentary-ko{font-family:'Noto Sans KR',sans-serif;font-size:15px;line-height:1.85;color:#1c1c1c;margin-bottom:8px;word-break:keep-all}
-.commentary-en{font-size:14px;line-height:1.75;color:#1c1c1c;margin-bottom:6px}
-body.dark .commentary-en{color:#d8d5d0}
-body.dark .commentary-ko{color:#e8e5e0}
-body.dark .commentary-en{color:#999}
+/* #1: Commentary — plain text, no selectable blocks */
+.comm-wrap{padding:16px 20px 40px}
+.comm-section{margin-bottom:24px}
+.comm-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#1b2a4a;margin-bottom:8px}
+body.dark .comm-label{color:#8899bb}
+.comm-ko{font-family:'Noto Sans KR',sans-serif;font-size:15px;line-height:1.85;color:#1c1c1c;margin-bottom:6px;word-break:keep-all;letter-spacing:-.02em}
+.comm-en{font-size:14px;line-height:1.75;color:#555;margin-bottom:6px}
+body.dark .comm-ko{color:#e8e5e0}
+body.dark .comm-en{color:#999}
 .fn-popup{position:fixed;z-index:200;background:#fff;border:1px solid #e8e5e0;border-radius:8px;padding:10px 14px;max-width:280px;font-size:12px;color:#444;line-height:1.6;box-shadow:0 4px 16px rgba(0,0,0,.12);pointer-events:none;transition:opacity .15s}
 body.dark .fn-popup{background:#2a2a2a;border-color:#444;color:#ccc}
 .votd-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 20px;min-height:60vh}
 .votd-card{background:#fff;border-radius:20px;padding:28px 24px 24px;max-width:420px;width:100%;box-shadow:0 2px 20px rgba(0,0,0,.07);display:flex;flex-direction:column}
 body.dark .votd-card{background:#242424;box-shadow:0 2px 20px rgba(0,0,0,.3)}
-.votd-label{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#1b2a4a;margin-bottom:18px}
+/* #7: No ALL CAPS on votd label */
+.votd-label{font-size:10px;font-weight:700;letter-spacing:.08em;color:#1b2a4a;margin-bottom:18px}
 body.dark .votd-label{color:#8899bb}
 .votd-ko-ref{font-family:'Noto Sans KR',sans-serif;font-size:11px;font-weight:600;color:#aaa;margin-bottom:5px}
 .votd-ko{font-family:'Noto Sans KR',sans-serif;font-size:18px;line-height:1.85;color:#1c1c1c;word-break:keep-all;margin-bottom:20px}
@@ -300,6 +302,19 @@ body.dark .confirm-msg{color:#e8e5e0}
 body.dark .confirm-btn.cancel{background:#333;color:#bbb}
 .confirm-btn.ok{background:#222;color:#fff}
 body.dark .confirm-btn.ok{background:#e8e5e0;color:#111}
+/* Force mobile layout */
+header{display:none!important}
+.desk-only{display:none!important}
+.mob-nav{display:flex!important;align-items:center;justify-content:space-between;width:100%}
+.edge-nav{display:none!important}
+.title-row,.shead-row,.verse-row{grid-template-columns:1fr!important}
+.verse-cell{padding:6px 20px!important}
+.verse-cell.ko-side{border-right:0!important;border-bottom:none!important;padding-bottom:2px!important}
+.verse-cell.en-side{padding-top:2px!important;border-bottom:none!important}
+.ko-side{border-right:0!important}
+.mob-sheet{align-items:flex-end!important}
+.mob-sheet-inner{border-radius:16px 16px 0 0!important;max-height:85vh!important;max-width:100%!important}
+.prog-chapters{grid-template-columns:repeat(6,1fr)!important}
 </style>
 </head>
 <body>
@@ -317,7 +332,7 @@ body.dark .confirm-btn.ok{background:#e8e5e0;color:#111}
     <button class="fbtn" id="fminus" type="button">&#8722;</button>
     <button class="fbtn" id="fplus" type="button">+</button>
     <button class="desk-icon-btn" id="desk-dark-btn" onclick="toggleDark(this)" title="Dark mode">
-      <svg id="desk-dark-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9 9 9 0 0 0-9-9zm0 0v18A9 9 0 0 1 12 3z" style="display:none"/><circle cx="12" cy="12" r="9"/><path d="M12 3v18" /><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg>
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v18"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg>
     </button>
     <button class="desk-icon-btn" onclick="sheetOpen('progress')" title="읽기 진도">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
@@ -335,7 +350,7 @@ body.dark .confirm-btn.ok{background:#e8e5e0;color:#111}
       </button>
       <button class="mob-icon-btn" id="mob-dark-btn" onclick="toggleDark(this)" title="Dark mode">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v18"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg>
-    </button>
+      </button>
       <button class="mob-icon-btn" onclick="sheetOpen('progress')" title="읽기 진도">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
       </button>
@@ -402,7 +417,7 @@ let bi=42,ci=3,fs=15,pendingBook=null,loaded=false,langOrder="ko-en",darkMode=fa
 })();
 function applyFs(){
   document.documentElement.style.setProperty('--fs',fs+'px');
-  document.querySelectorAll('.vt,.commentary-ko,.commentary-en,.intro-ko,.intro-en,.intro-theme-ko,.intro-theme-en').forEach(function(el){el.style.fontSize=fs+'px';});
+  document.querySelectorAll('.vt,.comm-ko,.comm-en,.intro-ko,.intro-en,.intro-theme-ko,.intro-theme-en').forEach(function(el){el.style.fontSize=fs+'px';});
 }
 function updateLabel(){
   var lbl;
@@ -444,7 +459,6 @@ function parseAndLoad(raw){
 }
 function toggleLangOrder(btn){
   langOrder=langOrder==='ko-en'?'en-ko':'ko-en';
-  if(btn)btn.textContent=langOrder==='ko-en'?'한':'Eng';
   var deskBtn=document.getElementById('desk-lang-btn');
   var mobBtn=document.getElementById('mob-lang-btn');
   if(deskBtn)deskBtn.textContent=langOrder==='ko-en'?'한':'Eng';
@@ -480,7 +494,7 @@ function applyLangOrder(){
   var sid='lang-order-style',ex=document.getElementById(sid);if(ex)ex.remove();
   if(langOrder==='en-ko'){
     var s=document.createElement('style');s.id=sid;
-    s.textContent='.verse-cell.ko-side{order:2;box-shadow:0 1px 0 0 var(--div);padding-top:2px!important;padding-bottom:6px!important}.verse-cell.en-side{order:1;border-bottom:none!important;padding-top:6px!important;padding-bottom:2px!important}.verse-row{display:flex;flex-direction:column}.fn-row{display:flex!important;flex-direction:column}.fn-row .ko-side{order:2!important}.fn-row .en-side{order:1!important}.verse-cell.en-side .vn{visibility:visible!important}.verse-cell.ko-side .vn{visibility:hidden!important}';
+    s.textContent='.verse-cell.ko-side{order:2;padding-top:2px!important;padding-bottom:6px!important}.verse-cell.en-side{order:1;padding-top:6px!important;padding-bottom:2px!important}.verse-row{display:flex;flex-direction:column}.fn-row{display:flex!important;flex-direction:column}.fn-row .ko-side{order:2!important}.fn-row .en-side{order:1!important}.verse-cell.en-side .vn{visibility:visible!important}.verse-cell.ko-side .vn{visibility:hidden!important}';
     document.head.appendChild(s);
   }
 }
@@ -562,6 +576,7 @@ function progShowOverview(){
   function bookStats(books,si){var t=0,r=0;books.forEach(function(b,i){t+=b.ch;for(var c=1;c<=b.ch;c++)if(data[progKey(si+i,c)])r++;});return{total:t,read:r};}
   var otS=bookStats(OT,0),ntS=bookStats(NT,39);
   var html='<div style="padding:0">';
+  /* #7: Title case for Old/New Testament */
   html+='<div class="prog-testament" style="padding:8px 20px 0"><div class="prog-testament-title">'+(langOrder==='en-ko'?'Old Testament / 구약':'구약 / Old Testament')+'</div>';
   html+='<div class="prog-bar-row"><span class="prog-bar-label">'+otS.read+'/'+otS.total+'</span><div class="prog-bar-track"><div class="prog-bar-fill" style="width:'+Math.round(otS.read/otS.total*100)+'%"></div></div><span class="prog-bar-pct">'+Math.round(otS.read/otS.total*100)+'%</span></div></div>';
   html+='<div class="prog-testament" style="padding:0 20px 0"><div class="prog-testament-title">'+(langOrder==='en-ko'?'New Testament / 신약':'신약 / New Testament')+'</div>';
@@ -592,15 +607,11 @@ function toggleProgBook(idx){
   var grid=document.getElementById('prog-ch-'+idx);
   var chevron=document.querySelector('#prog-row-'+idx+' .prog-book-row-chevron2');
   var isOpen=grid.style.display!=='none';
-  if(isOpen){
-    grid.style.display='none';
-    if(chevron)chevron.classList.remove('open');
-  } else {
+  if(isOpen){grid.style.display='none';if(chevron)chevron.classList.remove('open');}
+  else{
     var b=BOOKS[idx],data=progLoad(),h='';
     for(var c=1;c<=b.ch;c++){var k=progKey(idx,c),entry=data[k],cls=entry?(entry.source==='auto'?'auto':'manual'):'unread';h+='<div class="prog-ch '+cls+'" onclick="progToggleManual('+idx+','+c+')" title="'+(entry?entry.date:'Tap to mark read')+'">'+c+'</div>';}
-    grid.innerHTML=h;
-    grid.style.display='grid';
-    if(chevron)chevron.classList.add('open');
+    grid.innerHTML=h;grid.style.display='grid';if(chevron)chevron.classList.add('open');
   }
 }
 function progShowBook(idx){toggleProgBook(idx);}
@@ -616,23 +627,15 @@ async function loadVotd(){
     var koRef=bookIdx>=0?BOOKS[bookIdx].ko+' '+v.chapter+':'+v.verse:ref;
     var isEn=langOrder==='en-ko';
     var html='<div class="votd-wrap"><div class="votd-card">';
-    html+='<div class="votd-label">'+(isEn?'Verse of the Day · 오늘의 말씀':'오늘의 말씀 · Verse of the Day')+'</div>';
+    /* #7: Title case, use / */
+    html+='<div class="votd-label">'+(isEn?'Verse of the Day / 오늘의 말씀':'오늘의 말씀 / Verse of the Day')+'</div>';
     if(isEn){
       html+='<div class="votd-en-ref">'+ref+'</div>';
       html+='<div class="votd-en" style="color:#1c1c1c;font-style:normal;margin-bottom:20px">'+v.text+'</div>';
-      if(koText){
-        html+='<div class="votd-divider"></div>';
-        html+='<div class="votd-ko-ref">'+koRef+'</div>';
-        html+='<div class="votd-ko" style="font-size:15px;color:#555;margin-bottom:24px">'+koText+'</div>';
-      }
+      if(koText){html+='<div class="votd-divider"></div><div class="votd-ko-ref">'+koRef+'</div><div class="votd-ko" style="font-size:15px;color:#555;margin-bottom:24px">'+koText+'</div>';}
     } else {
-      if(koText){
-        html+='<div class="votd-ko-ref">'+koRef+'</div>';
-        html+='<div class="votd-ko">'+koText+'</div>';
-        html+='<div class="votd-divider"></div>';
-      }
-      html+='<div class="votd-en-ref">'+ref+'</div>';
-      html+='<div class="votd-en">'+v.text+'</div>';
+      if(koText){html+='<div class="votd-ko-ref">'+koRef+'</div><div class="votd-ko">'+koText+'</div><div class="votd-divider"></div>';}
+      html+='<div class="votd-en-ref">'+ref+'</div><div class="votd-en">'+v.text+'</div>';
     }
     if(bookIdx>=0){
       var chRef=v.bookname+' '+v.chapter;
@@ -670,39 +673,23 @@ function sheetOpen(mode){
     });
     h+='</div>';
     body.innerHTML=h;
-    setTimeout(function(){
-      var activeRow=body.querySelector('.mob-book-row.active');
-      if(activeRow) activeRow.scrollIntoView({block:'start'});
-    },50);
+    setTimeout(function(){var activeRow=body.querySelector('.mob-book-row.active');if(activeRow)activeRow.scrollIntoView({block:'start'});},50);
   } else {
     document.getElementById('mob-sheet-title').textContent=langOrder==='en-ko'?'Font Size / 글자 크기':'글자 크기 / Font Size';
     body.innerHTML='<div class="mob-font-sheet"><div class="mob-font-row"><button class="mob-font-btn" onclick="adjFont(-1)">−</button><div class="mob-font-preview">가 Aa — '+fs+'px</div><button class="mob-font-btn" onclick="adjFont(1)">+</button></div></div>';
   }
 }
-
-/* FIXED */
 function toggleBookRow(idx){
   var grid=document.getElementById('ch-grid-'+idx);
   var chevron=document.querySelector('#book-row-'+idx+' .mob-book-row-chevron');
   var isOpen=grid.style.display!=='none';
-
-  if(isOpen){
-    grid.style.display='none';
-    if(chevron)chevron.classList.remove('open');
-  } else {
-    var b=BOOKS[idx];
-    var h='';
-
-    for(var c=1;c<=b.ch;c++){
-      h+='<div class="mob-ch-item'+(idx===bi&&c===ci&&!inIntroMode?' active':'')+'" onclick="sheetSelectCh2('+idx+','+c+')">'+c+'</div>';
-    }
-
-    grid.innerHTML=h;
-    grid.style.display='grid';
-    if(chevron)chevron.classList.add('open');
+  if(isOpen){grid.style.display='none';if(chevron)chevron.classList.remove('open');}
+  else{
+    var b=BOOKS[idx],h='';
+    for(var c=1;c<=b.ch;c++)h+='<div class="mob-ch-item'+(idx===bi&&c===ci&&!inIntroMode?' active':'')+'" onclick="sheetSelectCh2('+idx+','+c+')">'+c+'</div>';
+    grid.innerHTML=h;grid.style.display='grid';if(chevron)chevron.classList.add('open');
   }
 }
-
 function sheetSelectCh2(bookIdx,ch){
   bi=bookIdx;ci=ch;pendingBook=bookIdx;inIntroMode=false;
   window._lastIntroData=null;window._lastIntroBk=null;
@@ -857,10 +844,8 @@ function hlApply(color){
 }
 function hlShowToolbar(row,e){
   if(hlSelected&&hlSelected!==row) hlSelected.classList.remove('hl-selected');
-  hlSelected=row;
-  row.classList.add('hl-selected');
-  var bar=document.getElementById('hl-bar');
-  bar.classList.add('visible');
+  hlSelected=row;row.classList.add('hl-selected');
+  var bar=document.getElementById('hl-bar');bar.classList.add('visible');
   var data=hlLoad(),n=row.id.replace('vr-',''),cur=data[hlKey(bi,ci,n)]||null;
   var koC={y:'노란색',g:'초록색',b:'파란색',p:'보라색',r:'빨간색'},enC={y:'Yellow',g:'Green',b:'Blue',p:'Purple',r:'Red'};
   bar.querySelectorAll('.hl-bar-swatch').forEach(function(s){
@@ -912,22 +897,24 @@ function loadBookIntroView(bookIdx){
     document.getElementById('content').innerHTML='<div class="errbox">Intro failed: '+esc(e.message)+'</div>';
   });
 }
+/* #2 & #3: renderBookIntro — consistent fonts with commentary, correct language flip */
 function renderBookIntro(d,bk,container){
   var isEn=langOrder==='en-ko';
-  var ol=isEn?'Overview · 개요':'개요 · Overview';
-  var bl=isEn?'Historical Background · 역사적 배경':'역사적 배경 · Historical Background';
-  var tl=isEn?'Key Themes · 핵심 주제':'핵심 주제 · Key Themes';
-  var gl=isEn?'Geographic Context · 지리적 배경':'지리적 배경 · Geographic Context';
+  var ol=isEn?'Overview / 개요':'개요 / Overview';
+  var bl=isEn?'Historical Background / 역사적 배경':'역사적 배경 / Historical Background';
+  var tl=isEn?'Key Themes / 핵심 주제':'핵심 주제 / Key Themes';
+  var gl=isEn?'Geographic Context / 지리적 배경':'지리적 배경 / Geographic Context';
   var h='';
   if(!container) h+='<div class="col-headers"></div>';
   h+='<div class="intro-wrap">';
   h+='<div class="intro-section"><div class="intro-label">'+ol+'</div>';
-  if(isEn){h+='<div class="intro-en">'+esc(d.overview_en)+'</div><div class="intro-ko">'+esc(d.overview_ko)+'</div>';}
-  else{h+='<div class="intro-ko">'+esc(d.overview_ko)+'</div><div class="intro-en">'+esc(d.overview_en)+'</div>';}
+  /* #3: language order correct */
+  if(isEn){h+='<div class="comm-en">'+esc(d.overview_en)+'</div><div class="comm-ko">'+esc(d.overview_ko)+'</div>';}
+  else{h+='<div class="comm-ko">'+esc(d.overview_ko)+'</div><div class="comm-en">'+esc(d.overview_en)+'</div>';}
   h+='</div>';
   h+='<div class="intro-section"><div class="intro-label">'+bl+'</div>';
-  if(isEn){h+='<div class="intro-en">'+esc(d.background_en)+'</div><div class="intro-ko">'+esc(d.background_ko)+'</div>';}
-  else{h+='<div class="intro-ko">'+esc(d.background_ko)+'</div><div class="intro-en">'+esc(d.background_en)+'</div>';}
+  if(isEn){h+='<div class="comm-en">'+esc(d.background_en)+'</div><div class="comm-ko">'+esc(d.background_ko)+'</div>';}
+  else{h+='<div class="comm-ko">'+esc(d.background_ko)+'</div><div class="comm-en">'+esc(d.background_en)+'</div>';}
   h+='</div>';
   h+='<div class="intro-section"><div class="intro-label">'+tl+'</div><div class="intro-themes">';
   var themes=isEn?d.themes_en:d.themes_ko;
@@ -948,8 +935,8 @@ function renderBookIntro(d,bk,container){
   });}
   h+='</div></div>';
   h+='<div class="intro-section"><div class="intro-label">'+gl+'</div>';
-  if(isEn){h+='<div class="intro-en">'+esc(d.geo_en)+'</div><div class="intro-ko">'+esc(d.geo_ko)+'</div>';}
-  else{h+='<div class="intro-ko">'+esc(d.geo_ko)+'</div><div class="intro-en">'+esc(d.geo_en)+'</div>';}
+  if(isEn){h+='<div class="comm-en">'+esc(d.geo_en)+'</div><div class="comm-ko">'+esc(d.geo_ko)+'</div>';}
+  else{h+='<div class="comm-ko">'+esc(d.geo_ko)+'</div><div class="comm-en">'+esc(d.geo_en)+'</div>';}
   if(d.map_locations&&d.map_locations.length){
     h+='<div class="intro-map" id="intro-map"></div>';
     h+='<div class="intro-map-legend">';
@@ -971,31 +958,18 @@ function renderBookIntro(d,bk,container){
     });
     h+='</div>';
   }
-  h+='</div>';
-  h+='</div>';
+  h+='</div></div>';
   var target=container||document.getElementById('content');
   target.innerHTML=h;
   if(d.map_locations&&d.map_locations.length&&window.L){
     setTimeout(function(){
       var mapEl=document.getElementById('intro-map');
       if(!mapEl)return;
-      var locs=d.map_locations;
       if(mapEl._leaflet_id){try{L.DomUtil.get('intro-map')._leaflet_map&&L.DomUtil.get('intro-map')._leaflet_map.remove();}catch(e){}}
       mapEl._leaflet_id=null;
-      var map=L.map('intro-map',{
-        zoomControl:false,
-        attributionControl:false,
-        dragging:false,
-        touchZoom:false,
-        doubleClickZoom:false,
-        scrollWheelZoom:false,
-        boxZoom:false,
-        keyboard:false
-      });
-      L.tileLayer('https://cawm.lib.uiowa.edu/tiles/{z}/{x}/{y}.png',{
-        attribution:'© <a href="https://cawm.lib.uiowa.edu">CAWM</a> CC BY 4.0',
-        maxZoom:10
-      }).addTo(map);
+      var locs=d.map_locations;
+      var map=L.map('intro-map',{zoomControl:false,attributionControl:false,dragging:false,touchZoom:false,doubleClickZoom:false,scrollWheelZoom:false,boxZoom:false,keyboard:false});
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{subdomains:'abcd'}).addTo(map);
       var bounds=locs.map(function(l){return[l.lat,l.lng];});
       if(bounds.length>1)map.fitBounds(bounds,{padding:[50,50],animate:false});
       else map.setView(bounds[0],7,{animate:false});
@@ -1004,47 +978,16 @@ function renderBookIntro(d,bk,container){
       mapEl.appendChild(svg);
       function drawPins(){
         while(svg.firstChild)svg.removeChild(svg.firstChild);
-        var pts=locs.map(function(loc){
-          var pt=map.latLngToContainerPoint([loc.lat,loc.lng]);
-          return{x:pt.x,y:pt.y};
-        });
+        var pts=locs.map(function(loc){var pt=map.latLngToContainerPoint([loc.lat,loc.lng]);return{x:pt.x,y:pt.y};});
         var r=14;
-        for(var i=0;i<pts.length;i++){
-          for(var j=i+1;j<pts.length;j++){
-            var dx=pts[j].x-pts[i].x, dy=pts[j].y-pts[i].y;
-            var dist=Math.sqrt(dx*dx+dy*dy);
-            if(dist<r*2&&dist>0){
-              var overlap=(r*2-dist)/2+2;
-              var nx=dx/dist, ny=dy/dist;
-              pts[i].x-=nx*overlap; pts[i].y-=ny*overlap;
-              pts[j].x+=nx*overlap; pts[j].y+=ny*overlap;
-            } else if(dist===0){
-              pts[i].x-=r; pts[j].x+=r;
-            }
-          }
-        }
+        for(var i=0;i<pts.length;i++){for(var j=i+1;j<pts.length;j++){var dx=pts[j].x-pts[i].x,dy=pts[j].y-pts[i].y,dist=Math.sqrt(dx*dx+dy*dy);if(dist<r*2&&dist>0){var overlap=(r*2-dist)/2+2,nx=dx/dist,ny=dy/dist;pts[i].x-=nx*overlap;pts[i].y-=ny*overlap;pts[j].x+=nx*overlap;pts[j].y+=ny*overlap;}else if(dist===0){pts[i].x-=r;pts[j].x+=r;}}}
         pts.forEach(function(pt,i){
           var g=document.createElementNS('http://www.w3.org/2000/svg','g');
           var circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
-          circle.setAttribute('cx',pt.x);
-          circle.setAttribute('cy',pt.y);
-          circle.setAttribute('r','13');
-          circle.setAttribute('fill','#1b2a4a');
-          circle.setAttribute('stroke','#fff');
-          circle.setAttribute('stroke-width','2');
+          circle.setAttribute('cx',pt.x);circle.setAttribute('cy',pt.y);circle.setAttribute('r','13');circle.setAttribute('fill','#1b2a4a');circle.setAttribute('stroke','#fff');circle.setAttribute('stroke-width','2');
           var text=document.createElementNS('http://www.w3.org/2000/svg','text');
-          text.setAttribute('x',pt.x);
-          text.setAttribute('y',pt.y);
-          text.setAttribute('text-anchor','middle');
-          text.setAttribute('dominant-baseline','central');
-          text.setAttribute('fill','#fff');
-          text.setAttribute('font-size','11');
-          text.setAttribute('font-weight','700');
-          text.setAttribute('font-family','sans-serif');
-          text.textContent=i+1;
-          g.appendChild(circle);
-          g.appendChild(text);
-          svg.appendChild(g);
+          text.setAttribute('x',pt.x);text.setAttribute('y',pt.y);text.setAttribute('text-anchor','middle');text.setAttribute('dominant-baseline','central');text.setAttribute('fill','#fff');text.setAttribute('font-size','11');text.setAttribute('font-weight','700');text.setAttribute('font-family','sans-serif');text.textContent=i+1;
+          g.appendChild(circle);g.appendChild(text);svg.appendChild(g);
         });
       }
       map.on('moveend zoomend viewreset',drawPins);
@@ -1059,49 +1002,27 @@ function switchTab(tab){
   var btnText=document.getElementById('tab-text');
   var btnComm=document.getElementById('tab-comm');
   var btnIntro=document.getElementById('tab-intro');
-  if(tText)tText.style.display='none';
-  if(tComm)tComm.style.display='none';
-  if(tIntro)tIntro.style.display='none';
-  if(btnText)btnText.classList.remove('active');
-  if(btnComm)btnComm.classList.remove('active');
-  if(btnIntro)btnIntro.classList.remove('active');
-  if(tab==='text'){
-    if(tText)tText.style.display='';
-    if(btnText)btnText.classList.add('active');
-  } else if(tab==='comm'){
-    if(tComm)tComm.style.display='';
-    if(btnComm)btnComm.classList.add('active');
-    if(tComm&&tComm.querySelector('.ldg')) loadCommentary();
-  } else if(tab==='intro'){
-    if(tIntro)tIntro.style.display='';
-    if(btnIntro)btnIntro.classList.add('active');
-    if(tIntro&&tIntro.querySelector('.ldg')) loadTabIntro();
-  }
+  if(tText)tText.style.display='none';if(tComm)tComm.style.display='none';if(tIntro)tIntro.style.display='none';
+  if(btnText)btnText.classList.remove('active');if(btnComm)btnComm.classList.remove('active');if(btnIntro)btnIntro.classList.remove('active');
+  if(tab==='text'){if(tText)tText.style.display='';if(btnText)btnText.classList.add('active');}
+  else if(tab==='comm'){if(tComm)tComm.style.display='';if(btnComm)btnComm.classList.add('active');if(tComm&&tComm.querySelector('.ldg'))loadCommentary();}
+  else if(tab==='intro'){if(tIntro)tIntro.style.display='';if(btnIntro)btnIntro.classList.add('active');if(tIntro&&tIntro.querySelector('.ldg'))loadTabIntro();}
 }
+/* #1 & #4: renderCommentary — plain text, no blocks, single bilingual label */
 function renderCommentary(d,tComm){
-  var sl=langOrder==='ko-en'?'요약':'Synopsis';
-  var rl=langOrder==='ko-en'?'묵상':'Reflection';
   var isEn=langOrder==='en-ko';
-  var h='<div class="verse-row" style="padding-top:16px">';
-  h+='<div class="verse-cell ko-side" style="flex-direction:column;align-items:flex-start;padding-top:16px;padding-bottom:12px">';
-  h+='<div class="commentary-label">'+sl+'</div>';
-  h+='<div class="'+(isEn?'commentary-en':'commentary-ko')+'">'+esc(isEn?d.summary_en:d.summary_ko)+'</div>';
+  /* #4: single label with / , preferred language first */
+  var sl=isEn?'Synopsis / 요약':'요약 / Synopsis';
+  var rl=isEn?'Reflection / 묵상':'묵상 / Reflection';
+  var h='<div class="comm-wrap">';
+  h+='<div class="comm-section"><div class="comm-label">'+sl+'</div>';
+  if(isEn){h+='<div class="comm-en">'+esc(d.summary_en)+'</div><div class="comm-ko">'+esc(d.summary_ko)+'</div>';}
+  else{h+='<div class="comm-ko">'+esc(d.summary_ko)+'</div><div class="comm-en">'+esc(d.summary_en)+'</div>';}
   h+='</div>';
-  h+='<div class="verse-cell en-side" style="flex-direction:column;align-items:flex-start;padding-top:16px;padding-bottom:12px">';
-  h+='<div class="commentary-label">'+sl+'</div>';
-  h+='<div class="'+(isEn?'commentary-ko':'commentary-en')+'">'+esc(isEn?d.summary_ko:d.summary_en)+'</div>';
-  h+='</div>';
-  h+='</div>';
-  h+='<div class="verse-row">';
-  h+='<div class="verse-cell ko-side" style="flex-direction:column;align-items:flex-start;padding-top:16px;padding-bottom:24px">';
-  h+='<div class="commentary-label">'+rl+'</div>';
-  h+='<div class="'+(isEn?'commentary-en':'commentary-ko')+'">'+esc(isEn?d.reflection_en:d.reflection_ko)+'</div>';
-  h+='</div>';
-  h+='<div class="verse-cell en-side" style="flex-direction:column;align-items:flex-start;padding-top:16px;padding-bottom:24px">';
-  h+='<div class="commentary-label">'+rl+'</div>';
-  h+='<div class="'+(isEn?'commentary-ko':'commentary-en')+'">'+esc(isEn?d.reflection_ko:d.reflection_en)+'</div>';
-  h+='</div>';
-  h+='</div>';
+  h+='<div class="comm-section"><div class="comm-label">'+rl+'</div>';
+  if(isEn){h+='<div class="comm-en">'+esc(d.reflection_en)+'</div><div class="comm-ko">'+esc(d.reflection_ko)+'</div>';}
+  else{h+='<div class="comm-ko">'+esc(d.reflection_ko)+'</div><div class="comm-en">'+esc(d.reflection_en)+'</div>';}
+  h+='</div></div>';
   tComm.innerHTML=h;
 }
 async function loadTabIntro(){
