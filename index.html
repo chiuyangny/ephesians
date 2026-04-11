@@ -212,6 +212,7 @@ body.dark .intro-theme-en{color:#888}
 .intro-map{width:100%;height:260px;border-radius:12px;overflow:hidden;margin-top:8px;border:1px solid #e8e5e0;position:relative;z-index:1}
 body.dark .intro-map{border-color:#333}
 .leaflet-div-icon{background:none!important;border:none!important}
+.map-num-label{background:none!important;border:none!important;box-shadow:none!important;color:#fff!important;font-size:11px!important;font-weight:700!important;padding:0!important;margin:0!important;line-height:1}
 .lnm{background:#1b2a4a;color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4);font-family:'DM Sans',sans-serif}
 .intro-map-legend{margin-top:12px;display:flex;flex-direction:column;gap:8px}
 .intro-map-legend-item{display:flex;align-items:flex-start;gap:10px}
@@ -978,8 +979,10 @@ function renderBookIntro(d,bk){
     h+='<div class="intro-map-legend">';
     d.map_locations.forEach(function(loc,i){
       var name=esc(loc.name);
+      var nameKo=esc(loc.name_ko||loc.name);
       var desc=esc(isEn?loc.desc:(loc.desc_ko||loc.desc));
-      h+='<div class="intro-map-legend-item"><span class="intro-map-legend-num">'+(i+1)+'</span><div class="intro-map-legend-text"><div class="intro-map-legend-name">'+name+'</div><div class="intro-map-legend-desc">'+desc+'</div></div></div>';
+      var displayName=isEn?name:(nameKo+(nameKo!==name?' ('+name+')':''));
+      h+='<div class="intro-map-legend-item"><span class="intro-map-legend-num">'+(i+1)+'</span><div class="intro-map-legend-text"><div class="intro-map-legend-name">'+displayName+'</div><div class="intro-map-legend-desc">'+desc+'</div></div></div>';
     });
     h+='</div>';
   }
@@ -1009,13 +1012,21 @@ function renderBookIntro(d,bk){
       var locs=d.map_locations;
       var bounds=[];
       locs.forEach(function(loc,i){
-        var icon=L.divIcon({
-          html:'<div style="background:#1b2a4a;color:#fff;border-radius:50%;width:26px;height:26px;line-height:26px;text-align:center;font-size:11px;font-weight:700;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4);font-family:sans-serif">'+(i+1)+'</div>',
-          className:'',
-          iconSize:[26,26],
-          iconAnchor:[13,13]
-        });
-        L.marker([loc.lat,loc.lng],{icon:icon}).addTo(map);
+        // Use circleMarker (pure SVG, no image) with a tooltip for the number
+        var circle=L.circleMarker([loc.lat,loc.lng],{
+          radius:13,
+          fillColor:'#1b2a4a',
+          fillOpacity:1,
+          color:'#fff',
+          weight:2
+        }).addTo(map);
+        // Add number label as permanent tooltip
+        circle.bindTooltip(String(i+1),{
+          permanent:true,
+          direction:'center',
+          className:'map-num-label',
+          offset:[0,0]
+        }).openTooltip();
         bounds.push([loc.lat,loc.lng]);
       });
       if(bounds.length>1)map.fitBounds(bounds,{padding:[30,30]});
@@ -1039,16 +1050,11 @@ function switchTab(tab){
 }
 function renderCommentary(d,tComm){
     var sl=langOrder==='ko-en'?'요약':'Synopsis';
-    var cl=langOrder==='ko-en'?'역사적 배경':'Historical Context';
     var rl=langOrder==='ko-en'?'묵상':'Reflection';
     var h='<div class="commentary-wrap">';
     h+='<div class="commentary-section"><div class="commentary-label">'+sl+'</div>';
     if(langOrder==='ko-en'){h+='<div class="commentary-ko">'+esc(d.summary_ko)+'</div><div class="commentary-en">'+esc(d.summary_en)+'</div>';}
     else{h+='<div class="commentary-en">'+esc(d.summary_en)+'</div><div class="commentary-ko">'+esc(d.summary_ko)+'</div>';}
-    h+='</div>';
-    h+='<div class="commentary-section"><div class="commentary-label">'+cl+'</div>';
-    if(langOrder==='ko-en'){h+='<div class="commentary-ko">'+esc(d.context_ko)+'</div><div class="commentary-en">'+esc(d.context_en)+'</div>';}
-    else{h+='<div class="commentary-en">'+esc(d.context_en)+'</div><div class="commentary-ko">'+esc(d.context_ko)+'</div>';}
     h+='</div>';
     h+='<div class="commentary-section"><div class="commentary-label">'+rl+'</div>';
     if(langOrder==='ko-en'){h+='<div class="commentary-ko">'+esc(d.reflection_ko)+'</div><div class="commentary-en">'+esc(d.reflection_en)+'</div>';}
