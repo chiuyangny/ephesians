@@ -1,1092 +1,327 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>krengbible.com</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
-<style>
-:root{--fs:15px;--bg:#f7f5f2;--ko-order:1;--en-order:2;--div:#e8e5e0}
-*{box-sizing:border-box;margin:0;padding:0;max-width:100%}
-html,body{height:100%;overflow-x:hidden}html{overscroll-behavior-y:none}body{overscroll-behavior-y:none}
-body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:#111;display:flex;flex-direction:column;height:100%;-webkit-font-smoothing:antialiased}
-header{height:48px;padding:0 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--bg);border-bottom:1px solid #e8e5e0}
-.logo{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:#222}
-nav{min-height:44px;padding:6px 12px;display:flex;align-items:center;gap:6px;flex-shrink:0;background:var(--bg);border-bottom:1px solid #e8e5e0;flex-wrap:wrap;max-width:100%}
-.fctl{margin-left:auto;display:flex;align-items:center;gap:3px}
-.fctl>span{font-size:11px;color:#bbb;margin-right:2px}
-.fbtn{background:#efecea;border:1px solid #d8d4ce;border-radius:5px;color:#666;cursor:pointer;font-size:12px;font-weight:500;width:26px;height:26px;display:flex;align-items:center;justify-content:center;user-select:none}
-main{flex:1;overflow-y:scroll;overflow-x:hidden;min-height:0;background:var(--bg);max-width:100%;scrollbar-gutter:stable}
-main::-webkit-scrollbar{width:10px}
-main::-webkit-scrollbar-track{background:#eae7e2}
-main::-webkit-scrollbar-thumb{background:#b8b4ae;border-radius:10px;border:2px solid #eae7e2}
-main::-webkit-scrollbar-thumb:hover{background:#999590}
-.col-headers{display:none}
-.title-row{display:grid;grid-template-columns:1fr 1fr;padding:20px 0 12px}
-@media(max-width:640px){
-  .title-row{display:flex!important;flex-direction:row!important;align-items:baseline;gap:0;padding:14px 14px 6px}
-  .title-row .ko-side,.title-row .en-side{padding:0;border:none!important}
-  .title-row .ch-title{font-size:16px}
-  .title-row .title-sep{color:#ccc;font-size:14px;margin:0 5px;flex-shrink:0}
-}
-.ko-side{padding:0 28px;border-right:1px solid #e8e5e0}
-.en-side{padding:0 28px}
-.ch-title{font-size:17px;font-weight:600;color:#222;letter-spacing:-.02em}
-.ko-side .ch-title{font-family:'Noto Sans KR',sans-serif}
-.shead-row{display:grid;grid-template-columns:1fr 1fr;padding:20px 0 4px}
-.shead-row .ko-side{border-right:1px solid #e8e5e0}
-.fn-row{display:grid;grid-template-columns:1fr 1fr}
-.fn-row .ko-side{border-right:1px solid #e8e5e0}
-.shead{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#bbb}
-.verse-row{display:grid;grid-template-columns:1fr 1fr}
-.verse-row:hover{background:#f0ede8}
-.verse-cell{padding:2px 28px;display:flex;gap:10px;align-items:baseline}
-.verse-cell.ko-side{border-right:1px solid #e8e5e0}
-/* #5: Remove verse divider lines entirely */
-.verse-cell.en-side{border-bottom:none!important}
-.vn{color:#999;font-size:10px;font-weight:600;min-width:16px;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums;padding-top:2px;cursor:pointer}
-.vt{line-height:1.85;color:#1c1c1c;flex:1;user-select:none;-webkit-user-select:none}
-.ko-side .vt{font-family:'Noto Sans KR',sans-serif;font-weight:400;word-break:keep-all;letter-spacing:-.02em}
-.en-side .vt{font-family:'DM Sans',-apple-system,sans-serif;font-weight:400}
-sup.fn-ref{font-size:9px;color:#2563eb;margin-left:1px;vertical-align:super;line-height:0;cursor:pointer;padding:0 1px}
-.ldg{display:flex;flex-direction:column;align-items:center;gap:12px;padding:64px 20px}
-@keyframes spin{to{transform:rotate(360deg)}}
-.spinner{width:20px;height:20px;border-radius:50%;border:2px solid #e8e5e0;border-top-color:#555;animation:spin .6s linear infinite}
-.ldg-txt{font-size:12px;color:#bbb}
-.errbox{background:#fff5f5;border:1px solid #fecaca;border-radius:6px;color:#dc2626;padding:10px 14px;font-size:13px;line-height:1.5;margin:16px 28px}
-footer{border-top:1px solid #e8e5e0;color:#bbb;background:var(--bg);font-size:10px;padding:8px 20px;text-align:center}
-@media(max-width:640px){
-  header{display:none}
-  nav{padding:6px 12px;min-height:0}
-  .title-row,.shead-row,.verse-row{grid-template-columns:1fr}
-  .verse-cell{padding:6px 20px}
-  .verse-cell.ko-side{border-right:0!important;border-bottom:none!important;padding-bottom:2px}
-  .verse-cell.en-side{padding-top:2px}
-  .title-row{padding:16px 20px 4px}
-  .title-row .ko-side{border-right:0!important;border-bottom:none!important;padding-bottom:4px}
-  .title-row .en-side{padding-top:0}
-  .shead-row{padding:12px 20px 2px}
-  .shead-row .ko-side{display:none}
-  .fn-row{display:block!important}
-  .fn-row .ko-side{display:block!important;border-right:none!important;padding:0!important}
-  .fn-row .en-side{padding:0!important}
-  .verse-cell.en-side .vn{visibility:hidden}
-}
-.mob-nav{display:none!important}
-@media(max-width:640px){
-  .desk-only{display:none!important}
-  .mob-nav{display:flex!important;align-items:center;justify-content:space-between;width:100%}
-}
-.mob-passage-pill{display:flex;align-items:center;gap:6px;background:none;border:none;font-size:13px;font-weight:600;color:#222;padding:6px 10px;font-family:inherit;cursor:pointer;flex:0 1 auto;letter-spacing:-.01em}
-.mob-passage-pill span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mob-passage-pill svg{flex-shrink:0;color:#aaa}
-body.dark .mob-passage-pill{color:#e8e5e0}
-.desk-icon-btn{background:none;border:none;cursor:pointer;color:#666;display:flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0}
-.desk-icon-btn:hover{color:#111}
-body.dark .desk-icon-btn{color:#999}
-body.dark .desk-icon-btn:hover{color:#e8e5e0}
-.mob-nav-actions{display:flex;gap:5px;flex-shrink:0}
-/* #6: Fix dark mode square boxes on nav icons */
-.mob-icon-btn{background:none;border:none;font:500 14px inherit;color:#555;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-appearance:none;appearance:none}
-body.dark .mob-icon-btn{color:#aaa;background:none!important}
-.mob-sheet{position:fixed;inset:0;z-index:1100;background:rgba(0,0,0,.4);display:flex;align-items:flex-end}
-.mob-sheet.hidden{display:none}
-.mob-sheet-inner{background:var(--bg);border-radius:16px 16px 0 0;width:100%;max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
-.mob-sheet-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;flex-shrink:0;border-bottom:1px solid #e8e5e0}
-.mob-sheet-hdr span{font-size:14px;font-weight:500;color:#222}
-.mob-sheet-close{background:#efecea;border:none;border-radius:50%;width:36px;height:36px;min-width:36px;font-size:15px;color:#444;display:flex;align-items:center;justify-content:center;cursor:pointer;font-weight:500;flex-shrink:0;margin-right:4px}
-#mob-sheet-body{overflow-y:auto;flex:1}
-.mob-book-list{display:flex;flex-direction:column}
-.mob-book-row{border-bottom:.5px solid #f0ede8;cursor:pointer}
-.mob-book-row-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 20px}
-.mob-book-row-hdr .names{display:flex;align-items:baseline;gap:6px}
-.mob-book-row-hdr .ko{font-family:'Noto Sans KR',sans-serif;font-size:14px;color:#222}
-.mob-book-row-hdr .en{font-size:12px;color:#999}
-.mob-book-row-chevron{color:#ccc;font-size:12px;transition:transform 0.2s;flex-shrink:0}
-.mob-book-row-chevron.open{transform:rotate(180deg)}
-.mob-book-row.active .mob-book-row-hdr .ko{font-weight:700}
-.mob-ch-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;padding:4px 20px 16px}
-body.dark .mob-book-row{border-bottom-color:#2a2a2a}
-body.dark .mob-book-row-hdr .ko{color:#e8e5e0}
-body.dark .mob-book-row-hdr .en{color:#666}
-.mob-ch-item{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;color:#222;background:#efecea;cursor:pointer}
-.mob-ch-item:active{background:#d8d4ce}
-.mob-ch-item.active{background:#1b2a4a;color:#fff;font-weight:500}
-.mob-font-sheet{padding:16px 16px 32px}
-.mob-font-row{display:flex;align-items:center;gap:16px;padding:12px 0}
-button{touch-action:manipulation}
-.mob-font-btn{background:#efecea;border:1px solid #d8d4ce;border-radius:8px;font:500 18px inherit;color:#222;width:56px;height:56px;display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:manipulation}
-.mob-font-preview{flex:1;font-size:15px;color:#555;text-align:center}
-.edge-nav{position:fixed;top:50%;transform:translateY(-50%);z-index:50;display:none}
-.edge-nav.left{left:0}.edge-nav.right{right:0}
-.edge-btn{background:rgba(255,255,255,0.85);border:1px solid #e8e5e0;color:#555;font-size:20px;width:36px;height:80px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s;backdrop-filter:blur(4px)}
-.edge-btn:hover{background:#fff;color:#111}
-.edge-btn:disabled{opacity:0.2;cursor:not-allowed}
-.edge-nav.left .edge-btn{border-radius:0 8px 8px 0;border-left:none}
-.edge-nav.right .edge-btn{border-radius:8px 0 0 8px;border-right:none}
-@media(min-width:641px){
-  .edge-nav{display:block}
-  .mob-sheet{align-items:center;justify-content:center;background:rgba(0,0,0,.5)}
-  .mob-sheet-inner{border-radius:12px;max-height:80vh;max-width:560px;width:100%}
-  .prog-chapters{grid-template-columns:repeat(10,1fr)!important}
-  .prog-books{grid-template-columns:repeat(4,1fr)!important}
-}
-#passage-input{flex:1;max-width:400px;background:#efecea;border:1px solid #d8d4ce;border-radius:6px;color:#111;font:14px inherit;padding:6px 12px;outline:none;min-width:0}
-#passage-input:focus{border-color:#555;background:#fff}
-#passage-input::placeholder{color:#bbb}
-.ko-side{order:var(--ko-order)}.en-side{order:var(--en-order)}
-body.dark{--bg:#1a1a1a;--div:#333;color:#e8e5e0}
-body.dark header,body.dark nav,body.dark main,body.dark footer{background:var(--bg)}
-body.dark header,body.dark nav{border-bottom-color:#333}
-body.dark .ko-side{border-right-color:#333}
-body.dark .logo{color:#e8e5e0}
-body.dark .verse-row:hover{background:#242424}
-body.dark .vt{color:#d8d5d0}
-body.dark .ch-title{color:#e8e5e0}
-body.dark select,body.dark .fbtn,body.dark .mob-font-btn,body.dark .mob-sheet-close{background:#2a2a2a;border-color:#444;color:#ccc}
-body.dark .mob-book-item{color:#d8d5d0;border-bottom-color:#2a2a2a}
-body.dark .mob-book-item:active{background:#2a2a2a}
-body.dark .mob-ch-item{background:#2a2a2a;color:#d8d5d0}
-body.dark .mob-sheet-inner,body.dark #mob-sheet-body{background:#1a1a1a}
-body.dark .mob-sheet-hdr{border-bottom-color:#333}
-body.dark .mob-sheet-hdr span{color:#e8e5e0}
-body.dark .mob-ch-item.active{background:#e8e5e0;color:#111}
-body.dark #passage-input{background:#2a2a2a;border-color:#444;color:#e8e5e0}
-body.dark #passage-input::placeholder{color:#555}
-body.dark #intro-dropdown{background:#2a2a2a;border-color:#444}
-body.dark .edge-btn{background:rgba(30,30,30,0.85);border-color:#444;color:#aaa}
-body.dark main::-webkit-scrollbar-track{background:#222}
-body.dark main::-webkit-scrollbar-thumb{background:#444}
-/* #8: Progress bars use dark navy to match chapter grids */
-.prog-books{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;padding:4px 20px 8px}
-.prog-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-.prog-bar-track{flex:1;height:6px;background:#efecea;border-radius:3px;overflow:hidden}
-.prog-bar-fill{height:100%;background:#1b2a4a;border-radius:3px;transition:width 0.3s}
-.prog-book-list{display:flex;flex-direction:column}
-.prog-book-row{border-bottom:.5px solid #f0ede8;cursor:pointer}
-.prog-book-row-hdr{display:flex;align-items:center;padding:10px 20px;gap:12px}
-.prog-book-row-name{flex:1;min-width:0;display:flex;align-items:baseline;gap:6px}
-.prog-book-row-primary{font-size:14px;font-weight:500;color:#222;font-family:'Noto Sans KR',sans-serif}
-.prog-book-row-secondary{font-size:12px;color:#999}
-.prog-book-row-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.prog-book-row-pct{font-size:11px;color:#555;min-width:28px;text-align:right}
-.prog-book-mini-bar{width:48px;height:3px;background:#efecea;border-radius:2px;overflow:hidden}
-.prog-book-mini-fill{height:100%;background:#1b2a4a;border-radius:2px}
-.prog-book-row-chevron2{color:#ccc;transition:transform 0.2s}
-.prog-book-row-chevron2.open{transform:rotate(180deg)}
-.prog-book-row.complete .prog-book-row-primary{color:#1b2a4a}
-.prog-testament-title{font-size:11px;font-weight:600;letter-spacing:.04em;color:#555;margin-bottom:6px}
-.prog-bar-label{font-size:12px;color:#555;width:60px;flex-shrink:0}
-.prog-bar-pct{font-size:11px;color:#555;width:32px;text-align:right;flex-shrink:0}
-body.dark .prog-book-row{border-bottom-color:#2a2a2a}
-body.dark .prog-book-row-primary{color:#e8e5e0}
-body.dark .prog-book-row.complete .prog-book-row-primary{color:#8899bb}
-body.dark .prog-book-mini-bar{background:#333}
-body.dark .prog-testament-title{color:#aaa}
-body.dark .prog-bar-label{color:#aaa}
-body.dark .prog-bar-pct{color:#aaa}
-body.dark .prog-bar-track{background:#2a2a2a}
-.prog-chapters{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;padding:16px 20px}
-.prog-ch{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:6px;font-size:12px;cursor:pointer;position:relative}
-.prog-ch.unread{background:#efecea;color:#555}
-.prog-ch.auto{background:#1b2a4a;color:#fff}
-.prog-ch.manual{background:#1b2a4a;color:#fff}
-.prog-ch.auto::after{content:'';position:absolute;bottom:3px;right:3px;width:4px;height:4px;background:rgba(255,255,255,.6);border-radius:50%}
-.prog-back-btn{background:none;border:none;color:#1b2a4a;font:500 13px inherit;cursor:pointer;padding:4px 0}
-body.dark .prog-ch.unread{background:#2a2a2a;color:#999}
-body.dark .prog-back-btn{color:#8899bb}
-/* Shared text styles for intro and commentary — #2 font consistency */
-.section-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#1b2a4a;margin-bottom:8px}
-body.dark .section-label{color:#8899bb}
-.text-ko{font-family:'Noto Sans KR',sans-serif;font-size:15px;line-height:1.85;color:#1c1c1c;margin-bottom:6px;word-break:keep-all;letter-spacing:-.02em}
-.text-en{font-size:14px;line-height:1.75;color:#555;margin-bottom:6px}
-body.dark .text-ko{color:#e8e5e0}
-body.dark .text-en{color:#999}
-/* Keep these for backward compat */
-.intro-wrap{padding:20px 20px 40px;max-width:680px}
-.intro-section{margin-bottom:24px}
-.intro-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#1b2a4a;margin-bottom:8px}
-body.dark .intro-label{color:#8899bb}
-.intro-ko{font-family:'Noto Sans KR',sans-serif;font-size:15px;line-height:1.85;color:#1c1c1c;margin-bottom:6px;word-break:keep-all;letter-spacing:-.02em}
-.intro-en{font-size:14px;line-height:1.75;color:#555;margin-bottom:6px}
-body.dark .intro-ko{color:#e8e5e0}
-body.dark .intro-en{color:#999}
-.intro-themes{display:flex;flex-direction:column;gap:12px;margin-top:4px}
-.intro-theme{background:#fff;border-radius:10px;padding:12px 14px;border:1px solid #e8e5e0}
-body.dark .intro-theme{background:#242424;border-color:#333}
-.intro-theme-title{font-size:13px;font-weight:600;color:#1b2a4a;margin-bottom:4px}
-body.dark .intro-theme-title{color:#a8b8d8}
-.intro-theme-ko{font-family:'Noto Sans KR',sans-serif;font-size:13px;line-height:1.7;color:#444;word-break:keep-all}
-.intro-theme-en{font-size:12px;line-height:1.6;color:#777}
-body.dark .intro-theme-ko{color:#ccc}
-body.dark .intro-theme-en{color:#888}
-.intro-map{width:100%;height:260px;border-radius:12px;overflow:hidden;margin-top:8px;border:1px solid #e8e5e0;position:relative;z-index:1}
-body.dark .intro-map{border-color:#333}
-.leaflet-div-icon{background:none!important;border:none!important;box-shadow:none!important;}
-.intro-map-legend{margin-top:12px;display:flex;flex-direction:column;gap:8px}
-.intro-map-legend-item{display:flex;align-items:flex-start;gap:10px}
-.intro-map-legend-num{background:#1b2a4a;color:#fff;border-radius:50%;width:20px;height:20px;min-width:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-top:2px}
-.intro-map-legend-name{font-size:13px;font-weight:600;color:#222;margin-bottom:2px}
-body.dark .intro-map-legend-name{color:#e8e5e0}
-.intro-map-legend-desc{font-size:12px;color:#666;line-height:1.5}
-body.dark .intro-map-legend-desc{color:#999}
-/* #6: Tab bar — remove full-width border, keep only active underline */
-.ch-tabs{display:flex;gap:0;padding:0 0 0 20px;flex-shrink:0;border-bottom:none}
-.ch-tab{background:none;border:none;font:500 13px inherit;color:#999;padding:8px 12px;cursor:pointer;border-bottom:2px solid transparent;touch-action:manipulation}
-.ch-tab.active{color:#1b2a4a;border-bottom:2px solid #1b2a4a}
-body.dark .ch-tab.active{color:#e8e5e0;border-bottom-color:#e8e5e0}
-/* #1: Commentary — plain text, no selectable blocks */
-.comm-wrap{padding:16px 20px 40px}
-.comm-section{margin-bottom:24px}
-.comm-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#1b2a4a;margin-bottom:8px}
-body.dark .comm-label{color:#8899bb}
-.comm-ko{font-family:'Noto Sans KR',sans-serif;font-size:15px;line-height:1.85;color:#1c1c1c;margin-bottom:6px;word-break:keep-all;letter-spacing:-.02em}
-.comm-en{font-size:14px;line-height:1.75;color:#555;margin-bottom:6px}
-body.dark .comm-ko{color:#e8e5e0}
-body.dark .comm-en{color:#999}
-.fn-popup{position:fixed;z-index:200;background:#fff;border:1px solid #e8e5e0;border-radius:8px;padding:10px 14px;max-width:280px;font-size:12px;color:#444;line-height:1.6;box-shadow:0 4px 16px rgba(0,0,0,.12);pointer-events:none;transition:opacity .15s}
-body.dark .fn-popup{background:#2a2a2a;border-color:#444;color:#ccc}
-.votd-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 20px;min-height:60vh}
-.votd-card{background:#fff;border-radius:20px;padding:28px 24px 24px;max-width:420px;width:100%;box-shadow:0 2px 20px rgba(0,0,0,.07);display:flex;flex-direction:column}
-body.dark .votd-card{background:#242424;box-shadow:0 2px 20px rgba(0,0,0,.3)}
-/* #7: No ALL CAPS on votd label */
-.votd-label{font-size:10px;font-weight:700;letter-spacing:.08em;color:#1b2a4a;margin-bottom:18px}
-body.dark .votd-label{color:#8899bb}
-.votd-ko-ref{font-family:'Noto Sans KR',sans-serif;font-size:11px;font-weight:600;color:#aaa;margin-bottom:5px}
-.votd-ko{font-family:'Noto Sans KR',sans-serif;font-size:18px;line-height:1.85;color:#1c1c1c;word-break:keep-all;margin-bottom:20px}
-body.dark .votd-ko{color:#e8e5e0}
-.votd-divider{height:1px;background:#f0ede8;margin-bottom:18px}
-body.dark .votd-divider{background:#333}
-.votd-en-ref{font-size:11px;font-weight:600;color:#aaa;margin-bottom:5px}
-.votd-en{font-size:15px;line-height:1.75;color:#555;font-style:italic;margin-bottom:24px}
-body.dark .votd-en{color:#999}
-.votd-read-btn{align-self:flex-start;background:#1b2a4a;border:none;border-radius:10px;color:#fff;cursor:pointer;font:500 13px inherit;padding:9px 20px}
-.votd-read-btn:active{opacity:.85}
-body.dark .votd-read-btn{background:#2a3d66}
-.verse-row.hl-selected .vt{text-decoration:underline;text-decoration-style:dashed;text-decoration-color:#888;text-decoration-thickness:2px;text-underline-offset:4px}
-.hl-bar{position:fixed;bottom:0;left:0;right:0;z-index:1200;background:#fff;border-top:1px solid #e8e5e0;padding:14px 28px env(safe-area-inset-bottom);display:flex;align-items:center;gap:16px;transform:translateY(100%);transition:transform 0.25s cubic-bezier(0.25,0.46,0.45,0.94)}
-.hl-bar.visible{transform:translateY(0)}
-body.dark .hl-bar{background:#1e1e1e;border-top-color:#333}
-.hl-bar-handle{position:absolute;top:6px;left:50%;transform:translateX(-50%);width:36px;height:4px;background:#d8d4ce;border-radius:2px}
-body.dark .hl-bar-handle{background:#444}
-.hl-bar-swatches{display:flex;gap:14px;align-items:center}
-.hl-bar-swatch{width:32px;height:32px;border-radius:50%;cursor:pointer;border:3px solid transparent;flex-shrink:0;transition:transform 0.1s}
-.hl-bar-swatch:active{transform:scale(1.15)}
-.hl-bar-swatch.active{border-color:#333}
-body.dark .hl-bar-swatch.active{border-color:#fff}
-.hl-bar-copy{background:none;border:none;cursor:pointer;color:#555;padding:0;line-height:1;display:flex;align-items:center;margin-left:4px}
-body.dark .hl-bar-copy{color:#aaa}
-.hl-bar-copy svg{width:26px;height:26px}
-.hl-bar-clear{background:none;border:none;font-size:18px;cursor:pointer;color:#bbb;padding:0;line-height:1;margin-left:auto}
-.hl-bar-clear:active{color:#dc2626}
-.verse-row.hl-y .vt{background:#fde047;border-radius:3px}
-.verse-row.hl-g .vt{background:#86efac;border-radius:3px}
-.verse-row.hl-b .vt{background:#93c5fd;border-radius:3px}
-.verse-row.hl-p .vt{background:#d8b4fe;border-radius:3px}
-.verse-row.hl-r .vt{background:#fca5a5;border-radius:3px}
-body.dark .verse-row.hl-y .vt{background:#854d0e}
-body.dark .verse-row.hl-g .vt{background:#166534}
-body.dark .verse-row.hl-b .vt{background:#1e40af}
-body.dark .verse-row.hl-p .vt{background:#6b21a8}
-body.dark .verse-row.hl-r .vt{background:#991b1b}
-.confirm-modal{position:fixed;inset:0;z-index:1300;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.4)}
-.confirm-modal.hidden{display:none}
-.confirm-box{background:#fff;border-radius:14px;padding:24px 20px 16px;max-width:300px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.15)}
-body.dark .confirm-box{background:#2a2a2a}
-.confirm-msg{font-size:14px;line-height:1.6;color:#222;margin-bottom:20px}
-body.dark .confirm-msg{color:#e8e5e0}
-.confirm-btns{display:flex;gap:8px;justify-content:flex-end}
-.confirm-btn{border:none;border-radius:8px;font:500 13px inherit;cursor:pointer;padding:8px 18px}
-.confirm-btn.cancel{background:#efecea;color:#555}
-body.dark .confirm-btn.cancel{background:#333;color:#bbb}
-.confirm-btn.ok{background:#222;color:#fff}
-body.dark .confirm-btn.ok{background:#e8e5e0;color:#111}
-/* Force mobile layout */
-header{display:none!important}
-.desk-only{display:none!important}
-.mob-nav{display:flex!important;align-items:center;justify-content:space-between;width:100%}
-.edge-nav{display:none!important}
-.title-row,.shead-row,.verse-row{grid-template-columns:1fr!important}
-.verse-cell{padding:6px 20px!important}
-.verse-cell.ko-side{border-right:0!important;border-bottom:none!important;padding-bottom:2px!important}
-.verse-cell.en-side{padding-top:2px!important;border-bottom:none!important}
-.ko-side{border-right:0!important}
-.mob-sheet{align-items:flex-end!important}
-.mob-sheet-inner{border-radius:16px 16px 0 0!important;max-height:85vh!important;max-width:100%!important}
-.prog-chapters{grid-template-columns:repeat(6,1fr)!important}
-</style>
-</head>
-<body>
-<header><div class="logo"><span>krengbible.com</span></div></header>
-<nav>
-  <input id="passage-input" class="desk-only" type="text" placeholder="" autocomplete="off" spellcheck="false">
-  <div class="desk-only" style="position:relative;flex-shrink:0">
-    <button class="fbtn" id="intro-btn" onclick="toggleIntroDropdown()" style="width:auto;padding:0 8px;font-size:11px;white-space:nowrap;letter-spacing:0">Book Intro</button>
-    <div id="intro-dropdown" style="display:none;position:absolute;top:32px;left:0;background:#fff;border:1px solid #d8d4ce;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:2000;width:210px;max-height:320px;overflow-y:auto">
-      <div id="intro-dropdown-list"></div>
-    </div>
-  </div>
-  <button class="fbtn desk-only" id="desk-lang-btn" onclick="toggleLangOrder(this)" style="width:auto;padding:0 8px;font-size:11px">한</button>
-  <div class="fctl desk-only">
-    <button class="fbtn" id="fminus" type="button">&#8722;</button>
-    <button class="fbtn" id="fplus" type="button">+</button>
-    <button class="desk-icon-btn" id="desk-dark-btn" onclick="toggleDark(this)" title="Dark mode">
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v18"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg>
-    </button>
-    <button class="desk-icon-btn" onclick="sheetOpen('progress')" title="읽기 진도">
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
-    </button>
-  </div>
-  <div class="mob-nav">
-    <button class="mob-passage-pill" id="mob-passage-btn" onclick="sheetOpen('passage')">
-      <span id="mob-passage-label">책 선택 / Select Book</span>
-      <svg width="10" height="6" viewBox="0 0 10 6"><path fill="currentColor" d="M0 0l5 6 5-6z"/></svg>
-    </button>
-    <div class="mob-nav-actions">
-      <button class="mob-icon-btn" id="mob-lang-btn" onclick="toggleLangOrder(this)">한</button>
-      <button class="mob-icon-btn" onclick="sheetOpen('font')" title="Font size">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><text x="1" y="18" font-size="14" font-family="inherit" font-weight="600" stroke="none" fill="currentColor">A</text><text x="12" y="16" font-size="10" font-family="inherit" font-weight="500" stroke="none" fill="currentColor">A</text></svg>
-      </button>
-      <button class="mob-icon-btn" id="mob-dark-btn" onclick="toggleDark(this)" title="Dark mode">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v18"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg>
-      </button>
-      <button class="mob-icon-btn" onclick="sheetOpen('progress')" title="읽기 진도">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
-      </button>
-    </div>
-  </div>
-</nav>
-<div id="mob-sheet" class="mob-sheet hidden">
-  <div class="mob-sheet-inner">
-    <div class="mob-sheet-hdr">
-      <span id="mob-sheet-title"></span>
-      <button class="mob-sheet-close" onclick="sheetClose()">&#10005;</button>
-    </div>
-    <div id="mob-sheet-body"></div>
-  </div>
-</div>
-<div id="confirm-modal" class="confirm-modal hidden" onclick="if(event.target===this)confirmCancel()">
-  <div class="confirm-box">
-    <div class="confirm-msg" id="confirm-msg"></div>
-    <div class="confirm-btns">
-      <button class="confirm-btn cancel" id="confirm-cancel-btn" onclick="confirmCancel()">취소</button>
-      <button class="confirm-btn ok" id="confirm-ok-btn" onclick="confirmOk()">초기화</button>
-    </div>
-  </div>
-</div>
-<div id="hl-bar" class="hl-bar">
-  <div class="hl-bar-handle" id="hl-bar-handle"></div>
-  <div class="hl-bar-swatches">
-    <div class="hl-bar-swatch" style="background:#fde047" data-color="y" onclick="hlApply('y')"></div>
-    <div class="hl-bar-swatch" style="background:#86efac" data-color="g" onclick="hlApply('g')"></div>
-    <div class="hl-bar-swatch" style="background:#93c5fd" data-color="b" onclick="hlApply('b')"></div>
-    <div class="hl-bar-swatch" style="background:#d8b4fe" data-color="p" onclick="hlApply('p')"></div>
-    <div class="hl-bar-swatch" style="background:#fca5a5" data-color="r" onclick="hlApply('r')"></div>
-  </div>
-  <button class="hl-bar-copy" id="hl-copy-btn" onclick="hlCopy()">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
-    </svg>
-  </button>
-</div>
-<div id="fn-popup" class="fn-popup" style="opacity:0;display:none"></div>
-<main id="main">
-  <div id="content"></div>
-  <footer>개역개정판 &copy; 대한성서공회 &nbsp;&middot;&nbsp; ESV&reg; &copy; 2001 Crossway &middot; Used by permission</footer>
-</main>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script>
-const WORKER='https://krengbible.pauljkim22.workers.dev';
-const BOOKS=[{ko:"창세기",en:"Genesis",n:1,ch:50},{ko:"출애굽기",en:"Exodus",n:2,ch:40},{ko:"레위기",en:"Leviticus",n:3,ch:27},{ko:"민수기",en:"Numbers",n:4,ch:36},{ko:"신명기",en:"Deuteronomy",n:5,ch:34},{ko:"여호수아",en:"Joshua",n:6,ch:24},{ko:"사사기",en:"Judges",n:7,ch:21},{ko:"룻기",en:"Ruth",n:8,ch:4},{ko:"사무엘상",en:"1 Samuel",n:9,ch:31},{ko:"사무엘하",en:"2 Samuel",n:10,ch:24},{ko:"열왕기상",en:"1 Kings",n:11,ch:22},{ko:"열왕기하",en:"2 Kings",n:12,ch:25},{ko:"역대상",en:"1 Chronicles",n:13,ch:29},{ko:"역대하",en:"2 Chronicles",n:14,ch:36},{ko:"에스라",en:"Ezra",n:15,ch:10},{ko:"느헤미야",en:"Nehemiah",n:16,ch:13},{ko:"에스더",en:"Esther",n:17,ch:10},{ko:"욥기",en:"Job",n:18,ch:42},{ko:"시편",en:"Psalms",n:19,ch:150},{ko:"잠언",en:"Proverbs",n:20,ch:31},{ko:"전도서",en:"Ecclesiastes",n:21,ch:12},{ko:"아가",en:"Song of Solomon",n:22,ch:8},{ko:"이사야",en:"Isaiah",n:23,ch:66},{ko:"예레미야",en:"Jeremiah",n:24,ch:52},{ko:"예레미야애가",en:"Lamentations",n:25,ch:5},{ko:"에스겔",en:"Ezekiel",n:26,ch:48},{ko:"다니엘",en:"Daniel",n:27,ch:12},{ko:"호세아",en:"Hosea",n:28,ch:14},{ko:"요엘",en:"Joel",n:29,ch:3},{ko:"아모스",en:"Amos",n:30,ch:9},{ko:"오바댜",en:"Obadiah",n:31,ch:1},{ko:"요나",en:"Jonah",n:32,ch:4},{ko:"미가",en:"Micah",n:33,ch:7},{ko:"나훔",en:"Nahum",n:34,ch:3},{ko:"하박국",en:"Habakkuk",n:35,ch:3},{ko:"스바냐",en:"Zephaniah",n:36,ch:3},{ko:"학개",en:"Haggai",n:37,ch:2},{ko:"스가랴",en:"Zechariah",n:38,ch:14},{ko:"말라기",en:"Malachi",n:39,ch:4},{ko:"마태복음",en:"Matthew",n:40,ch:28},{ko:"마가복음",en:"Mark",n:41,ch:16},{ko:"누가복음",en:"Luke",n:42,ch:24},{ko:"요한복음",en:"John",n:43,ch:21},{ko:"사도행전",en:"Acts",n:44,ch:28},{ko:"로마서",en:"Romans",n:45,ch:16},{ko:"고린도전서",en:"1 Corinthians",n:46,ch:16},{ko:"고린도후서",en:"2 Corinthians",n:47,ch:13},{ko:"갈라디아서",en:"Galatians",n:48,ch:6},{ko:"에베소서",en:"Ephesians",n:49,ch:6},{ko:"빌립보서",en:"Philippians",n:50,ch:4},{ko:"골로새서",en:"Colossians",n:51,ch:4},{ko:"데살로니가전서",en:"1 Thessalonians",n:52,ch:5},{ko:"데살로니가후서",en:"2 Thessalonians",n:53,ch:3},{ko:"디모데전서",en:"1 Timothy",n:54,ch:6},{ko:"디모데후서",en:"2 Timothy",n:55,ch:4},{ko:"디도서",en:"Titus",n:56,ch:3},{ko:"빌레몬서",en:"Philemon",n:57,ch:1},{ko:"히브리서",en:"Hebrews",n:58,ch:13},{ko:"야고보서",en:"James",n:59,ch:5},{ko:"베드로전서",en:"1 Peter",n:60,ch:5},{ko:"베드로후서",en:"2 Peter",n:61,ch:3},{ko:"요한일서",en:"1 John",n:62,ch:5},{ko:"요한이서",en:"2 John",n:63,ch:1},{ko:"요한삼서",en:"3 John",n:64,ch:1},{ko:"유다서",en:"Jude",n:65,ch:1},{ko:"요한계시록",en:"Revelation",n:66,ch:22}];
-let bi=42,ci=3,fs=15,pendingBook=null,loaded=false,langOrder="ko-en",darkMode=false;
-(function(){
-  applyFs();
-  document.getElementById('fminus').addEventListener('click',()=>{fs=Math.max(11,fs-1);applyFs();});
-  document.getElementById('fplus').addEventListener('click',()=>{fs=Math.min(22,fs+1);applyFs();});
-  const inp=document.getElementById('passage-input');
-  if(inp) inp.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();parseAndLoad(inp.value.trim());}});
-  updateLabel();
-  loadVotd();
-  document.getElementById('mob-sheet').addEventListener('click',function(e){if(e.target===this)sheetClose();});
-  var si=document.querySelector('.mob-sheet-inner'),sh=document.querySelector('.mob-sheet-hdr'),swy=0,swa=false;
-  sh.addEventListener('touchstart',function(e){swy=e.touches[0].clientY;swa=true;},{passive:true});
-  sh.addEventListener('touchmove',function(e){if(!swa)return;var dy=e.touches[0].clientY-swy;if(dy>0)si.style.transform='translateY('+Math.min(dy,300)+'px)';},{passive:true});
-  sh.addEventListener('touchend',function(e){if(!swa)return;swa=false;var dy=e.changedTouches[0].clientY-swy;if(dy>100){si.style.transition='transform 0.2s ease';si.style.transform='translateY(100%)';setTimeout(function(){si.style.transform='';si.style.transition='';sheetClose();},200);}else{si.style.transition='transform 0.2s ease';si.style.transform='';setTimeout(function(){si.style.transition='';},200);}},{passive:true});
-  sh.addEventListener('touchcancel',function(){swa=false;si.style.transform='';},{passive:true});
-})();
-function applyFs(){
-  document.documentElement.style.setProperty('--fs',fs+'px');
-  document.querySelectorAll('.vt,.comm-ko,.comm-en,.intro-ko,.intro-en,.intro-theme-ko,.intro-theme-en').forEach(function(el){el.style.fontSize=fs+'px';});
-}
-function updateLabel(){
-  var lbl;
-  if(inIntroMode){
-    lbl=langOrder==='en-ko'?BOOKS[bi].en+' — Book Intro':BOOKS[bi].ko+' — 책 소개';
-  } else {
-    lbl=loaded?(langOrder==='en-ko'?BOOKS[bi].en+' '+ci+' / '+BOOKS[bi].ko+' '+ci+'장':BOOKS[bi].ko+' '+ci+'장 / '+BOOKS[bi].en+' '+ci):(langOrder==='en-ko'?'Select Book / 책 선택':'책 선택 / Select Book');
-  }
-  document.getElementById('mob-passage-label').textContent=lbl;
-}
-function step(d){
-  var wasIntro=inIntroMode;
-  inIntroMode=false;window._lastIntroData=null;window._lastIntroBk=null;
-  if(!loaded){if(d===-1){bi=0;ci=1;load();}return;}
-  if(wasIntro){ci=1;load();return;}
-  if(d===-1){if(ci>1)ci--;else if(bi>0){bi--;ci=BOOKS[bi].ch;}}
-  else{if(ci<BOOKS[bi].ch)ci++;else if(bi<BOOKS.length-1){bi++;ci=1;}}
-  load();
-}
-function parseAndLoad(raw){
-  if(!raw)return;
-  const cleaned=raw.trim().replace(/:/g,' ');
-  const parts=cleaned.match(/^(.+?)\s+(\d+)(?:\s+(\d+))?$/);
-  if(!parts)return;
-  const bookQuery=parts[1].trim().toLowerCase(),chNum=parseInt(parts[2]),koQuery=parts[1].trim();
-  const idx=BOOKS.findIndex(b=>{
-    const enL=b.en.toLowerCase(),enNS=enL.replace(/\s+/g,''),bqNS=bookQuery.replace(/\s+/g,'');
-    if(enL.startsWith(bookQuery))return true;
-    if(enNS.startsWith(bqNS))return true;
-    if(b.ko.startsWith(koQuery))return true;
-    if(koQuery.length<=3&&b.ko.startsWith(koQuery))return true;
-    const initials=b.en.split(' ').map(w=>w[0].toLowerCase()).join('');
-    if(initials.startsWith(bookQuery))return true;
-    if(enL.slice(0,bookQuery.length)===bookQuery&&bookQuery.length>=2)return true;
-    return false;
-  });
-  if(idx===-1){const inp=document.getElementById('passage-input');if(inp){inp.style.borderColor='#dc2626';setTimeout(()=>{inp.style.borderColor='';},1000);}return;}
-  bi=idx;ci=Math.min(Math.max(1,chNum),BOOKS[idx].ch);load();
-}
-function toggleLangOrder(btn){
-  langOrder=langOrder==='ko-en'?'en-ko':'ko-en';
-  var deskBtn=document.getElementById('desk-lang-btn');
-  var mobBtn=document.getElementById('mob-lang-btn');
-  if(deskBtn)deskBtn.textContent=langOrder==='ko-en'?'한':'Eng';
-  if(mobBtn)mobBtn.textContent=langOrder==='ko-en'?'한':'Eng';
-  updateLabel();
-  if(loaded)applyLangOrder();
-  var koSide=document.querySelector('.title-row .ko-side');
-  var enSide=document.querySelector('.title-row .en-side');
-  if(koSide&&enSide){koSide.style.order=langOrder==='ko-en'?1:2;enSide.style.order=langOrder==='ko-en'?2:1;}
-  var tabText=document.getElementById('tab-text');var tabComm=document.getElementById('tab-comm');var tabIntro=document.getElementById('tab-intro');
-  if(tabText)tabText.textContent=langOrder==='ko-en'?'본문':'Passage';
-  if(tabComm)tabComm.textContent=langOrder==='ko-en'?'해설':'Commentary';
-  if(tabIntro)tabIntro.textContent=langOrder==='ko-en'?'책 소개':'Book Intro';
-  var koBtn=document.querySelector('.votd-btn-ko');
-  var enBtn=document.querySelector('.votd-btn-en');
-  if(koBtn) koBtn.style.display=langOrder==='en-ko'?'none':'';
-  if(enBtn) enBtn.style.display=langOrder==='ko-en'?'none':'';
-  if(!loaded&&!inIntroMode) loadVotd();
-  if(inIntroMode&&window._lastIntroData&&window._lastIntroBk){
-    renderBookIntro(window._lastIntroData,window._lastIntroBk);
-  }
-  var tComm=document.getElementById('tab-comm-content');
-  if(tComm&&tComm.style.display!=='none'&&!tComm.querySelector('.ldg')){
-    if(window._lastCommData) renderCommentary(window._lastCommData,tComm);
-    else loadCommentary();
-  }
-  if(!document.getElementById('mob-sheet').classList.contains('hidden')){
-    if(progView==='overview')progShowOverview();
-    else if(pendingBook===null)sheetOpen('passage');
-  }
-}
-function applyLangOrder(){
-  var sid='lang-order-style',ex=document.getElementById(sid);if(ex)ex.remove();
-  if(langOrder==='en-ko'){
-    var s=document.createElement('style');s.id=sid;
-    s.textContent='.verse-cell.ko-side{order:2;padding-top:2px!important;padding-bottom:6px!important}.verse-cell.en-side{order:1;padding-top:6px!important;padding-bottom:2px!important}.verse-row{display:flex;flex-direction:column}.fn-row{display:flex!important;flex-direction:column}.fn-row .ko-side{order:2!important}.fn-row .en-side{order:1!important}.verse-cell.en-side .vn{visibility:visible!important}.verse-cell.ko-side .vn{visibility:hidden!important}';
-    document.head.appendChild(s);
-  }
-}
-function toggleDark(btn){
-  darkMode=!darkMode;
-  document.body.classList.toggle('dark',darkMode);
-}
-var PROGRESS_KEY='krengbible_progress';
-function progLoad(){try{return JSON.parse(localStorage.getItem(PROGRESS_KEY)||'{}');}catch(e){return {};}}
-function progSave(d){try{localStorage.setItem(PROGRESS_KEY,JSON.stringify(d));}catch(e){}}
-function progKey(b,c){return b+'_'+c;}
-function progMarkRead(b,c,src){var d=progLoad(),k=progKey(b,c);if(!d[k]){d[k]={date:new Date().toISOString().slice(0,10),source:src};progSave(d);}}
-function progToggleManual(b,c){
-  var d=progLoad(),k=progKey(b,c);
-  if(d[k])delete d[k];else d[k]={date:new Date().toISOString().slice(0,10),source:'manual'};
-  progSave(d);
-  var grid=document.getElementById('prog-ch-'+b);
-  if(grid&&grid.style.display!=='none'){
-    var bk=BOOKS[b],data=progLoad(),h='';
-    for(var ch=1;ch<=bk.ch;ch++){var ky=progKey(b,ch),entry=data[ky],cls=entry?(entry.source==='auto'?'auto':'manual'):'unread';h+='<div class="prog-ch '+cls+'" onclick="progToggleManual('+b+','+ch+')" title="'+(entry?entry.date:'Tap to mark read')+'">'+ch+'</div>';}
-    grid.innerHTML=h;
-  }
-  var row=document.getElementById('prog-row-'+b);
-  if(row){
-    var bk2=BOOKS[b],data2=progLoad(),rc=0;
-    for(var ch2=1;ch2<=bk2.ch;ch2++)if(data2[progKey(b,ch2)])rc++;
-    var pct=Math.round(rc/bk2.ch*100);
-    var fill=row.querySelector('.prog-book-mini-fill');
-    if(fill)fill.style.width=pct+'%';
-    var pctEl=row.querySelector('.prog-book-row-pct');
-    if(pctEl)pctEl.textContent=rc>0?pct+'%':'';
-    row.className='prog-book-row'+(rc===bk2.ch?' complete':rc>0?' partial':'');
-  }
-  var data3=progLoad();
-  var OT=BOOKS.slice(0,39),NT=BOOKS.slice(39);
-  function calcStats(books,si){var t=0,r=0;books.forEach(function(bk,i){t+=bk.ch;for(var c=1;c<=bk.ch;c++)if(data3[progKey(si+i,c)])r++;});return{total:t,read:r};}
-  var otS=calcStats(OT,0),ntS=calcStats(NT,39);
-  var otBar=document.querySelector('.prog-testament:nth-child(1) .prog-bar-fill');
-  var otLabel=document.querySelector('.prog-testament:nth-child(1) .prog-bar-label');
-  var otPct=document.querySelector('.prog-testament:nth-child(1) .prog-bar-pct');
-  if(otBar)otBar.style.width=Math.round(otS.read/otS.total*100)+'%';
-  if(otLabel)otLabel.textContent=otS.read+'/'+otS.total;
-  if(otPct)otPct.textContent=Math.round(otS.read/otS.total*100)+'%';
-  var ntBar=document.querySelector('.prog-testament:nth-child(2) .prog-bar-fill');
-  var ntLabel=document.querySelector('.prog-testament:nth-child(2) .prog-bar-label');
-  var ntPct=document.querySelector('.prog-testament:nth-child(2) .prog-bar-pct');
-  if(ntBar)ntBar.style.width=Math.round(ntS.read/ntS.total*100)+'%';
-  if(ntLabel)ntLabel.textContent=ntS.read+'/'+ntS.total;
-  if(ntPct)ntPct.textContent=Math.round(ntS.read/ntS.total*100)+'%';
-}
-var progObserver=null;
-function progAttachObserver(){
-  if(progObserver){progObserver.disconnect();progObserver=null;}
-  var rows=document.querySelectorAll('.verse-row'),last=rows[rows.length-1];
-  if(!last||!loaded)return;
-  progObserver=new IntersectionObserver(function(entries){entries.forEach(function(e){if(e.isIntersecting){progMarkRead(bi,ci,'auto');progObserver.disconnect();}});},{root:document.getElementById('main'),threshold:0.1});
-  progObserver.observe(last);
-}
-var progView='overview',progViewBook=0;
-var _confirmCb=null;
-function showConfirm(msg,cb){
-  var isKo=langOrder==='ko-en';
-  document.getElementById('confirm-msg').textContent=msg;
-  document.getElementById('confirm-cancel-btn').textContent=isKo?'취소':'Cancel';
-  document.getElementById('confirm-ok-btn').textContent=isKo?'초기화':'Reset';
-  document.getElementById('confirm-modal').classList.remove('hidden');
-  _confirmCb=cb;
-}
-function confirmOk(){document.getElementById('confirm-modal').classList.add('hidden');if(_confirmCb)_confirmCb();_confirmCb=null;}
-function confirmCancel(){document.getElementById('confirm-modal').classList.add('hidden');_confirmCb=null;}
-function progReset(){
-  var msg=langOrder==='ko-en'?'읽기 진도를 초기화할까요? 되돌릴 수 없습니다.':'Reset all reading progress? This cannot be undone.';
-  showConfirm(msg,function(){localStorage.removeItem(PROGRESS_KEY);progShowOverview();});
-}
-function progShowOverview(){
-  progView='overview';
-  document.getElementById('mob-sheet-title').textContent=langOrder==='en-ko'?'Reading Progress / 성경 읽기 진도':'성경 읽기 진도 / Reading Progress';
-  var data=progLoad(),OT=BOOKS.slice(0,39),NT=BOOKS.slice(39);
-  function bookStats(books,si){var t=0,r=0;books.forEach(function(b,i){t+=b.ch;for(var c=1;c<=b.ch;c++)if(data[progKey(si+i,c)])r++;});return{total:t,read:r};}
-  var otS=bookStats(OT,0),ntS=bookStats(NT,39);
-  var html='<div style="padding:0">';
-  /* #7: Title case for Old/New Testament */
-  html+='<div class="prog-testament" style="padding:8px 20px 0"><div class="prog-testament-title">'+(langOrder==='en-ko'?'Old Testament / 구약':'구약 / Old Testament')+'</div>';
-  html+='<div class="prog-bar-row"><span class="prog-bar-label">'+otS.read+'/'+otS.total+'</span><div class="prog-bar-track"><div class="prog-bar-fill" style="width:'+Math.round(otS.read/otS.total*100)+'%"></div></div><span class="prog-bar-pct">'+Math.round(otS.read/otS.total*100)+'%</span></div></div>';
-  html+='<div class="prog-testament" style="padding:0 20px 0"><div class="prog-testament-title">'+(langOrder==='en-ko'?'New Testament / 신약':'신약 / New Testament')+'</div>';
-  html+='<div class="prog-bar-row"><span class="prog-bar-label">'+ntS.read+'/'+ntS.total+'</span><div class="prog-bar-track"><div class="prog-bar-fill" style="width:'+Math.round(ntS.read/ntS.total*100)+'%"></div></div><span class="prog-bar-pct">'+Math.round(ntS.read/ntS.total*100)+'%</span></div></div></div>';
-  html+='<div class="prog-book-list">';
-  BOOKS.forEach(function(b,i){
-    var rc=0;for(var c=1;c<=b.ch;c++)if(data[progKey(i,c)])rc++;
-    var pct=Math.round(rc/b.ch*100);
-    var cls=rc===b.ch?'complete':rc>0?'partial':'';
-    var p=langOrder==='en-ko'?b.en:b.ko, s=langOrder==='en-ko'?b.ko:b.en;
-    html+='<div class="prog-book-row '+cls+'" id="prog-row-'+i+'">';
-    html+='<div class="prog-book-row-hdr" onclick="toggleProgBook('+i+')">';
-    html+='<div class="prog-book-row-name"><div class="prog-book-row-primary">'+p+'</div><div class="prog-book-row-secondary">'+s+'</div></div>';
-    html+='<div class="prog-book-row-right">';
-    if(rc>0) html+='<div class="prog-book-row-pct">'+pct+'%</div>';
-    html+='<div class="prog-book-mini-bar"><div class="prog-book-mini-fill" style="width:'+pct+'%"></div></div>';
-    html+='<svg class="prog-book-row-chevron2" width="10" height="6" viewBox="0 0 10 6"><path fill="currentColor" d="M0 0l5 6 5-6z"/></svg>';
-    html+='</div></div>';
-    html+='<div class="prog-chapters" id="prog-ch-'+i+'" style="display:none"></div>';
-    html+='</div>';
-  });
-  html+='</div>';
-  var rl=langOrder==='ko-en'?'초기화 / Reset All':'Reset All / 초기화';
-  html+='<div style="display:flex;justify-content:center;padding:16px 20px"><button onclick="progReset()" style="background:#efecea;border:1px solid #d8d4ce;color:#666;font:500 12px inherit;cursor:pointer;padding:6px 20px;border-radius:6px;font-family:inherit">'+rl+'</button></div>';
-  document.getElementById('mob-sheet-body').innerHTML=html;
-}
-function toggleProgBook(idx){
-  var grid=document.getElementById('prog-ch-'+idx);
-  var chevron=document.querySelector('#prog-row-'+idx+' .prog-book-row-chevron2');
-  var isOpen=grid.style.display!=='none';
-  if(isOpen){grid.style.display='none';if(chevron)chevron.classList.remove('open');}
-  else{
-    var b=BOOKS[idx],data=progLoad(),h='';
-    for(var c=1;c<=b.ch;c++){var k=progKey(idx,c),entry=data[k],cls=entry?(entry.source==='auto'?'auto':'manual'):'unread';h+='<div class="prog-ch '+cls+'" onclick="progToggleManual('+idx+','+c+')" title="'+(entry?entry.date:'Tap to mark read')+'">'+c+'</div>';}
-    grid.innerHTML=h;grid.style.display='grid';if(chevron)chevron.classList.add('open');
-  }
-}
-function progShowBook(idx){toggleProgBook(idx);}
-async function loadVotd(){
-  var wrap=document.getElementById('content');
-  wrap.innerHTML='<div class="ldg"><div class="spinner"></div><div class="ldg-txt">Loading…</div></div>';
-  try{
-    var r=await fetch(WORKER+'/votd'),d=await r.json();
-    if(!d||!d[0])throw new Error('no data');
-    var v=d[0],ref=v.bookname+' '+v.chapter+':'+v.verse;
-    var bookIdx=BOOKS.findIndex(function(b){return b.en===v.bookname;}),koText='';
-    if(bookIdx>=0){try{var kr=await fetch(WORKER+'/nkrv/'+BOOKS[bookIdx].n+'/'+v.chapter,{cache:'no-store'}),kd=await kr.json(),verses=Array.isArray(kd)?kd:(kd.verses||[]),kv=verses.find(function(x){return x.verse===+v.verse;});if(kv)koText=kv.text.replace(/\(KN:\d+\)/g,'');}catch(e){}}
-    var koRef=bookIdx>=0?BOOKS[bookIdx].ko+' '+v.chapter+':'+v.verse:ref;
-    var isEn=langOrder==='en-ko';
-    var html='<div class="votd-wrap"><div class="votd-card">';
-    /* #7: Title case, use / */
-    html+='<div class="votd-label">'+(isEn?'Verse of the Day / 오늘의 말씀':'오늘의 말씀 / Verse of the Day')+'</div>';
-    if(isEn){
-      html+='<div class="votd-en-ref">'+ref+'</div>';
-      html+='<div class="votd-en" style="color:#1c1c1c;font-style:normal;margin-bottom:20px">'+v.text+'</div>';
-      if(koText){html+='<div class="votd-divider"></div><div class="votd-ko-ref">'+koRef+'</div><div class="votd-ko" style="font-size:15px;color:#555;margin-bottom:24px">'+koText+'</div>';}
-    } else {
-      if(koText){html+='<div class="votd-ko-ref">'+koRef+'</div><div class="votd-ko">'+koText+'</div><div class="votd-divider"></div>';}
-      html+='<div class="votd-en-ref">'+ref+'</div><div class="votd-en">'+v.text+'</div>';
+export default {
+  async fetch(request, env) {
+    const cors = {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, OPTIONS",
+      "Cache-Control": "public, max-age=86400"
+    };
+    if (request.method === "OPTIONS") return new Response(null, { headers: cors });
+    const url = new URL(request.url);
+    const path = url.pathname;
+
+    if (path.startsWith('/esv/')) {
+      const q = url.searchParams.get('q');
+      if (!q) return new Response(JSON.stringify({error:'missing q'}), {status:400, headers:{...cors,"Content-Type":"application/json"}});
+      const esvUrl = 'https://api.esv.org/v3/passage/text/?q=' + encodeURIComponent(q)
+        + '&include-headings=false&include-footnotes=true&include-verse-numbers=true'
+        + '&include-short-copyright=false&include-passage-references=false'
+        + '&indent-paragraphs=0&indent-poetry=false&include-chapter-numbers=false'
+        + '&indent-psalm-doxology=false&line-length=0';
+      const esvResp = await fetch(esvUrl, { headers: { Authorization: 'Token ' + env.ESV_TOKEN } });
+      const data = await esvResp.json();
+      return new Response(JSON.stringify(data), { headers: { ...cors, "Content-Type": "application/json" } });
     }
-    if(bookIdx>=0){
-      var chRef=v.bookname+' '+v.chapter;
-      var koChRef=BOOKS[bookIdx].ko+' '+v.chapter+'장';
-      html+='<button class="votd-read-btn" onclick="bi='+bookIdx+';ci='+v.chapter+';loaded=true;updateLabel();load()">'
-        +'<span class="votd-btn-ko" style="'+(isEn?'display:none':'')+'">'+koChRef+' 읽기 →</span>'
-        +'<span class="votd-btn-en" style="'+(isEn?'':'display:none')+'">Read '+chRef+' →</span>'
-        +'</button>';
-    }
-    html+='</div></div>';
-    document.getElementById('content').innerHTML=html;
-  }catch(e){document.getElementById('content').innerHTML='';}
-}
-function sheetOpen(mode){
-  document.getElementById('mob-sheet').classList.remove('hidden');
-  var body=document.getElementById('mob-sheet-body');
-  if(mode==='progress'){progShowOverview();return;}
-  if(mode==='passage'){
-    document.getElementById('mob-sheet-title').textContent=langOrder==='en-ko'?'Select Book / 책 선택':'책 선택 / Select Book';
-    pendingBook=null;
-    var h='<div class="mob-book-list">';
-    BOOKS.forEach(function(b,i){
-      var p=langOrder==='en-ko'?b.en:b.ko,s=langOrder==='en-ko'?b.ko:b.en;
-      var isActive=loaded&&i===bi;
-      h+='<div class="mob-book-row'+(isActive?' active':'')+'" id="book-row-'+i+'">';
-      h+='<div class="mob-book-row-hdr" onclick="toggleBookRow('+i+')">';
-      h+='<div class="names"><div class="ko">'+p+'</div><div class="en">'+s+'</div></div>';
-      h+='<svg class="mob-book-row-chevron'+(isActive?' open':'')+'" width="12" height="8" viewBox="0 0 10 6"><path fill="currentColor" d="M0 0l5 6 5-6z"/></svg>';
-      h+='</div>';
-      h+='<div class="mob-ch-grid" id="ch-grid-'+i+'" style="'+(isActive?'':'display:none')+'">';
-      if(isActive){
-        for(var c=1;c<=b.ch;c++)h+='<div class="mob-ch-item'+(c===ci&&!inIntroMode?' active':'')+'" onclick="sheetSelectCh2('+i+','+c+')">'+c+'</div>';
+
+    if (path.startsWith('/intro/')) {
+      const parts = path.match(/\/intro\/(\d+)/);
+      if (!parts) return new Response(JSON.stringify({error:'bad path'}), {status:400, headers:{...cors,'Content-Type':'application/json'}});
+      const bookNum = +parts[1];
+      const cacheKey = `intro_${bookNum}`;
+
+      const cached = env.COMMENTARY_KV ? await env.COMMENTARY_KV.get(cacheKey) : null;
+      if (cached) return new Response(cached, {headers:{...cors,'Content-Type':'application/json'}});
+
+      const BOOK_NAMES = [
+        'Genesis','Exodus','Leviticus','Numbers','Deuteronomy','Joshua','Judges','Ruth',
+        '1 Samuel','2 Samuel','1 Kings','2 Kings','1 Chronicles','2 Chronicles','Ezra','Nehemiah',
+        'Esther','Job','Psalms','Proverbs','Ecclesiastes','Song of Solomon','Isaiah','Jeremiah',
+        'Lamentations','Ezekiel','Daniel','Hosea','Joel','Amos','Obadiah','Jonah',
+        'Micah','Nahum','Habakkuk','Zephaniah','Haggai','Zechariah','Malachi',
+        'Matthew','Mark','Luke','John','Acts','Romans','1 Corinthians','2 Corinthians',
+        'Galatians','Ephesians','Philippians','Colossians','1 Thessalonians','2 Thessalonians',
+        '1 Timothy','2 Timothy','Titus','Philemon','Hebrews','James',
+        '1 Peter','2 Peter','1 John','2 John','3 John','Jude','Revelation'
+      ];
+      const BOOK_NAMES_KO = [
+        '창세기','출애굽기','레위기','민수기','신명기','여호수아','사사기','룻기',
+        '사무엘상','사무엘하','열왕기상','열왕기하','역대상','역대하','에스라','느헤미야',
+        '에스더','욥기','시편','잠언','전도서','아가','이사야','예레미야',
+        '예레미야애가','에스겔','다니엘','호세아','요엘','아모스','오바댜','요나',
+        '미가','나훔','하박국','스바냐','학개','스가랴','말라기',
+        '마태복음','마가복음','누가복음','요한복음','사도행전','로마서','고린도전서','고린도후서',
+        '갈라디아서','에베소서','빌립보서','골로새서','데살로니가전서','데살로니가후서',
+        '디모데전서','디모데후서','디도서','빌레몬서','히브리서','야고보서',
+        '베드로전서','베드로후서','요한일서','요한이서','요한삼서','유다서','요한계시록'
+      ];
+      const bookName = BOOK_NAMES[bookNum-1];
+      const bookNameKo = BOOK_NAMES_KO[bookNum-1];
+
+      const prompt = `You are a Bible scholar writing an accessible book introduction in the Reformed/evangelical tradition (Calvin, Sproul, Keller, Piper). 
+
+Write a book introduction for ${bookName} with these sections:
+
+1. **Overview** (3-4 sentences): What this book is about, its central message, and why it matters.
+2. **Historical Background** (3-4 sentences): Author, date, audience, historical setting, and how it fits in the canon.
+3. **Key Themes** (provide exactly 4 themes, each with a title and 2-sentence explanation).
+4. **Geographic Context** (2-3 sentences): Key locations in the book and their significance. Then provide an array of up to 5 map locations relevant to this book with name, lat, lng, and a one-sentence description.
+
+Then provide Korean translations of all sections.
+
+Respond in this exact JSON format with no markdown, no preamble:
+{
+  "overview_en": "...",
+  "background_en": "...",
+  "themes_en": [{"title": "...", "desc": "..."}, {"title": "...", "desc": "..."}, {"title": "...", "desc": "..."}, {"title": "...", "desc": "..."}],
+  "geo_en": "...",
+  "map_locations": [{"name": "...", "name_ko": "...", "lat": 0.0, "lng": 0.0, "desc": "...", "desc_ko": "..."}],
+  "overview_ko": "...",
+  "background_ko": "...",
+  "themes_ko": [{"title": "...", "desc": "..."}, {"title": "...", "desc": "..."}, {"title": "...", "desc": "..."}, {"title": "...", "desc": "..."}],
+  "geo_ko": "..."
+}`;
+
+      const aiResp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': env.ANTHROPIC_KEY,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 4000,
+          messages: [{role:'user', content: prompt}]
+        })
+      });
+
+      if (!aiResp.ok) {
+        const err = await aiResp.text();
+        return new Response(JSON.stringify({error:'ai_failed', detail: err}), {status:500, headers:{...cors,'Content-Type':'application/json'}});
       }
-      h+='</div></div>';
-    });
-    h+='</div>';
-    body.innerHTML=h;
-    setTimeout(function(){var activeRow=body.querySelector('.mob-book-row.active');if(activeRow)activeRow.scrollIntoView({block:'start'});},50);
-  } else {
-    document.getElementById('mob-sheet-title').textContent=langOrder==='en-ko'?'Font Size / 글자 크기':'글자 크기 / Font Size';
-    body.innerHTML='<div class="mob-font-sheet"><div class="mob-font-row"><button class="mob-font-btn" onclick="adjFont(-1)">−</button><div class="mob-font-preview">가 Aa — '+fs+'px</div><button class="mob-font-btn" onclick="adjFont(1)">+</button></div></div>';
-  }
-}
-function toggleBookRow(idx){
-  var grid=document.getElementById('ch-grid-'+idx);
-  var chevron=document.querySelector('#book-row-'+idx+' .mob-book-row-chevron');
-  var isOpen=grid.style.display!=='none';
-  if(isOpen){grid.style.display='none';if(chevron)chevron.classList.remove('open');}
-  else{
-    var b=BOOKS[idx],h='';
-    for(var c=1;c<=b.ch;c++)h+='<div class="mob-ch-item'+(idx===bi&&c===ci&&!inIntroMode?' active':'')+'" onclick="sheetSelectCh2('+idx+','+c+')">'+c+'</div>';
-    grid.innerHTML=h;grid.style.display='grid';if(chevron)chevron.classList.add('open');
-  }
-}
-function sheetSelectCh2(bookIdx,ch){
-  bi=bookIdx;ci=ch;pendingBook=bookIdx;inIntroMode=false;
-  window._lastIntroData=null;window._lastIntroBk=null;
-  loaded=true;sheetClose();updateLabel();load();
-}
-function sheetSelectBook(idx){
-  pendingBook=idx;
-  document.getElementById('mob-sheet-title').textContent=langOrder==='en-ko'?BOOKS[idx].en+' '+BOOKS[idx].ko:BOOKS[idx].ko+' '+BOOKS[idx].en;
-  var h='<div class="mob-ch-grid">';
-  for(var i=1;i<=BOOKS[idx].ch;i++)h+='<div class="mob-ch-item '+(idx===bi&&i===ci?'active':'')+'" onclick="sheetSelectCh('+i+')">'+i+'</div>';
-  h+='</div>';document.getElementById('mob-sheet-body').innerHTML=h;
-}
-function sheetSelectCh(ch){bi=pendingBook;ci=ch;loaded=true;sheetClose();updateLabel();load();}
-function sheetClose(){document.getElementById('mob-sheet').classList.add('hidden');pendingBook=null;}
-function adjFont(d){fs=Math.min(22,Math.max(11,fs+d));applyFs();var p=document.querySelector('.mob-font-preview');if(p)p.textContent='가 Aa — '+fs+'px';}
-async function load(){
-  var bk=BOOKS[bi];
-  var ebp=document.getElementById('edge-bp');if(ebp)ebp.disabled=(bi===0&&ci===1);
-  var ebn=document.getElementById('edge-bn');if(ebn)ebn.disabled=(bi===BOOKS.length-1&&ci===bk.ch);
-  document.getElementById('content').innerHTML='<div class="ldg"><div class="spinner"></div><div class="ldg-txt">Loading…</div></div>';
-  const [kr,er]=await Promise.allSettled([fetchKo(bk,ci),fetchEsv(bk,ci)]);
-  if(kr.status==='rejected'){document.getElementById('content').innerHTML='<div class="errbox"><b>Error:</b> '+esc(kr.reason?.message||'실패')+'</div>';return;}
-  if(er.status==='rejected'){document.getElementById('content').innerHTML='<div class="errbox"><b>ESV Error:</b> '+esc(er.reason?.message||'Failed')+'</div>';return;}
-  render(kr.value,er.value,bk,ci);
-  loaded=true;document.getElementById('main').scrollTop=0;updateLabel();
-  var inp=document.getElementById('passage-input');if(inp)inp.value=BOOKS[bi].en+' '+ci;
-}
-async function fetchKo(bk,ch){
-  var r=await fetch(WORKER+'/nkrv/'+bk.n+'/'+ch,{cache:'no-store'});
-  if(!r.ok)throw new Error('Worker error '+r.status);
-  var d=await r.json();if(d.error)throw new Error(d.error);
-  if(Array.isArray(d))return{verses:d,footnotes:{}};
-  if(!d.verses||d.verses.length===0)throw new Error('No verses');
-  return{verses:d.verses,footnotes:d.footnotes||{}};
-}
-async function fetchEsv(bk,ch){
-  var esvQ=bk.en+' '+ch;if(bk.ch===1)esvQ=bk.en+' 1:1-999';
-  var r=await fetch(WORKER+'/esv/?q='+encodeURIComponent(esvQ));
-  if(!r.ok)throw new Error('ESV proxy error '+r.status);
-  var d=await r.json();if(!d.passages||!d.passages[0])throw new Error('No ESV data');
-  var txt=d.passages[0],verses={},footnotes={},aL=txt.split('\n'),pL=[],fL=[],inFn=false;
-  for(var l of aL){if(!inFn&&/^\s*\(\d+\)\s/.test(l)&&!l.match(/^\s*\(\d+\)\s*\[/))inFn=true;if(inFn)fL.push(l);else pL.push(l);}
-  for(var l of fL){var m=l.match(/\((\d+)\)\s*(.+)/);if(m)footnotes[m[1]]=m[2].trim();}
-  for(var vp of pL.join(' ').split(/(?=\[\d+\])/)){var p=vp.trim();if(!p)continue;var m=p.match(/^\[(\d+)\]\s*([\s\S]*)/);if(m)verses[+m[1]]=m[2].replace(/\s+/g,' ').replace(/\s*Footnotes?\s*$/i,'').trim();}
-  return{verses,headings:{},footnotes};
-}
-function render(koData,esvData,bk,ch){
-  var kv=koData.verses,kf=koData.footnotes||{};
-  var en=esvData.verses,headings=esvData.headings,footnotes=esvData.footnotes;
-  var h='<div class="col-headers"></div>';
-  var tl1=langOrder==='ko-en'?'본문':'Passage', tl2=langOrder==='ko-en'?'해설':'Commentary', tl3=langOrder==='ko-en'?'책 소개':'Book Intro';
-  h+='<div class="ch-tabs"><button class="ch-tab active" id="tab-text" onclick="switchTab(\'text\')">'+tl1+'</button><button class="ch-tab" id="tab-comm" onclick="switchTab(\'comm\')">'+tl2+'</button><button class="ch-tab" id="tab-intro" onclick="switchTab(\'intro\')">'+tl3+'</button></div>';
-  h+='<div id="tab-text-content" style="padding-top:8px">';
-  kv.forEach(function(v){
-    var n=v.verse,er=en[n]||'';
-    if(headings[n])h+='<div class="shead-row"><div class="ko-side"></div><div class="en-side"><div class="shead">'+esc(headings[n])+'</div></div></div>';
-    var eh=er.replace(/\((\d+)\)/g,function(_,x){return '<sup class="fn-ref" onclick="showFnByRef(\'fn-'+x+'\',event)">'+x+'</sup>';});
-    var kh=v.text.replace(/\(KN:(\d+)\)/g,function(_,x){return '<sup class="fn-ref" onclick="showFnByRef(\'ko-fn-'+x+'\',event)">'+x+'</sup>';});
-    h+='<div class="verse-row" id="vr-'+n+'"><div class="verse-cell ko-side"><span class="vn">'+n+'</span><span class="vt" style="font-size:'+fs+'px">'+kh+'</span></div><div class="verse-cell en-side"><span class="vn">'+n+'</span><span class="vt" style="font-size:'+fs+'px">'+eh+'</span></div></div>';
-  });
-  var fnHidden='<div style="display:none" id="fn-data">';
-  Object.keys(kf).forEach(function(k){fnHidden+='<div id="ko-fn-'+k+'"><span></span><span>'+esc(kf[k])+'</span></div>';});
-  Object.keys(footnotes).forEach(function(k){fnHidden+='<div id="fn-'+k+'"><span></span><span>'+esc(footnotes[k])+'</span></div>';});
-  fnHidden+='</div>';h+=fnHidden;
-  h+='</div>';
-  h+='<div id="tab-comm-content" style="display:none"><div class="ldg"><div class="spinner"></div><div class="ldg-txt">Loading…</div></div></div>';
-  h+='<div id="tab-intro-content" style="display:none"><div class="ldg"><div class="spinner"></div><div class="ldg-txt">Loading…</div></div></div>';
-  document.getElementById('content').innerHTML=h;
-  if(langOrder==='en-ko')applyLangOrder();
-  setTimeout(progAttachObserver,500);
-  hlApplyAll();hlAttach();
-}
-(function(){
-  var main=document.getElementById('main'),content=document.getElementById('content');
-  var sx=0,sy=0,drag=false,locked=true,startedHoriz=false;
-  main.addEventListener('touchstart',function(e){
-    if(!document.getElementById('mob-sheet').classList.contains('hidden'))return;
-    if(e.target.closest&&e.target.closest('.intro-map')){return;}
-    sx=e.touches[0].clientX;sy=e.touches[0].clientY;
-    drag=false;locked=false;startedHoriz=false;
-  },{passive:true});
-  main.addEventListener('touchmove',function(e){
-    if(!document.getElementById('mob-sheet').classList.contains('hidden'))return;
-    if(locked)return;
-    var dx=e.touches[0].clientX-sx,dy=e.touches[0].clientY-sy;
-    var adx=Math.abs(dx),ady=Math.abs(dy);
-    if(inIntroMode&&dx>0){locked=true;return;}
-    if(!loaded&&dx<0){locked=true;return;}
-    if(!startedHoriz&&!drag){
-      if(adx>8&&adx>ady){startedHoriz=true;drag=true;e.preventDefault();}
-      else if(ady>adx*1.2){locked=true;return;}
-      else if(adx<8&&ady<8){return;}
+
+      const aiData = await aiResp.json();
+      const text = aiData.content?.[0]?.text || '{}';
+      const cleanText = text.replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
+
+      let intro;
+      try { intro = JSON.parse(cleanText); }
+      catch(e) { return new Response(JSON.stringify({error:'parse_failed', raw: cleanText}), {status:500, headers:{...cors,'Content-Type':'application/json'}}); }
+
+      intro.book_en = bookName;
+      intro.book_ko = bookNameKo;
+
+      const result = JSON.stringify(intro);
+      if (env.COMMENTARY_KV) await env.COMMENTARY_KV.put(cacheKey, result);
+      return new Response(result, {headers:{...cors,'Content-Type':'application/json'}});
     }
-    if(drag){e.preventDefault();content.style.transform='translateX('+(dx*0.35)+'px)';content.style.transition='none';}
-  },{passive:false});
-  main.addEventListener('touchend',function(e){
-    if(!document.getElementById('mob-sheet').classList.contains('hidden'))return;
-    if(!drag){content.style.transform='';drag=false;return;}
-    var dx=e.changedTouches[0].clientX-sx;drag=false;startedHoriz=false;
-    if(Math.abs(dx)>80){
-      var dir=dx<0?-1:1;
-      content.style.transition='transform 0.18s ease-in,opacity 0.18s ease-in';
-      content.style.transform='translateX('+(dir*-80)+'px)';
-      content.style.opacity='0';
-      setTimeout(function(){
-        content.style.transform='';content.style.transition='none';content.style.opacity='';
-        if(navigator.vibrate)navigator.vibrate(15);
-        if(dx<0)step(1);else step(-1);
-      },180);
-    }else{
-      content.style.transition='transform 0.25s cubic-bezier(0.25,0.46,0.45,0.94)';
-      content.style.transform='';
-      setTimeout(function(){content.style.transition='';},260);
-    }
-  },{passive:true});
-})();
-(function(){
-  var popup=null,hideTimer=null;
-  function getPopup(){if(!popup)popup=document.getElementById('fn-popup');return popup;}
-  function showFnPopup(e,text){var p=getPopup();if(!p)return;clearTimeout(hideTimer);p.textContent=text;p.style.display='block';p.style.opacity='1';var x=e.clientX||(e.touches&&e.touches[0]&&e.touches[0].clientX)||0,y=e.clientY||(e.touches&&e.touches[0]&&e.touches[0].clientY)||0,pw=280,vw=window.innerWidth;var top=y-92;if(top<8)top=y+20;var left=x-pw/2;if(left<8)left=8;if(left+pw>vw-8)left=vw-pw-8;p.style.left=left+'px';p.style.top=top+'px';hideTimer=setTimeout(hideFnPopup,3000);}
-  function hideFnPopup(){var p=getPopup();if(p){p.style.opacity='0';setTimeout(function(){p.style.display='none';},150);}}
-  window.showFnByRef=function(id,e){e.preventDefault();e.stopPropagation();var el=document.getElementById(id);if(el){var span=el.querySelector('span:last-child'),text=span?span.textContent:'';if(text)showFnPopup(e,text);}};
-  document.getElementById('main').addEventListener('scroll',hideFnPopup,{passive:true});
-  document.addEventListener('click',function(e){if(!e.target.classList.contains('fn-ref'))hideFnPopup();});
-})();
-var HL_KEY='krengbible_hl',hlSelected=null;
-function hlLoad(){try{return JSON.parse(localStorage.getItem(HL_KEY)||'{}');}catch(e){return {};}}
-function hlSave(d){try{localStorage.setItem(HL_KEY,JSON.stringify(d));}catch(e){}}
-function hlKey(b,c,v){return b+'_'+c+'_'+v;}
-function hlApplyAll(){var data=hlLoad();document.querySelectorAll('.verse-row').forEach(function(row){var n=row.id.replace('vr-',''),k=hlKey(bi,ci,n);row.classList.remove('hl-y','hl-g','hl-b','hl-p','hl-r');if(data[k])row.classList.add('hl-'+data[k]);});}
-function hlCopy(){
-  if(!hlSelected) return;
-  var texts=[];
-  hlSelected.querySelectorAll('.vt').forEach(function(vt){texts.push(vt.textContent.trim());});
-  var txt=texts.join(' ');
-  navigator.clipboard.writeText(txt).then(function(){
-    var btn=document.getElementById('hl-copy-btn');
-    if(btn){var orig=btn.innerHTML;btn.innerHTML='<span style="font-size:16px;color:#2563eb">✓</span>';setTimeout(function(){btn.innerHTML=orig;},1200);}
-  }).catch(function(){});
-  hlHideToolbar();
+
+    if (path.startsWith('/commentary/')) {
+      const parts = path.match(/\/commentary\/(\d+)\/(\d+)/);
+      if (!parts) return new Response(JSON.stringify({error:'bad path'}), {status:400, headers:{...cors,'Content-Type':'application/json'}});
+      const bookNum = +parts[1], chapter = +parts[2];
+      const cacheKey = `commentary_${bookNum}_${chapter}`;
+
+      const cached = env.COMMENTARY_KV ? await env.COMMENTARY_KV.get(cacheKey) : null;
+      if (cached) return new Response(cached, {headers:{...cors,'Content-Type':'application/json'}});
+
+      const BOOK_NAMES = [
+        'Genesis','Exodus','Leviticus','Numbers','Deuteronomy','Joshua','Judges','Ruth',
+        '1 Samuel','2 Samuel','1 Kings','2 Kings','1 Chronicles','2 Chronicles','Ezra','Nehemiah',
+        'Esther','Job','Psalms','Proverbs','Ecclesiastes','Song of Solomon','Isaiah','Jeremiah',
+        'Lamentations','Ezekiel','Daniel','Hosea','Joel','Amos','Obadiah','Jonah',
+        'Micah','Nahum','Habakkuk','Zephaniah','Haggai','Zechariah','Malachi',
+        'Matthew','Mark','Luke','John','Acts','Romans','1 Corinthians','2 Corinthians',
+        'Galatians','Ephesians','Philippians','Colossians','1 Thessalonians','2 Thessalonians',
+        '1 Timothy','2 Timothy','Titus','Philemon','Hebrews','James',
+        '1 Peter','2 Peter','1 John','2 John','3 John','Jude','Revelation'
+      ];
+      const BOOK_NAMES_KO = [
+        '창세기','출애굽기','레위기','민수기','신명기','여호수아','사사기','룻기',
+        '사무엘상','사무엘하','열왕기상','열왕기하','역대상','역대하','에스라','느헤미야',
+        '에스더','욥기','시편','잠언','전도서','아가','이사야','예레미야',
+        '예레미야애가','에스겔','다니엘','호세아','요엘','아모스','오바댜','요나',
+        '미가','나훔','하박국','스바냐','학개','스가랴','말라기',
+        '마태복음','마가복음','누가복음','요한복음','사도행전','로마서','고린도전서','고린도후서',
+        '갈라디아서','에베소서','빌립보서','골로새서','데살로니가전서','데살로니가후서',
+        '디모데전서','디모데후서','디도서','빌레몬서','히브리서','야고보서',
+        '베드로전서','베드로후서','요한일서','요한이서','요한삼서','유다서','요한계시록'
+      ];
+      const bookName = BOOK_NAMES[bookNum-1];
+      const bookNameKo = BOOK_NAMES_KO[bookNum-1];
+
+      const prompt = `You are a Bible teacher writing accessible commentary in the tradition of Reformed/evangelical scholars like John Calvin, Matthew Henry, R.C. Sproul, Tim Keller, and John Piper. Your commentary emphasizes Scripture's authority, God's sovereignty, Christ-centered interpretation, and practical application.
+
+Write commentary for ${bookName} chapter ${chapter} with these two sections:
+
+1. **Summary** (2-3 sentences): What happens in this chapter in plain language anyone can understand.
+
+2. **Reflection** (3-4 sentences): Key theological themes and one practical takeaway for a modern reader. Keep it warm, pastoral, and grounded in the text.
+
+Then provide Korean translations of each section.
+
+Respond in this exact JSON format:
+{
+  "summary_en": "...",
+  "reflection_en": "...",
+  "summary_ko": "...",
+  "reflection_ko": "..."
 }
-function hlApply(color){
-  if(!hlSelected)return;
-  var n=hlSelected.id.replace('vr-',''),k=hlKey(bi,ci,n),data=hlLoad();
-  var current=data[k]||null;
-  if(color&&color===current)color=null;
-  if(color)data[k]=color;else delete data[k];
-  hlSave(data);
-  hlSelected.classList.remove('hl-y','hl-g','hl-b','hl-p','hl-r');
-  if(color)hlSelected.classList.add('hl-'+color);
-  hlHideToolbar();
-}
-function hlShowToolbar(row,e){
-  if(hlSelected&&hlSelected!==row) hlSelected.classList.remove('hl-selected');
-  hlSelected=row;row.classList.add('hl-selected');
-  var bar=document.getElementById('hl-bar');bar.classList.add('visible');
-  var data=hlLoad(),n=row.id.replace('vr-',''),cur=data[hlKey(bi,ci,n)]||null;
-  var koC={y:'노란색',g:'초록색',b:'파란색',p:'보라색',r:'빨간색'},enC={y:'Yellow',g:'Green',b:'Blue',p:'Purple',r:'Red'};
-  bar.querySelectorAll('.hl-bar-swatch').forEach(function(s){
-    s.classList.toggle('active',s.dataset.color===cur);
-    s.title=langOrder==='ko-en'?koC[s.dataset.color]:enC[s.dataset.color];
-  });
-}
-function hlHideToolbar(){
-  var bar=document.getElementById('hl-bar');
-  if(bar) bar.classList.remove('visible');
-  if(hlSelected){hlSelected.classList.remove('hl-selected');hlSelected=null;}
-}
-function hlAttach(){
-  document.querySelectorAll('.verse-row').forEach(function(row){
-    row.addEventListener('click',function(e){
-      if(e.target.classList.contains('fn-ref')) return;
-      if(hlSelected===row){ hlHideToolbar(); return; }
-      hlShowToolbar(row,e);
-    });
-  });
-  var bar=document.getElementById('hl-bar');
-  var bsy=0,bsdrag=false;
-  bar.addEventListener('touchstart',function(e){bsy=e.touches[0].clientY;bsdrag=false;},{passive:true});
-  bar.addEventListener('touchmove',function(e){var dy=e.touches[0].clientY-bsy;if(dy>8){bsdrag=true;bar.style.transform='translateY('+dy+'px)';}},{passive:true});
-  bar.addEventListener('touchend',function(e){var dy=e.changedTouches[0].clientY-bsy;bar.style.transform='';if(dy>60) hlHideToolbar();},{passive:true});
-}
-document.addEventListener('click',function(e){
-  var bar=document.getElementById('hl-bar');
-  if(bar&&bar.classList.contains('visible')&&!bar.contains(e.target)&&!e.target.closest('.verse-row')) hlHideToolbar();
-});
-document.addEventListener('touchstart',function(e){
-  var bar=document.getElementById('hl-bar');
-  if(bar&&bar.classList.contains('visible')&&!bar.contains(e.target)&&!e.target.closest('.verse-row')) hlHideToolbar();
-},{passive:true});
-function scrollToVerse(n){var el=document.getElementById('vr-'+n),m=document.getElementById('main');if(el&&m)m.scrollTop+=el.getBoundingClientRect().top-m.getBoundingClientRect().top-20;}
-function scrollToFn(id){var el=document.getElementById(id),m=document.getElementById('main');if(el&&m)m.scrollTop+=el.getBoundingClientRect().top-m.getBoundingClientRect().top-20;}
-var inIntroMode=false;
-function loadBookIntroView(bookIdx){
-  bi=bookIdx;loaded=true;inIntroMode=true;sheetClose();
-  updateLabel();
-  var bk=BOOKS[bookIdx];
-  document.getElementById('content').innerHTML='<div class="ldg"><div class="spinner"></div><div class="ldg-txt">'+(langOrder==='ko-en'?'책 소개 불러오는 중…':'Loading book intro…')+'</div></div>';
-  document.getElementById('main').scrollTop=0;
-  fetch(WORKER+'/intro/'+bk.n).then(function(r){return r.json();}).then(function(d){
-    if(d.error) throw new Error(d.error);
-    window._lastIntroData=d;window._lastIntroBk=bk;
-    renderBookIntro(d,bk);
-  }).catch(function(e){
-    document.getElementById('content').innerHTML='<div class="errbox">Intro failed: '+esc(e.message)+'</div>';
-  });
-}
-/* #2 & #3: renderBookIntro — consistent fonts with commentary, correct language flip */
-function renderBookIntro(d,bk,container){
-  var isEn=langOrder==='en-ko';
-  var ol=isEn?'Overview / 개요':'개요 / Overview';
-  var bl=isEn?'Historical Background / 역사적 배경':'역사적 배경 / Historical Background';
-  var tl=isEn?'Key Themes / 핵심 주제':'핵심 주제 / Key Themes';
-  var gl=isEn?'Geographic Context / 지리적 배경':'지리적 배경 / Geographic Context';
-  var h='';
-  if(!container) h+='<div class="col-headers"></div>';
-  h+='<div class="intro-wrap">';
-  h+='<div class="intro-section"><div class="intro-label">'+ol+'</div>';
-  /* #3: language order correct */
-  if(isEn){h+='<div class="comm-en">'+esc(d.overview_en)+'</div><div class="comm-ko">'+esc(d.overview_ko)+'</div>';}
-  else{h+='<div class="comm-ko">'+esc(d.overview_ko)+'</div><div class="comm-en">'+esc(d.overview_en)+'</div>';}
-  h+='</div>';
-  h+='<div class="intro-section"><div class="intro-label">'+bl+'</div>';
-  if(isEn){h+='<div class="comm-en">'+esc(d.background_en)+'</div><div class="comm-ko">'+esc(d.background_ko)+'</div>';}
-  else{h+='<div class="comm-ko">'+esc(d.background_ko)+'</div><div class="comm-en">'+esc(d.background_en)+'</div>';}
-  h+='</div>';
-  h+='<div class="intro-section"><div class="intro-label">'+tl+'</div><div class="intro-themes">';
-  var themes=isEn?d.themes_en:d.themes_ko;
-  var themes2=isEn?d.themes_ko:d.themes_en;
-  if(themes&&themes.length){themes.forEach(function(t,i){
-    var t2=themes2&&themes2[i];
-    h+='<div class="intro-theme">';
-    h+='<div class="intro-theme-title">'+esc(t.title)+'</div>';
-    if(t2) h+='<div class="intro-theme-title" style="font-size:11px;color:#aaa;font-weight:500;margin-bottom:6px">'+esc(t2.title)+'</div>';
-    if(isEn){
-      h+='<div class="intro-theme-en">'+esc(t.desc)+'</div>';
-      if(t2) h+='<div class="intro-theme-ko" style="margin-top:8px;padding-top:8px;border-top:1px solid #f0ede8">'+esc(t2.desc)+'</div>';
-    } else {
-      h+='<div class="intro-theme-ko">'+esc(t.desc)+'</div>';
-      if(t2) h+='<div class="intro-theme-en" style="margin-top:8px;padding-top:8px;border-top:1px solid #f0ede8">'+esc(t2.desc)+'</div>';
-    }
-    h+='</div>';
-  });}
-  h+='</div></div>';
-  h+='<div class="intro-section"><div class="intro-label">'+gl+'</div>';
-  if(isEn){h+='<div class="comm-en">'+esc(d.geo_en)+'</div><div class="comm-ko">'+esc(d.geo_ko)+'</div>';}
-  else{h+='<div class="comm-ko">'+esc(d.geo_ko)+'</div><div class="comm-en">'+esc(d.geo_en)+'</div>';}
-  if(d.map_locations&&d.map_locations.length){
-    h+='<div class="intro-map" id="intro-map"></div>';
-    h+='<div class="intro-map-legend">';
-    d.map_locations.forEach(function(loc,i){
-      var name=esc(loc.name);
-      var nameKo=esc(loc.name_ko||loc.name);
-      var descPrimary=esc(isEn?loc.desc:(loc.desc_ko||loc.desc));
-      var descSecondary=esc(isEn?(loc.desc_ko||loc.desc):loc.desc);
-      var displayNamePrimary=isEn?name:nameKo;
-      var displayNameSecondary=isEn?nameKo:name;
-      h+='<div class="intro-map-legend-item"><span class="intro-map-legend-num">'+(i+1)+'</span>'
-        +'<div class="intro-map-legend-text">'
-        +'<div class="intro-map-legend-name">'+displayNamePrimary
-        +(displayNameSecondary&&displayNameSecondary!==displayNamePrimary?' <span style="font-size:11px;font-weight:400;color:#aaa">('+displayNameSecondary+')</span>':'')
-        +'</div>'
-        +'<div class="intro-map-legend-desc">'+descPrimary+'</div>'
-        +'<div class="intro-map-legend-desc" style="color:#aaa;font-style:italic;margin-top:4px">'+descSecondary+'</div>'
-        +'</div></div>';
-    });
-    h+='</div>';
-  }
-  h+='</div></div>';
-  var target=container||document.getElementById('content');
-  target.innerHTML=h;
-  if(d.map_locations&&d.map_locations.length&&window.L){
-    setTimeout(function(){
-      var mapEl=document.getElementById('intro-map');
-      if(!mapEl)return;
-      if(mapEl._leaflet_id){try{L.DomUtil.get('intro-map')._leaflet_map&&L.DomUtil.get('intro-map')._leaflet_map.remove();}catch(e){}}
-      mapEl._leaflet_id=null;
-      var locs=d.map_locations;
-      var map=L.map('intro-map',{zoomControl:false,attributionControl:false,dragging:false,touchZoom:false,doubleClickZoom:false,scrollWheelZoom:false,boxZoom:false,keyboard:false});
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{subdomains:'abcd'}).addTo(map);
-      var bounds=locs.map(function(l){return[l.lat,l.lng];});
-      if(bounds.length>1)map.fitBounds(bounds,{padding:[50,50],animate:false});
-      else map.setView(bounds[0],7,{animate:false});
-      var svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
-      svg.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:500;overflow:visible';
-      mapEl.appendChild(svg);
-      function drawPins(){
-        while(svg.firstChild)svg.removeChild(svg.firstChild);
-        var pts=locs.map(function(loc){var pt=map.latLngToContainerPoint([loc.lat,loc.lng]);return{x:pt.x,y:pt.y};});
-        var r=14;
-        for(var i=0;i<pts.length;i++){for(var j=i+1;j<pts.length;j++){var dx=pts[j].x-pts[i].x,dy=pts[j].y-pts[i].y,dist=Math.sqrt(dx*dx+dy*dy);if(dist<r*2&&dist>0){var overlap=(r*2-dist)/2+2,nx=dx/dist,ny=dy/dist;pts[i].x-=nx*overlap;pts[i].y-=ny*overlap;pts[j].x+=nx*overlap;pts[j].y+=ny*overlap;}else if(dist===0){pts[i].x-=r;pts[j].x+=r;}}}
-        pts.forEach(function(pt,i){
-          var g=document.createElementNS('http://www.w3.org/2000/svg','g');
-          var circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
-          circle.setAttribute('cx',pt.x);circle.setAttribute('cy',pt.y);circle.setAttribute('r','13');circle.setAttribute('fill','#1b2a4a');circle.setAttribute('stroke','#fff');circle.setAttribute('stroke-width','2');
-          var text=document.createElementNS('http://www.w3.org/2000/svg','text');
-          text.setAttribute('x',pt.x);text.setAttribute('y',pt.y);text.setAttribute('text-anchor','middle');text.setAttribute('dominant-baseline','central');text.setAttribute('fill','#fff');text.setAttribute('font-size','11');text.setAttribute('font-weight','700');text.setAttribute('font-family','sans-serif');text.textContent=i+1;
-          g.appendChild(circle);g.appendChild(text);svg.appendChild(g);
-        });
+
+Only output valid JSON, no markdown, no preamble.`;
+
+      const aiResp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': env.ANTHROPIC_KEY,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 2000,
+          messages: [{role:'user', content: prompt}]
+        })
+      });
+
+      if (!aiResp.ok) {
+        const err = await aiResp.text();
+        return new Response(JSON.stringify({error:'ai_failed', detail: err}), {status:500, headers:{...cors,'Content-Type':'application/json'}});
       }
-      map.on('moveend zoomend viewreset',drawPins);
-      drawPins();
-    },100);
+
+      const aiData = await aiResp.json();
+      const text = aiData.content?.[0]?.text || '{}';
+
+      let commentary;
+      const cleanText = text.replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
+      try { commentary = JSON.parse(cleanText); }
+      catch(e) { return new Response(JSON.stringify({error:'parse_failed', raw: text}), {status:500, headers:{...cors,'Content-Type':'application/json'}}); }
+
+      commentary.book_en = bookName;
+      commentary.book_ko = bookNameKo;
+      commentary.chapter = chapter;
+
+      const result = JSON.stringify(commentary);
+      if (env.COMMENTARY_KV) await env.COMMENTARY_KV.put(cacheKey, result);
+      return new Response(result, {headers:{...cors,'Content-Type':'application/json'}});
+    }
+
+    if (path.startsWith('/votd')) {
+      const votdResp = await fetch('https://labs.bible.org/api/?passage=votd&type=json', {
+        headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/json" }
+      });
+      const votdData = await votdResp.json();
+      return new Response(JSON.stringify(votdData), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    // Korean Bible (nkrv) route — now with KV caching
+    let bookNum, chapter;
+    const m  = path.match(/\/nkrv\/(\d+)\/(\d+)/);
+    const m2 = path.match(/^\/(\d+)\/(\d+)/);
+    if (m)       { bookNum = +m[1];  chapter = +m[2]; }
+    else if (m2) { bookNum = +m2[1]; chapter = +m2[2]; }
+    else return new Response(JSON.stringify({error:"Use /nkrv/{book}/{chapter}"}), {status:400, headers:{...cors,"Content-Type":"application/json"}});
+
+    // Check KV cache first
+    const verseKey = `nkrv_${bookNum}_${chapter}`;
+    if (env.COMMENTARY_KV) {
+      const cachedVerses = await env.COMMENTARY_KV.get(verseKey);
+      if (cachedVerses) {
+        return new Response(cachedVerses, {headers:{...cors,"Content-Type":"application/json"}});
+      }
+    }
+
+    const CODES = [
+      "gen","exo","lev","num","deu","jos","jdg","rut",
+      "1sa","2sa","1ki","2ki","1ch","2ch","ezr","neh",
+      "est","job","psa","pro","ecc","sng","isa","jer",
+      "lam","ezk","dan","hos","jol","amo","oba","jon",
+      "mic","nam","hab","zep","hag","zec","mal",
+      "mat","mrk","luk","jhn","act","rom","1co","2co",
+      "gal","eph","php","col","1th","2th","1ti","2ti",
+      "tit","phm","heb","jas","1pe","2pe","1jn","2jn",
+      "3jn","jud","rev"
+    ];
+
+    const book = CODES[bookNum - 1];
+    const fetchUrl = `https://www.bskorea.or.kr/bible/korbibReadpage.php?version=GAE&book=${book}&chap=${chapter}`;
+
+    try {
+      const resp = await fetch(fetchUrl, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+          "Accept-Language": "ko-KR,ko;q=0.9",
+          "Referer": "https://www.bskorea.or.kr/"
+        }
+      });
+      if (!resp.ok) throw new Error("bskorea returned " + resp.status);
+      const html = await resp.text();
+
+      const divTextMap = {};
+      const d2Re = /<div\b[^>]*\bid=['"]?(D_\d+_\d+)['"]?[^>]*>/gi;
+      let d2Match;
+      while ((d2Match = d2Re.exec(html)) !== null) {
+        const divId = d2Match[1];
+        const start = d2Re.lastIndex;
+        const end = html.indexOf('</div>', start);
+        if (end === -1) continue;
+        const body = html.slice(start, end);
+        const fnText = body
+          .replace(/<[^>]+>/g, '')
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .trim();
+        if (fnText) divTextMap[divId] = fnText;
+      }
+
+      const footnotes = {};
+      const popRe = /clickPopUp\('([^']+)'[^)]*\)[^<]*<font[^>]*>(\d+)\)<\/font>/gi;
+      let popMatch;
+      while ((popMatch = popRe.exec(html)) !== null) {
+        const divId = popMatch[1];
+        const fnNum = popMatch[2];
+        if (fnNum && divId && divTextMap[divId]) footnotes[fnNum] = divTextMap[divId];
+      }
+
+      const verses = [];
+      const parts = html.split('<span class="number">');
+      for (let i = 1; i < parts.length; i++) {
+        const part = parts[i];
+        const numMatch = part.match(/^(\d+)/);
+        if (!numMatch) continue;
+        const num = parseInt(numMatch[1]);
+        const afterClose = part.replace(/^\d+(?:&nbsp;)+<\/span>/, '');
+        const end = afterClose.indexOf('</span>');
+        const raw = end > -1 ? afterClose.substring(0, end) : afterClose;
+        let text = raw
+          .replace(/<div[^>]*>[\s\S]*?<\/div>/gi, '')
+          .replace(/<[^>]+>/g, '')
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/\s+/g, ' ')
+          .trim();
+        text = text.replace(/[ㄱ-ㅎ]\)\s*/g, '');
+        text = text.replace(/(\d+)\)\s*/g, '(KN:$1)');
+        if (text.length > 1) verses.push({ verse: num, text });
+      }
+
+      if (verses.length === 0) {
+        return new Response(JSON.stringify({error:"parse_failed", html_length: html.length}), {headers:{...cors,"Content-Type":"application/json"}});
+      }
+
+      const result = JSON.stringify({ verses, footnotes });
+
+      // Cache in KV — verses don't change so cache indefinitely
+      if (env.COMMENTARY_KV) {
+        await env.COMMENTARY_KV.put(verseKey, result);
+      }
+
+      return new Response(result, {headers:{...cors,"Content-Type":"application/json"}});
+    } catch (e) {
+      return new Response(JSON.stringify({error: e.message}), {status:500, headers:{...cors,"Content-Type":"application/json"}});
+    }
   }
-}
-function switchTab(tab){
-  var tText=document.getElementById('tab-text-content');
-  var tComm=document.getElementById('tab-comm-content');
-  var tIntro=document.getElementById('tab-intro-content');
-  var btnText=document.getElementById('tab-text');
-  var btnComm=document.getElementById('tab-comm');
-  var btnIntro=document.getElementById('tab-intro');
-  if(tText)tText.style.display='none';if(tComm)tComm.style.display='none';if(tIntro)tIntro.style.display='none';
-  if(btnText)btnText.classList.remove('active');if(btnComm)btnComm.classList.remove('active');if(btnIntro)btnIntro.classList.remove('active');
-  if(tab==='text'){if(tText)tText.style.display='';if(btnText)btnText.classList.add('active');}
-  else if(tab==='comm'){if(tComm)tComm.style.display='';if(btnComm)btnComm.classList.add('active');if(tComm&&tComm.querySelector('.ldg'))loadCommentary();}
-  else if(tab==='intro'){if(tIntro)tIntro.style.display='';if(btnIntro)btnIntro.classList.add('active');if(tIntro&&tIntro.querySelector('.ldg'))loadTabIntro();}
-}
-/* #1 & #4: renderCommentary — plain text, no blocks, single bilingual label */
-function renderCommentary(d,tComm){
-  var isEn=langOrder==='en-ko';
-  /* #4: single label with / , preferred language first */
-  var sl=isEn?'Synopsis / 요약':'요약 / Synopsis';
-  var rl=isEn?'Reflection / 묵상':'묵상 / Reflection';
-  var h='<div class="comm-wrap">';
-  h+='<div class="comm-section"><div class="comm-label">'+sl+'</div>';
-  if(isEn){h+='<div class="comm-en">'+esc(d.summary_en)+'</div><div class="comm-ko">'+esc(d.summary_ko)+'</div>';}
-  else{h+='<div class="comm-ko">'+esc(d.summary_ko)+'</div><div class="comm-en">'+esc(d.summary_en)+'</div>';}
-  h+='</div>';
-  h+='<div class="comm-section"><div class="comm-label">'+rl+'</div>';
-  if(isEn){h+='<div class="comm-en">'+esc(d.reflection_en)+'</div><div class="comm-ko">'+esc(d.reflection_ko)+'</div>';}
-  else{h+='<div class="comm-ko">'+esc(d.reflection_ko)+'</div><div class="comm-en">'+esc(d.reflection_en)+'</div>';}
-  h+='</div></div>';
-  tComm.innerHTML=h;
-}
-async function loadTabIntro(){
-  var bk=BOOKS[bi];
-  var tIntro=document.getElementById('tab-intro-content');
-  if(!tIntro)return;
-  tIntro.innerHTML='<div class="ldg"><div class="spinner"></div><div class="ldg-txt">'+(langOrder==='ko-en'?'책 소개 불러오는 중…':'Loading book intro…')+'</div></div>';
-  try{
-    var r=await fetch(WORKER+'/intro/'+bk.n);
-    if(!r.ok) throw new Error('Worker error '+r.status);
-    var d=await r.json();
-    if(d.error) throw new Error(d.error);
-    window._lastIntroData=d;window._lastIntroBk=bk;
-    tIntro.innerHTML='';
-    renderBookIntro(d,bk,tIntro);
-  } catch(e){
-    tIntro.innerHTML='<div class="errbox">Intro failed: '+esc(e.message)+'</div>';
-  }
-}
-async function loadCommentary(){
-  var bk=BOOKS[bi];
-  var tComm=document.getElementById('tab-comm-content');
-  if(!tComm) return;
-  tComm.innerHTML='<div class="ldg"><div class="spinner"></div><div class="ldg-txt">'+(langOrder==='ko-en'?'해설 불러오는 중…':'Loading commentary…')+'</div></div>';
-  try{
-    var r=await fetch(WORKER+'/commentary/'+bk.n+'/'+ci);
-    if(!r.ok) throw new Error('Worker error '+r.status);
-    var d=await r.json();
-    if(d.error) throw new Error(d.error+(d.detail?' — '+d.detail:''));
-    window._lastCommData=d;
-    renderCommentary(d,tComm);
-  } catch(e){
-    tComm.innerHTML='<div class="errbox">Commentary failed: '+esc(e.message)+'</div>';
-  }
-}
-function toggleIntroDropdown(){
-  var dd=document.getElementById('intro-dropdown');
-  var list=document.getElementById('intro-dropdown-list');
-  if(dd.style.display!=='none'){dd.style.display='none';return;}
-  if(!list.children.length){
-    var h='';
-    BOOKS.forEach(function(b,i){
-      var primary=langOrder==='en-ko'?b.en:b.ko;
-      var secondary=langOrder==='en-ko'?b.ko:b.en;
-      h+='<div onclick="loadBookIntroView('+i+');document.getElementById(\'intro-dropdown\').style.display=\'none\'" '
-        +'style="padding:7px 14px;cursor:pointer;font-size:13px;border-bottom:.5px solid #f0ede8;display:flex;align-items:baseline;gap:6px" '
-        +'onmouseover="this.style.background=\'#f7f5f2\'" onmouseout="this.style.background=\'\'">'
-        +'<span style="font-weight:500;color:#222">'+esc(primary)+'</span>'
-        +'<span style="font-size:11px;color:#aaa">'+esc(secondary)+'</span>'
-        +'</div>';
-    });
-    list.innerHTML=h;
-  }
-  dd.style.display='block';
-}
-document.addEventListener('click',function(e){
-  var dd=document.getElementById('intro-dropdown');
-  var btn=document.getElementById('intro-btn');
-  if(dd&&btn&&!dd.contains(e.target)&&e.target!==btn)dd.style.display='none';
-});
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-document.addEventListener('keydown',function(e){if(e.target.tagName==='SELECT'||e.target.id==='passage-input')return;if(e.key==='ArrowRight')step(1);if(e.key==='ArrowLeft')step(-1);});
-</script>
-<div class="edge-nav left"><button class="edge-btn" id="edge-bp" onclick="step(-1)" disabled>&#8249;</button></div>
-<div class="edge-nav right"><button class="edge-btn" id="edge-bn" onclick="step(1)" disabled>&#8250;</button></div>
-</body>
-</html>
+};
