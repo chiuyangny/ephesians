@@ -389,8 +389,10 @@ function updateLabel(){
   document.getElementById('mob-passage-label').textContent=lbl;
 }
 function step(d){
+  var wasIntro=inIntroMode;
   inIntroMode=false;window._lastIntroData=null;window._lastIntroBk=null;
   if(!loaded){if(d===-1){bi=0;ci=1;load();}return;}
+  if(wasIntro){ci=1;load();return;}
   if(d===-1){if(ci>1)ci--;else if(bi>0){bi--;ci=BOOKS[bi].ch;}}
   else{if(ci<BOOKS[bi].ch)ci++;else if(bi<BOOKS.length-1){bi++;ci=1;}}
   load();
@@ -764,8 +766,8 @@ function render(koData,esvData,bk,ch){
     if(!document.getElementById('mob-sheet').classList.contains('hidden'))return;
     if(locked)return;
     var dx=e.touches[0].clientX-sx,dy=e.touches[0].clientY-sy;
-    // Block left swipe on VOTD and intro, allow right swipe
-    if((!loaded||inIntroMode)&&dx<0){locked=true;return;}
+    if(inIntroMode&&dx<0){locked=true;return;}
+    if(!loaded&&dx<0){locked=true;return;}
     if(!drag&&Math.abs(dy)>Math.abs(dx)*1.2){locked=true;return;}
     if(Math.abs(dx)>8)drag=true;
     if(drag){content.style.transform='translateX('+(dx*0.35)+'px)';content.style.transition='none';}
@@ -946,7 +948,10 @@ function renderBookIntro(d,bk){
       if(!mapEl)return;
       var locs=d.map_locations;
       var map=L.map('intro-map',{zoomControl:true,attributionControl:false});
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
+        attribution:'© OpenStreetMap © CartoDB',
+        subdomains:'abcd'
+      }).addTo(map);
       var bounds=[];
       locs.forEach(function(loc){
         var marker=L.marker([loc.lat,loc.lng]).addTo(map);
