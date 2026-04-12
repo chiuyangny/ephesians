@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://krengbible.com/sitemap.xml
