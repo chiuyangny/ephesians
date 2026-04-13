@@ -235,10 +235,10 @@ body.dark .intro-en{color:#e8e5e0}
 body.dark .intro-theme{background:#242424;border-color:#333}
 .intro-theme-title{font-size:13px;font-weight:600;color:#1b2a4a;margin-bottom:4px}
 body.dark .intro-theme-title{color:#a8b8d8}
-.intro-theme-ko{font-family:'Noto Sans KR',sans-serif;font-size:13px;line-height:1.7;color:#444;word-break:keep-all}
-.intro-theme-en{font-size:12px;line-height:1.6;color:#777}
-body.dark .intro-theme-ko{color:#ccc}
-body.dark .intro-theme-en{color:#888}
+.intro-theme-ko{font-family:'Noto Sans KR',sans-serif;font-size:13px;line-height:1.7;color:#222;word-break:keep-all}
+.intro-theme-en{font-size:12px;line-height:1.6;color:#333}
+body.dark .intro-theme-ko{color:#e8e5e0}
+body.dark .intro-theme-en{color:#e8e5e0}
 .intro-map{width:100%;height:260px;border-radius:12px;overflow:hidden;margin-top:8px;border:1px solid #e8e5e0;position:relative;z-index:1}
 body.dark .intro-map{border-color:#333}
 .leaflet-div-icon{background:none!important;border:none!important;box-shadow:none!important;}
@@ -247,8 +247,8 @@ body.dark .intro-map{border-color:#333}
 .intro-map-legend-num{background:#1b2a4a;color:#fff;border-radius:50%;width:20px;height:20px;min-width:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-top:2px}
 .intro-map-legend-name{font-size:13px;font-weight:600;color:#222;margin-bottom:2px}
 body.dark .intro-map-legend-name{color:#e8e5e0}
-.intro-map-legend-desc{font-size:12px;color:#666;line-height:1.5}
-body.dark .intro-map-legend-desc{color:#999}
+.intro-map-legend-desc{font-size:12px;color:#333;line-height:1.5}
+body.dark .intro-map-legend-desc{color:#e8e5e0}
 /* #6: Tab bar — remove full-width border, keep only active underline */
 .ch-tabs{display:flex;gap:0;padding:0 0 0 20px;flex-shrink:0;border-bottom:none}
 .ch-tab{background:none;border:none;font:500 13px inherit;color:#999;padding:8px 12px;cursor:pointer;border-bottom:2px solid transparent;touch-action:manipulation}
@@ -1068,7 +1068,7 @@ function renderBookIntro(d,bk,container){
         +(displayNameSecondary&&displayNameSecondary!==displayNamePrimary?' <span style="font-size:11px;font-weight:400;color:#aaa">('+displayNameSecondary+')</span>':'')
         +'</div>'
         +'<div class="intro-map-legend-desc">'+descPrimary+'</div>'
-        +'<div class="intro-map-legend-desc" style="color:#aaa;font-style:italic;margin-top:4px">'+descSecondary+'</div>'
+        +'<div class="intro-map-legend-desc" style="font-style:italic;margin-top:4px">'+descSecondary+'</div>'
         +'</div></div>';
     });
     h+='</div>';
@@ -1239,6 +1239,27 @@ document.getElementById('search-input').addEventListener('input',function(){
   }
   document.getElementById('search-results').innerHTML='<div class="search-empty"><div class="spinner"></div></div>';
   searchTimer=setTimeout(function(){
+    // First check if it's a verse reference like "ps 1" or "고전 1:1"
+    var ref=tryParseReference(q);
+    if(ref){
+      closeSearch();
+      bi=ref.bookIdx;ci=ref.chapter;loaded=true;inIntroMode=false;
+      window._lastIntroData=null;window._lastIntroBk=null;
+      updateLabel();
+      load().then(function(){
+        setTimeout(function(){
+          var verse=ref.verse;
+          var row=document.getElementById('vr-'+verse);
+          if(row){
+            var main=document.getElementById('main');
+            main.scrollTop+=row.getBoundingClientRect().top-main.getBoundingClientRect().top-60;
+            row.classList.add('hl-selected');
+            setTimeout(function(){row.classList.remove('hl-selected');},3000);
+          }
+        },400);
+      });
+      return;
+    }
     searchState={q:q,isKo:isKorean(q),loading:false,hasMore:false,nextOffset:0,nextPage:1};
     document.getElementById('search-results').innerHTML='';
     loadMoreResults();
@@ -1254,6 +1275,36 @@ document.getElementById('search-results').addEventListener('scroll',function(){
 }); // end window load
 
 function isKorean(str){return /[\uAC00-\uD7A3\u1100-\u11FF\u3130-\u318F]/.test(str);}
+
+// Try to parse a reference like "ps 1", "1 cor 1:1", "시편 1장", "고전 1:1"
+function tryParseReference(q){
+  var cleaned=q.trim().replace(/：/g,':').replace(/장/g,'').replace(/절/g,'').trim();
+  // Match pattern: optional number prefix + book name + chapter + optional :verse
+  var m=cleaned.match(/^(.+?)\s+(\d+)(?::(\d+))?$/);
+  if(!m)return null;
+  var bookQ=m[1].trim().toLowerCase(),ch=parseInt(m[2]),verse=m[3]?parseInt(m[3]):1;
+  var idx=BOOKS.findIndex(function(b){
+    var enL=b.en.toLowerCase(),enNS=enL.replace(/\s+/g,''),bqNS=bookQ.replace(/\s+/g,'');
+    // English matches
+    if(enL.startsWith(bookQ))return true;
+    if(enNS.startsWith(bqNS)&&bqNS.length>=2)return true;
+    // Initials match e.g. "1co" for "1 Corinthians"
+    var initials=b.en.split(' ').map(function(w){return w[0].toLowerCase();}).join('');
+    if(initials===bookQ)return true;
+    // Abbreviated like "cor" matches "Corinthians" or "1cor"
+    var words=enL.split(' ');
+    for(var w of words){if(w.startsWith(bookQ)&&bookQ.length>=3)return true;}
+    // Korean matches
+    var koL=b.ko;
+    if(koL.startsWith(m[1].trim()))return true;
+    // Korean abbreviated e.g. 고전 for 고린도전서
+    if(bookQ.length>=2&&koL.includes(m[1].trim().slice(0,2)))return true;
+    return false;
+  });
+  if(idx===-1)return null;
+  ch=Math.min(Math.max(1,ch),BOOKS[idx].ch);
+  return{bookIdx:idx,chapter:ch,verse:verse};
+}
 
 async function loadMoreResults(){
   if(searchState.loading||!searchState.q)return;
