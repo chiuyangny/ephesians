@@ -880,6 +880,7 @@ function render(koData,esvData,bk,ch){
   var main=document.getElementById('main'),content=document.getElementById('content');
   var sx=0,sy=0,drag=false,locked=true,startedHoriz=false;
   main.addEventListener('touchstart',function(e){
+    if(e.touches.length>1){locked=true;return;}
     if(!document.getElementById('mob-sheet').classList.contains('hidden'))return;
     if(e.target.closest&&e.target.closest('.intro-map')){return;}
     sx=e.touches[0].clientX;sy=e.touches[0].clientY;
