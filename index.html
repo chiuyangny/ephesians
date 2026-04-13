@@ -1236,31 +1236,54 @@ var searchState={q:'',isKo:false,loading:false,hasMore:false,nextOffset:0,nextPa
 function openSearch(){
   var inp=document.getElementById('search-input');
   inp.placeholder=langOrder==='ko-en'?'검색 / Search':'Search / 검색';
-  document.getElementById('search-overlay').classList.remove('hidden');
+  var overlay=document.getElementById('search-overlay');
+  overlay.style.transform='';overlay.style.transition='';
+  overlay.classList.remove('hidden');
   var emptyMsg=langOrder==='ko-en'?'검색어를 입력하세요 / Enter a search term':'Enter a search term / 검색어를 입력하세요';
   document.getElementById('search-results').innerHTML='<div class="search-empty"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" style="color:#ddd"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg><span>'+emptyMsg+'</span></div>';
   setTimeout(function(){inp.focus();},100);
 }
-// Swipe left to close search
+// Swipe right to close search with drag-follow animation
 (function(){
-  var overlay,sx=0,sy=0,dragging=false;
+  var sx=0,sy=0,dragging=false,active=false;
+  function getOverlay(){return document.getElementById('search-overlay');}
   document.addEventListener('touchstart',function(e){
-    overlay=document.getElementById('search-overlay');
+    var overlay=getOverlay();
     if(!overlay||overlay.classList.contains('hidden'))return;
-    sx=e.touches[0].clientX;sy=e.touches[0].clientY;dragging=false;
+    // Only start from left edge area or anywhere — track all touches
+    sx=e.touches[0].clientX;sy=e.touches[0].clientY;
+    dragging=false;active=true;
   },{passive:true});
   document.addEventListener('touchmove',function(e){
-    overlay=document.getElementById('search-overlay');
+    if(!active)return;
+    var overlay=getOverlay();
     if(!overlay||overlay.classList.contains('hidden'))return;
     var dx=e.touches[0].clientX-sx,dy=e.touches[0].clientY-sy;
-    if(!dragging&&Math.abs(dx)>10&&Math.abs(dx)>Math.abs(dy)*1.5)dragging=true;
+    if(!dragging){
+      if(Math.abs(dx)>8&&dx>0&&Math.abs(dx)>Math.abs(dy)*1.2){dragging=true;}
+      else if(Math.abs(dy)>8){active=false;return;}
+      else return;
+    }
+    if(dragging&&dx>0){
+      overlay.style.transition='none';
+      overlay.style.transform='translateX('+dx+'px)';
+    }
   },{passive:true});
   document.addEventListener('touchend',function(e){
-    overlay=document.getElementById('search-overlay');
-    if(!overlay||overlay.classList.contains('hidden')||!dragging)return;
+    if(!active||!dragging)return;
+    active=false;dragging=false;
+    var overlay=getOverlay();
+    if(!overlay||overlay.classList.contains('hidden'))return;
     var dx=e.changedTouches[0].clientX-sx;
-    if(dx>80)closeSearch();
-    dragging=false;
+    if(dx>90){
+      overlay.style.transition='transform 0.2s ease-in';
+      overlay.style.transform='translateX(100%)';
+      setTimeout(function(){closeSearch();},200);
+    } else {
+      overlay.style.transition='transform 0.25s cubic-bezier(0.25,0.46,0.45,0.94)';
+      overlay.style.transform='';
+      setTimeout(function(){overlay.style.transition='';},260);
+    }
   },{passive:true});
 })();
 function closeSearch(){
