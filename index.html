@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>krengbible.com — Korean & English Bible</title>
 <meta name="description" content="한국어와 영어로 성경을 읽으세요. Read the Bible in Korean (개역개정) and English (ESV) side by side. Free bilingual Bible app with daily verse, reading progress, and commentary.">
 <meta name="keywords" content="Korean Bible, English Bible, 개역개정, ESV, bilingual Bible, 한영성경, Bible reading">
@@ -110,7 +113,7 @@ body.dark .mob-sheet-hdr::after{background:#333}
 .mob-sheet-hdr span{font-size:14px;font-weight:500;color:#222}
 .mob-sheet-handle{width:36px;height:4px;background:#d8d4ce;border-radius:2px;position:absolute;top:8px;left:50%;transform:translateX(-50%)}
 body.dark .mob-sheet-handle{background:#444}
-#mob-sheet-body{overflow-y:auto;flex:1}
+#mob-sheet-body{overflow-y:auto;flex:1;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .mob-book-list{display:flex;flex-direction:column}
 .mob-book-row{border-bottom:.5px solid #f0ede8;cursor:pointer}
 .mob-book-row-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 20px}
@@ -288,8 +291,8 @@ body.dark .votd-secondary{color:#e8e5e0!important}
 .votd-read-btn:active{opacity:.85}
 body.dark .votd-read-btn{background:#2a3d66}
 .verse-row.hl-selected .vt{text-decoration:underline;text-decoration-style:dashed;text-decoration-color:#888;text-decoration-thickness:2px;text-underline-offset:4px}
-.hl-bar{position:fixed;bottom:0;left:0;right:0;z-index:1200;background:#fff;border-top:1px solid #e8e5e0;padding:14px 28px env(safe-area-inset-bottom);display:flex;align-items:center;gap:16px;transform:translateY(100%);transition:transform 0.25s cubic-bezier(0.25,0.46,0.45,0.94)}
-.hl-bar.visible{transform:translateY(0)}
+.hl-bar{position:fixed;bottom:0;left:0;right:0;z-index:1200;background:#fff;border-top:1px solid #e8e5e0;padding:14px 28px env(safe-area-inset-bottom);display:flex;align-items:center;gap:16px;transform:translateY(100%);transition:transform 0.25s cubic-bezier(0.25,0.46,0.45,0.94);pointer-events:none}
+.hl-bar.visible{transform:translateY(0);pointer-events:auto}
 body.dark .hl-bar{background:#1e1e1e;border-top-color:#333}
 .hl-bar-handle{position:absolute;top:6px;left:50%;transform:translateX(-50%);width:36px;height:4px;background:#d8d4ce;border-radius:2px}
 body.dark .hl-bar-handle{background:#444}
@@ -350,7 +353,7 @@ body.dark .search-back{color:#aaa}
 body.dark #search-input{color:#e8e5e0}
 body.dark .search-input-wrap{background:#2a2a2a}
 #search-input::placeholder{color:#aaa}
-.search-results{flex:1;overflow-y:auto;padding:8px 0}
+.search-results{flex:1;overflow-y:auto;padding:8px 0;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .search-result-item{display:flex;align-items:stretch;gap:0;padding:12px 18px;cursor:pointer;border-bottom:.5px solid #f0ede8}
 .search-result-item:active{background:#f0ede8}
 body.dark .search-result-item{border-bottom-color:#2a2a2a}
