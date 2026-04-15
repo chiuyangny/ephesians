@@ -507,7 +507,7 @@ header{display:none!important}
 <div id="fn-popup" class="fn-popup" style="opacity:0;display:none"></div>
 <main id="main">
   <div id="content"></div>
-  <footer>개역개정판 &copy; 대한성서공회 &nbsp;&middot;&nbsp; ESV&reg; &copy; 2001 Crossway &middot; <a href="https://www.esv.org" target="_blank" style="color:#bbb">esv.org</a> &middot; Used by permission</footer>
+  <footer id="main-footer">개역개정판 &copy; 대한성서공회 &nbsp;&middot;&nbsp; ESV&reg; &copy; 2001 Crossway &middot; <a href="https://www.esv.org" target="_blank" style="color:#bbb">esv.org</a> &middot; Used by permission</footer>
 </main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
@@ -764,28 +764,48 @@ async function loadVotd(){
     var html='<div class="votd-wrap">';
 
     if(photo&&photo.url){
-      // Photo background design
+      // Detect if photo is light or dark using dominant color
+      var isDark=true;
+      if(photo.color){
+        var hex=photo.color.replace('#','');
+        var r=parseInt(hex.substr(0,2),16),g=parseInt(hex.substr(2,2),16),b=parseInt(hex.substr(4,2),16);
+        // Perceived luminance formula
+        var lum=(0.299*r+0.587*g+0.114*b)/255;
+        isDark=lum<0.5;
+      }
+      var tc=isDark?'#ffffff':'#000000';
+      var tcSub=isDark?'rgba(255,255,255,0.6)':'rgba(0,0,0,0.55)';
+      var tcLabel=isDark?'rgba(255,255,255,0.45)':'rgba(0,0,0,0.4)';
+      var tcCredit=isDark?'rgba(255,255,255,0.3)':'rgba(0,0,0,0.3)';
+      var overlayBg=isDark
+        ?'linear-gradient(to bottom,rgba(0,0,0,0.05) 0%,rgba(0,0,0,0.35) 45%,rgba(0,0,0,0.82) 100%)'
+        :'linear-gradient(to bottom,rgba(255,255,255,0.05) 0%,rgba(255,255,255,0.35) 45%,rgba(255,255,255,0.82) 100%)';
       html+='<div class="votd-photo-card" style="background-image:url(\''+photo.url+'\')">';
-      html+='<div class="votd-photo-overlay"></div>';
+      html+='<div class="votd-photo-overlay" style="background:'+overlayBg+'"></div>';
       html+='<div class="votd-photo-content">';
-      html+='<div class="votd-photo-label">'+(isEn?'Verse of the Day · 오늘의 말씀':'오늘의 말씀 · Verse of the Day')+'</div>';
+      html+='<div class="votd-photo-label" style="color:'+tcLabel+'">'+(isEn?'Verse of the Day · 오늘의 말씀':'오늘의 말씀 · Verse of the Day')+'</div>';
       if(isEn){
-        html+='<div class="votd-photo-ref">'+ref+'</div>';
-        html+='<div class="votd-photo-text">'+v.text+'</div>';
-        if(koText){html+='<div class="votd-photo-divider"></div><div class="votd-photo-ref votd-photo-secondary">'+koRef+'</div><div class="votd-photo-text votd-photo-secondary" style="font-size:15px">'+koText+'</div>';}
+        html+='<div class="votd-photo-ref" style="color:'+tcSub+'">'+ref+'</div>';
+        html+='<div class="votd-photo-text" style="color:'+tc+'">'+v.text+'</div>';
+        if(koText){html+='<div class="votd-photo-divider" style="background:'+tcSub+'"></div><div class="votd-photo-ref" style="color:'+tcSub+'">'+koRef+'</div><div class="votd-photo-text" style="color:'+tcSub+';font-size:15px;font-family:\'Noto Sans KR\',sans-serif">'+koText+'</div>';}
       } else {
-        if(koText){html+='<div class="votd-photo-ref">'+koRef+'</div><div class="votd-photo-text">'+koText+'</div><div class="votd-photo-divider"></div>';}
-        html+='<div class="votd-photo-ref votd-photo-secondary">'+ref+'</div><div class="votd-photo-text votd-photo-secondary" style="font-size:15px">'+v.text+'</div>';
+        if(koText){html+='<div class="votd-photo-ref" style="color:'+tcSub+'">'+koRef+'</div><div class="votd-photo-text" style="color:'+tc+';font-family:\'Noto Sans KR\',sans-serif">'+koText+'</div><div class="votd-photo-divider" style="background:'+tcSub+'"></div>';}
+        html+='<div class="votd-photo-ref" style="color:'+tcSub+'">'+ref+'</div><div class="votd-photo-text" style="color:'+tcSub+';font-size:15px">'+v.text+'</div>';
       }
       if(bookIdx>=0){
         var chRef=v.bookname+' '+v.chapter;
         var koChRef=BOOKS[bookIdx].ko+' '+v.chapter+'장';
         html+='<div class="votd-photo-footer">';
-        html+='<button class="votd-photo-btn" onclick="bi='+bookIdx+';ci='+v.chapter+';loaded=true;updateLabel();load()">'+(isEn?'Read '+chRef+' →':koChRef+' 읽기 →')+'</button>';
-        if(photo.credit&&photo.creditLink){html+='<a class="votd-photo-credit" href="'+photo.creditLink+'?utm_source=krengbible&utm_medium=referral" target="_blank">📷 '+photo.credit+' / Unsplash</a>';}
+        html+='<button class="votd-photo-btn" style="color:'+tc+';border-color:'+tcSub+'" onclick="bi='+bookIdx+';ci='+v.chapter+';loaded=true;updateLabel();load()">'+(isEn?'Read '+chRef+' →':koChRef+' 읽기 →')+'</button>';
         html+='</div>';
       }
       html+='</div></div>';
+      // Store credit for footer
+      if(photo.credit&&photo.creditLink){
+        window._votdPhotoCredit={credit:photo.credit,link:photo.creditLink};
+      } else {
+        window._votdPhotoCredit=null;
+      }
     } else {
       // Fallback card design (no photo)
       html+='<div class="votd-card">';
@@ -810,6 +830,15 @@ async function loadVotd(){
     }
     html+='</div>';
     document.getElementById('content').innerHTML=html;
+    // Update footer with photo credit on VOTD page only
+    var footer=document.getElementById('main-footer');
+    if(footer){
+      var base='개역개정판 &copy; 대한성서공회 &nbsp;&middot;&nbsp; ESV&reg; &copy; 2001 Crossway &middot; <a href="https://www.esv.org" target="_blank" style="color:#bbb">esv.org</a> &middot; Used by permission';
+      if(window._votdPhotoCredit){
+        base+=' &nbsp;&middot;&nbsp; 📷 <a href="'+window._votdPhotoCredit.link+'?utm_source=krengbible&utm_medium=referral" target="_blank" style="color:#bbb">'+window._votdPhotoCredit.credit+'</a> / <a href="https://unsplash.com?utm_source=krengbible&utm_medium=referral" target="_blank" style="color:#bbb">Unsplash</a>';
+      }
+      footer.innerHTML=base;
+    }
   }catch(e){document.getElementById('content').innerHTML='';}
 }
 function sheetOpen(mode){
@@ -879,6 +908,9 @@ async function load(){
   render(kr.value,er.value,bk,ci);
   loaded=true;document.getElementById('main').scrollTop=0;updateLabel();
   var inp=document.getElementById('passage-input');if(inp)inp.value=BOOKS[bi].en+' '+ci;
+  // Reset footer — remove photo credit when reading chapters
+  var footer=document.getElementById('main-footer');
+  if(footer)footer.innerHTML='개역개정판 &copy; 대한성서공회 &nbsp;&middot;&nbsp; ESV&reg; &copy; 2001 Crossway &middot; <a href="https://www.esv.org" target="_blank" style="color:#bbb">esv.org</a> &middot; Used by permission';
 }
 async function fetchKo(bk,ch){
   var r=await fetch(WORKER+'/nkrv/'+bk.n+'/'+ch,{cache:'no-store'});
