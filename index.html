@@ -273,8 +273,8 @@ body.dark .fn-popup{background:#2a2a2a;border-color:#444;color:#ccc}
 .votd-photo-card{width:100%;max-width:420px;border-radius:20px;overflow:hidden;position:relative;background-size:cover;background-position:center;min-height:420px;display:flex;flex-direction:column;justify-content:flex-end}
 .votd-photo-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,0.05) 0%,rgba(0,0,0,0.35) 45%,rgba(0,0,0,0.82) 100%)}
 .votd-photo-content{position:relative;z-index:2;padding:24px 22px 20px}
-.votd-photo-label{font-size:10px;font-weight:700;letter-spacing:.12em;color:rgba(255,255,255,0.45);margin-bottom:12px}
-.votd-photo-ref{font-size:11px;font-weight:600;color:rgba(255,255,255,0.6);margin-bottom:4px}
+.votd-photo-label{font-size:12px;font-weight:700;letter-spacing:.12em;color:rgba(255,255,255,0.45);margin-bottom:12px}
+.votd-photo-ref{font-size:13px;font-weight:600;color:rgba(255,255,255,0.6);margin-bottom:4px}
 .votd-photo-text{font-size:17px;line-height:1.85;color:#fff;margin-bottom:12px;word-break:keep-all}
 .votd-photo-text.ko-text{font-family:'Noto Sans KR',sans-serif}
 .votd-photo-secondary{color:rgba(255,255,255,0.55)!important;font-size:14px!important}
@@ -764,22 +764,11 @@ async function loadVotd(){
     var html='<div class="votd-wrap">';
 
     if(photo&&photo.url){
-      // Detect if photo is light or dark using dominant color
-      var isDark=true;
-      if(photo.color){
-        var hex=photo.color.replace('#','');
-        var r=parseInt(hex.substr(0,2),16),g=parseInt(hex.substr(2,2),16),b=parseInt(hex.substr(4,2),16);
-        // Perceived luminance formula
-        var lum=(0.299*r+0.587*g+0.114*b)/255;
-        isDark=lum<0.5;
-      }
-      var tc=isDark?'#ffffff':'#000000';
-      var tcSub=isDark?'rgba(255,255,255,0.6)':'rgba(0,0,0,0.55)';
-      var tcLabel=isDark?'rgba(255,255,255,0.45)':'rgba(0,0,0,0.4)';
-      var tcCredit=isDark?'rgba(255,255,255,0.3)':'rgba(0,0,0,0.3)';
-      var overlayBg=isDark
-        ?'linear-gradient(to bottom,rgba(0,0,0,0.05) 0%,rgba(0,0,0,0.35) 45%,rgba(0,0,0,0.82) 100%)'
-        :'linear-gradient(to bottom,rgba(255,255,255,0.05) 0%,rgba(255,255,255,0.35) 45%,rgba(255,255,255,0.82) 100%)';
+      // Always white text — overlay always darkens the photo
+      var tc='#ffffff';
+      var tcSub='rgba(255,255,255,0.6)';
+      var tcLabel='rgba(255,255,255,0.45)';
+      var overlayBg='linear-gradient(to bottom,rgba(0,0,0,0.05) 0%,rgba(0,0,0,0.35) 45%,rgba(0,0,0,0.82) 100%)';
       html+='<div class="votd-photo-card" style="background-image:url(\''+photo.url+'\')">';
       html+='<div class="votd-photo-overlay" style="background:'+overlayBg+'"></div>';
       html+='<div class="votd-photo-content">';
@@ -835,7 +824,7 @@ async function loadVotd(){
     if(footer){
       var base='개역개정판 &copy; 대한성서공회 &nbsp;&middot;&nbsp; ESV&reg; &copy; 2001 Crossway &middot; <a href="https://www.esv.org" target="_blank" style="color:#bbb">esv.org</a> &middot; Used by permission';
       if(window._votdPhotoCredit){
-        base+=' &nbsp;&middot;&nbsp; 📷 <a href="'+window._votdPhotoCredit.link+'?utm_source=krengbible&utm_medium=referral" target="_blank" style="color:#bbb">'+window._votdPhotoCredit.credit+'</a> / <a href="https://unsplash.com?utm_source=krengbible&utm_medium=referral" target="_blank" style="color:#bbb">Unsplash</a>';
+        base+=' &nbsp;&middot;&nbsp; <a href="'+window._votdPhotoCredit.link+'?utm_source=krengbible&utm_medium=referral" target="_blank" style="color:#bbb">'+window._votdPhotoCredit.credit+'</a> / <a href="https://unsplash.com?utm_source=krengbible&utm_medium=referral" target="_blank" style="color:#bbb">Unsplash</a>';
       }
       footer.innerHTML=base;
     }
