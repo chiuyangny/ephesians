@@ -269,7 +269,21 @@ body.dark .comm-ko{color:#e8e5e0}
 body.dark .comm-en{color:#e8e5e0}
 .fn-popup{position:fixed;z-index:200;background:#fff;border:1px solid #e8e5e0;border-radius:8px;padding:10px 14px;max-width:280px;font-size:12px;color:#444;line-height:1.6;box-shadow:0 4px 16px rgba(0,0,0,.12);pointer-events:none;transition:opacity .15s}
 body.dark .fn-popup{background:#2a2a2a;border-color:#444;color:#ccc}
-.votd-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 20px;min-height:60vh}
+.votd-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px 20px;min-height:60vh}
+.votd-photo-card{width:100%;max-width:420px;border-radius:20px;overflow:hidden;position:relative;background-size:cover;background-position:center;min-height:420px;display:flex;flex-direction:column;justify-content:flex-end}
+.votd-photo-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,0.05) 0%,rgba(0,0,0,0.35) 45%,rgba(0,0,0,0.82) 100%)}
+.votd-photo-content{position:relative;z-index:2;padding:24px 22px 20px}
+.votd-photo-label{font-size:10px;font-weight:700;letter-spacing:.12em;color:rgba(255,255,255,0.45);margin-bottom:12px}
+.votd-photo-ref{font-size:11px;font-weight:600;color:rgba(255,255,255,0.6);margin-bottom:4px}
+.votd-photo-text{font-size:17px;line-height:1.85;color:#fff;margin-bottom:12px;word-break:keep-all}
+.votd-photo-text.ko-text{font-family:'Noto Sans KR',sans-serif}
+.votd-photo-secondary{color:rgba(255,255,255,0.55)!important;font-size:14px!important}
+.votd-photo-divider{height:1px;background:rgba(255,255,255,0.15);margin:10px 0}
+.votd-photo-footer{display:flex;align-items:center;justify-content:space-between;margin-top:16px;flex-wrap:wrap;gap:8px}
+.votd-photo-btn{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.35);border-radius:8px;color:#fff;font:500 12px inherit;padding:8px 16px;cursor:pointer;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.votd-photo-btn:active{background:rgba(255,255,255,0.25)}
+.votd-photo-credit{font-size:9px;color:rgba(255,255,255,0.3);text-decoration:none}
+.votd-photo-credit:hover{color:rgba(255,255,255,0.6)}
 .votd-card{background:#fff;border-radius:20px;padding:28px 24px 24px;max-width:420px;width:100%;box-shadow:0 2px 20px rgba(0,0,0,.07);display:flex;flex-direction:column}
 body.dark .votd-card{background:#242424;box-shadow:0 2px 20px rgba(0,0,0,.3)}
 /* #7: No ALL CAPS on votd label */
@@ -738,32 +752,63 @@ async function loadVotd(){
   wrap.innerHTML='<div class="ldg"><div class="spinner"></div><div class="ldg-txt">Loading…</div></div>';
   try{
     var r=await fetch(WORKER+'/votd'),d=await r.json();
-    if(!d||!d[0])throw new Error('no data');
-    var v=d[0],ref=v.bookname+' '+v.chapter+':'+v.verse;
+    // Handle both old format (array) and new format ({verses, photo})
+    var verses=Array.isArray(d)?d:(d.verses||d);
+    var photo=d.photo||null;
+    if(!verses||!verses[0])throw new Error('no data');
+    var v=verses[0],ref=v.bookname+' '+v.chapter+':'+v.verse;
     var bookIdx=BOOKS.findIndex(function(b){return b.en===v.bookname;}),koText='';
-    if(bookIdx>=0){try{var kr=await fetch(WORKER+'/nkrv/'+BOOKS[bookIdx].n+'/'+v.chapter,{cache:'no-store'}),kd=await kr.json(),verses=Array.isArray(kd)?kd:(kd.verses||[]),kv=verses.find(function(x){return x.verse===+v.verse;});if(kv)koText=kv.text.replace(/\(KN:\d+\)/g,'');}catch(e){}}
+    if(bookIdx>=0){try{var kr=await fetch(WORKER+'/nkrv/'+BOOKS[bookIdx].n+'/'+v.chapter,{cache:'no-store'}),kd=await kr.json(),kverses=Array.isArray(kd)?kd:(kd.verses||[]),kv=kverses.find(function(x){return x.verse===+v.verse;});if(kv)koText=kv.text.replace(/\(KN:\d+\)/g,'');}catch(e){}}
     var koRef=bookIdx>=0?BOOKS[bookIdx].ko+' '+v.chapter+':'+v.verse:ref;
     var isEn=langOrder==='en-ko';
-    var html='<div class="votd-wrap"><div class="votd-card">';
-    /* #7: Title case, use / */
-    html+='<div class="votd-label">'+(isEn?'Verse of the Day / 오늘의 말씀':'오늘의 말씀 / Verse of the Day')+'</div>';
-    if(isEn){
-      html+='<div class="votd-en-ref">'+ref+'</div>';
-      html+='<div class="votd-en" style="margin-bottom:20px">'+v.text+'</div>';
-      if(koText){html+='<div class="votd-divider"></div><div class="votd-ko-ref">'+koRef+'</div><div class="votd-ko votd-secondary" style="font-size:15px;margin-bottom:24px">'+koText+'</div>';}
+    var html='<div class="votd-wrap">';
+
+    if(photo&&photo.url){
+      // Photo background design
+      html+='<div class="votd-photo-card" style="background-image:url(\''+photo.url+'\')">';
+      html+='<div class="votd-photo-overlay"></div>';
+      html+='<div class="votd-photo-content">';
+      html+='<div class="votd-photo-label">'+(isEn?'Verse of the Day · 오늘의 말씀':'오늘의 말씀 · Verse of the Day')+'</div>';
+      if(isEn){
+        html+='<div class="votd-photo-ref">'+ref+'</div>';
+        html+='<div class="votd-photo-text">'+v.text+'</div>';
+        if(koText){html+='<div class="votd-photo-divider"></div><div class="votd-photo-ref votd-photo-secondary">'+koRef+'</div><div class="votd-photo-text votd-photo-secondary" style="font-size:15px">'+koText+'</div>';}
+      } else {
+        if(koText){html+='<div class="votd-photo-ref">'+koRef+'</div><div class="votd-photo-text">'+koText+'</div><div class="votd-photo-divider"></div>';}
+        html+='<div class="votd-photo-ref votd-photo-secondary">'+ref+'</div><div class="votd-photo-text votd-photo-secondary" style="font-size:15px">'+v.text+'</div>';
+      }
+      if(bookIdx>=0){
+        var chRef=v.bookname+' '+v.chapter;
+        var koChRef=BOOKS[bookIdx].ko+' '+v.chapter+'장';
+        html+='<div class="votd-photo-footer">';
+        html+='<button class="votd-photo-btn" onclick="bi='+bookIdx+';ci='+v.chapter+';loaded=true;updateLabel();load()">'+(isEn?'Read '+chRef+' →':koChRef+' 읽기 →')+'</button>';
+        if(photo.credit&&photo.creditLink){html+='<a class="votd-photo-credit" href="'+photo.creditLink+'?utm_source=krengbible&utm_medium=referral" target="_blank">📷 '+photo.credit+' / Unsplash</a>';}
+        html+='</div>';
+      }
+      html+='</div></div>';
     } else {
-      if(koText){html+='<div class="votd-ko-ref">'+koRef+'</div><div class="votd-ko">'+koText+'</div><div class="votd-divider"></div>';}
-      html+='<div class="votd-en-ref">'+ref+'</div><div class="votd-en votd-secondary" style="font-size:15px;margin-bottom:24px">'+v.text+'</div>';
+      // Fallback card design (no photo)
+      html+='<div class="votd-card">';
+      html+='<div class="votd-label">'+(isEn?'Verse of the Day / 오늘의 말씀':'오늘의 말씀 / Verse of the Day')+'</div>';
+      if(isEn){
+        html+='<div class="votd-en-ref">'+ref+'</div>';
+        html+='<div class="votd-en" style="margin-bottom:20px">'+v.text+'</div>';
+        if(koText){html+='<div class="votd-divider"></div><div class="votd-ko-ref">'+koRef+'</div><div class="votd-ko votd-secondary" style="font-size:15px;margin-bottom:24px">'+koText+'</div>';}
+      } else {
+        if(koText){html+='<div class="votd-ko-ref">'+koRef+'</div><div class="votd-ko">'+koText+'</div><div class="votd-divider"></div>';}
+        html+='<div class="votd-en-ref">'+ref+'</div><div class="votd-en votd-secondary" style="font-size:15px;margin-bottom:24px">'+v.text+'</div>';
+      }
+      if(bookIdx>=0){
+        var chRef2=v.bookname+' '+v.chapter;
+        var koChRef2=BOOKS[bookIdx].ko+' '+v.chapter+'장';
+        html+='<button class="votd-read-btn" onclick="bi='+bookIdx+';ci='+v.chapter+';loaded=true;updateLabel();load()">'
+          +'<span class="votd-btn-ko" style="'+(isEn?'display:none':'')+'">'+koChRef2+' 읽기 →</span>'
+          +'<span class="votd-btn-en" style="'+(isEn?'':'display:none')+'">Read '+chRef2+' →</span>'
+          +'</button>';
+      }
+      html+='</div>';
     }
-    if(bookIdx>=0){
-      var chRef=v.bookname+' '+v.chapter;
-      var koChRef=BOOKS[bookIdx].ko+' '+v.chapter+'장';
-      html+='<button class="votd-read-btn" onclick="bi='+bookIdx+';ci='+v.chapter+';loaded=true;updateLabel();load()">'
-        +'<span class="votd-btn-ko" style="'+(isEn?'display:none':'')+'">'+koChRef+' 읽기 →</span>'
-        +'<span class="votd-btn-en" style="'+(isEn?'':'display:none')+'">Read '+chRef+' →</span>'
-        +'</button>';
-    }
-    html+='</div></div>';
+    html+='</div>';
     document.getElementById('content').innerHTML=html;
   }catch(e){document.getElementById('content').innerHTML='';}
 }
