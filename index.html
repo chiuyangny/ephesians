@@ -306,7 +306,7 @@ body.dark .votd-secondary{color:#e8e5e0!important}
 .votd-read-btn:active{opacity:.85}
 body.dark .votd-read-btn{background:#2a3d66}
 .verse-row.hl-selected .vt{text-decoration:underline;text-decoration-style:dashed;text-decoration-color:#888;text-decoration-thickness:2px;text-underline-offset:4px}
-.hl-bar{position:fixed;bottom:0;left:0;right:0;z-index:1200;background:#fff;border-top:1px solid #e8e5e0;padding:16px 16px 4px;display:flex;align-items:center;justify-content:space-between;gap:12px;transform:translateY(100%);transition:transform 0.25s cubic-bezier(0.25,0.46,0.45,0.94);pointer-events:none}
+.hl-bar{position:fixed;bottom:0;left:0;right:0;z-index:1200;background:#fff;border-top:1px solid #e8e5e0;padding:16px 16px 4px;display:flex;align-items:center;justify-content:center;gap:12px;transform:translateY(100%);transition:transform 0.25s cubic-bezier(0.25,0.46,0.45,0.94);pointer-events:none}
 .hl-bar.visible{transform:translateY(0);pointer-events:auto}
 body.dark .hl-bar{background:#1e1e1e;border-top-color:#333}
 .hl-bar-handle{position:absolute;top:6px;left:50%;transform:translateX(-50%);width:36px;height:4px;background:#d8d4ce;border-radius:2px}
@@ -316,7 +316,7 @@ body.dark .hl-bar-handle{background:#444}
 .hl-bar-swatch:active{transform:scale(1.15)}
 .hl-bar-swatch.active{border-color:#333}
 body.dark .hl-bar-swatch.active{border-color:#fff}
-.hl-bar-copy{background:none;border:none;cursor:pointer;color:#333;padding:8px 12px;line-height:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.hl-bar-copy{background:none;border:none;cursor:pointer;color:#555;padding:4px 6px;line-height:1;display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0}
 body.dark .hl-bar-copy{color:#e8e5e0}
 body.dark .hl-bar-copy svg{color:#e8e5e0}
 .hl-bar-copy svg{width:24px;height:24px}
@@ -1046,7 +1046,7 @@ function render(koData,esvData,bk,ch){
   document.getElementById('main').addEventListener('scroll',hideFnPopup,{passive:true});
   document.addEventListener('click',function(e){if(!e.target.classList.contains('fn-ref'))hideFnPopup();});
 })();
-var HL_KEY='krengbible_hl',hlSelected=null;
+var HL_KEY='krengbible_hl',hlSelected=null,_savedFilter='all';
 
 function hlRenderSaved(hlData,filter){
   var isKo=langOrder==='ko-en';
