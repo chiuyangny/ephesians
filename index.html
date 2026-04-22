@@ -790,6 +790,8 @@ async function loadVotd(){
     var photo=d.photo||null;
     if(!verses||!verses[0])throw new Error('no data');
     var v=verses[0],ref=v.bookname+' '+v.chapter+':'+v.verse;
+    // Strip <b> tags from ESV (used for quoted/poetic speech) and fix spacing
+    v.text=(v.text||'').replace(/<\/?b>/gi,' ').replace(/;([a-zA-Z\u00C0-\u024F])/g,'; $1').replace(/\s+/g,' ').trim();
     var bookIdx=BOOKS.findIndex(function(b){return b.en===v.bookname;}),koText='';
     if(bookIdx>=0){try{var kr=await fetch(WORKER+'/nkrv/'+BOOKS[bookIdx].n+'/'+v.chapter,{cache:'no-store'}),kd=await kr.json(),kverses=Array.isArray(kd)?kd:(kd.verses||[]),kv=kverses.find(function(x){return x.verse===+v.verse;});if(kv)koText=kv.text.replace(/\(KN:\d+\)/g,'');}catch(e){}}
     var koRef=bookIdx>=0?BOOKS[bookIdx].ko+' '+v.chapter+':'+v.verse:ref;
