@@ -790,18 +790,19 @@ async function loadVotd(){
     var photo=d.photo||null;
     if(!verses||!verses[0])throw new Error('no data');
     var v=verses[0],ref=v.bookname+' '+v.chapter+':'+v.verse;
-    // Strip <b> tags from ESV (used for quoted/poetic speech) and fix spacing
+    // Strip <b> tags and fix ESV formatting
     v.text=(v.text||'')
-      .replace(/<b>/gi,' ').replace(/<\/b>/gi,' ')   // replace tags with spaces
-      .replace(/:(["""'\u201c\u2018])/g,': $1')       // add space after colon before opening quote
-      .replace(/;([a-zA-Z\u00C0-\u024F])/g,'; $1')   // add space after semicolons before letters
-      .replace(/\s+([.,;:!?])/g,'$1')                 // remove space before punctuation
+      .replace(/<b>/gi,'').replace(/<\/b>/gi,'')              // remove bold tags
+      .replace(/;([a-zA-Z\u00C0-\u024F])/g,'; $1')           // space after semicolons before letters
+      .replace(/([.!?,;:])(["""'\u201c\u2018])/g,'$1 $2')    // space before opening quote after punctuation
+      .replace(/(["""'\u201c\u2018])\s+/g,'$1')              // no space after opening quote
+      .replace(/\s+([.!?,;])/g,'$1')                         // no space before punctuation
       .replace(/\s+/g,' ').trim();
-    // Fix unmatched quotes — add closing quote instead of removing opening
-    var openCurly=(v.text.match(/\u201c/g)||[]).length,closeCurly=(v.text.match(/\u201d/g)||[]).length;
+    // Add closing quote before final punctuation if unmatched opening quote
     var openStraight=(v.text.match(/"/g)||[]).length;
-    if(openCurly>closeCurly)v.text=v.text.replace(/([.,;]?\s*)$/,'\u201d$1');
-    else if(openStraight%2!==0)v.text=v.text.replace(/([.,;]?\s*)$/,'"$1');
+    var openCurly=(v.text.match(/\u201c/g)||[]).length,closeCurly=(v.text.match(/\u201d/g)||[]).length;
+    if(openStraight%2!==0)v.text=v.text.replace(/([.!?])$/,'"$1');
+    else if(openCurly>closeCurly)v.text=v.text.replace(/([.!?])$/,'\u201d$1');
     var bookIdx=BOOKS.findIndex(function(b){return b.en===v.bookname;}),koText='';
     if(bookIdx>=0){try{var kr=await fetch(WORKER+'/nkrv/'+BOOKS[bookIdx].n+'/'+v.chapter),kd=await kr.json(),kverses=Array.isArray(kd)?kd:(kd.verses||[]),kv=kverses.find(function(x){return x.verse===+v.verse;});if(kv)koText=kv.text.replace(/\(KN:\d+\)/g,'');}catch(e){}}
     var koRef=bookIdx>=0?BOOKS[bookIdx].ko+' '+v.chapter+':'+v.verse:ref;
