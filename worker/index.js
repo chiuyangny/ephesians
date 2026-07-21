@@ -146,6 +146,47 @@ async function getSearchIndex(env) {
   return SEARCH_INDEX_PROMISE;
 }
 
+// ---- Per-Korean-version search indexes ----
+// The scraped Korean versions each get their own flat index in KV
+// (`{prefix}_search_index`), built the same way as NKRV.  NKRV keeps its
+// original getSearchIndex path untouched (lowest risk); SAEBEON/NKT load
+// through a small per-prefix cache.  KLB is NOT here — it searches via
+// api.bible (/search/apibible) instead.  `fetch` is the version's
+// fetchAndCache*, `verseKey` its per-chapter KV cache key (for refetch busting).
+const KO_INDEX_CONFIG = {
+  NKRV:    { prefix: 'nkrv',    fetch: fetchAndCacheNkrv,    verseKey: (b, c) => `nkrv_v4_${b}_${c}` },
+  SAEBEON: { prefix: 'saebeon', fetch: fetchAndCacheSaebeon, verseKey: (b, c) => `saebeon_v1_${b}_${c}` },
+  NKT:     { prefix: 'nkt',     fetch: fetchAndCacheNkt,     verseKey: (b, c) => `nkt_v1_${b}_${c}` },
+};
+function koIndexConfig(v) {
+  return KO_INDEX_CONFIG[String(v || 'NKRV').toUpperCase()] || KO_INDEX_CONFIG.NKRV;
+}
+
+const KO_INDEX_CACHE = new Map();   // prefix -> parsed tuple array
+const KO_INDEX_PROMISE = new Map(); // prefix -> in-flight load promise
+
+async function getKoSearchIndexByPrefix(env, prefix) {
+  // NKRV keeps its dedicated, already-proven loader untouched.
+  if (prefix === 'nkrv') return getSearchIndex(env);
+  if (KO_INDEX_CACHE.has(prefix)) return KO_INDEX_CACHE.get(prefix);
+  if (KO_INDEX_PROMISE.has(prefix)) return KO_INDEX_PROMISE.get(prefix);
+  const p = (async () => {
+    const raw = await env.COMMENTARY_KV.get(`${prefix}_search_index`);
+    let idx = null;
+    if (raw) { try { idx = JSON.parse(raw); } catch (e) { idx = null; } }
+    if (idx) KO_INDEX_CACHE.set(prefix, idx);
+    KO_INDEX_PROMISE.delete(prefix);
+    return idx;
+  })();
+  KO_INDEX_PROMISE.set(prefix, p);
+  return p;
+}
+function bustKoSearchIndex(prefix) {
+  if (prefix === 'nkrv') { SEARCH_INDEX = null; SEARCH_INDEX_PROMISE = null; return; }
+  KO_INDEX_CACHE.delete(prefix);
+  KO_INDEX_PROMISE.delete(prefix);
+}
+
 async function getEnSearchIndex(env) {
   if (EN_SEARCH_INDEX) return EN_SEARCH_INDEX;
   if (EN_SEARCH_INDEX_PROMISE) return EN_SEARCH_INDEX_PROMISE;
@@ -970,7 +1011,11 @@ async function handleBuildIndex(env, url, cors) {
   const from = Math.max(0, parseInt(url.searchParams.get('from') || '0'));
   const size = Math.min(400, Math.max(1, parseInt(url.searchParams.get('size') || '250')));
   const refetch = url.searchParams.get('refetch') === '1';
-  const concurrency = 12; // parallel fetches per batch
+  const cfg = koIndexConfig(url.searchParams.get('v')); // NKRV (default) | SAEBEON | NKT
+  // Parallel fetches per batch.  Default 12 for cache-hit-heavy rebuilds; pass
+  // a low value when building from cold (SAEBEON's uncached chapters each do an
+  // Anthropic heading-translation call, which rate-limits at high concurrency).
+  const concurrency = Math.min(12, Math.max(1, parseInt(url.searchParams.get('concurrency') || '12')));
 
   const tuples = [];
   let fetched = 0, fromCache = 0, errored = 0;
@@ -989,10 +1034,10 @@ async function handleBuildIndex(env, url, cors) {
         // do internally — bust the entry first so its own cache check
         // is a genuine miss.
         if (refetch && env.COMMENTARY_KV) {
-          await env.COMMENTARY_KV.delete(`nkrv_v4_${bookIdx + 1}_${chapter}`);
+          await env.COMMENTARY_KV.delete(cfg.verseKey(bookIdx + 1, chapter));
         }
-        const result = await fetchAndCacheNkrv(bookIdx + 1, chapter, env);
-        if (!result.ok) throw new Error(result.error || 'nkrv_fetch_failed');
+        const result = await cfg.fetch(bookIdx + 1, chapter, env);
+        if (!result.ok) throw new Error(result.error || `${cfg.prefix}_fetch_failed`);
         if (result.cached) fromCache++; else fetched++;
         const verses = result.data.verses || [];
         return chapterToTuples(bookIdx, chapter, verses);
@@ -1005,25 +1050,28 @@ async function handleBuildIndex(env, url, cors) {
     for (const r of results) for (const t of r) tuples.push(t);
   }
 
-  // Write the chunk under a key that encodes the starting ordinal.  Pad so lex order matches numeric.
-  const chunkKey = `nkrv_search_chunk_${String(from).padStart(5, '0')}`;
+  // Write the chunk under a key that encodes the version + starting ordinal.
+  // Pad so lex order matches numeric.
+  const chunkKey = `${cfg.prefix}_search_chunk_${String(from).padStart(5, '0')}`;
   if (env.COMMENTARY_KV) {
     await env.COMMENTARY_KV.put(chunkKey, JSON.stringify(tuples));
   }
 
   const nextFrom = from + size;
   const done = nextFrom >= TOTAL_CHAPTERS;
+  const vq = `&v=${cfg.prefix.toUpperCase()}`;
   return new Response(JSON.stringify({
     ok: true,
+    version: cfg.prefix,
     chunkKey,
     processedOrdinals: ordinals.length,
     verseCount: tuples.length,
-    fetchedFromBskorea: fetched,
+    fetchedLive: fetched,
     fromKvCache: fromCache,
     errored,
     errors: errors.slice(0, 10),
     nextFrom: done ? null : nextFrom,
-    nextUrl: done ? null : `/admin/build-index?secret=...&from=${nextFrom}&size=${size}`,
+    nextUrl: done ? null : `/admin/build-index?secret=...${vq}&from=${nextFrom}&size=${size}`,
     totalChapters: TOTAL_CHAPTERS,
     done
   }, null, 2), {headers:{...cors,'Content-Type':'application/json'}});
@@ -1198,12 +1246,16 @@ async function handleMergeIndex(env, url, cors) {
   }
   if (!env.COMMENTARY_KV) return new Response(JSON.stringify({error:'no_kv'}), {status:500, headers:{...cors,'Content-Type':'application/json'}});
 
-  // List all chunk keys.
+  const cfg = koIndexConfig(url.searchParams.get('v')); // NKRV (default) | SAEBEON | NKT
+  const chunkPrefix = `${cfg.prefix}_search_chunk_`;
+  const indexKey = `${cfg.prefix}_search_index`;
+
+  // List all chunk keys for this version.
   const chunks = [];
   let cursor = undefined;
   let safety = 0;
   while (true) {
-    const list = await env.COMMENTARY_KV.list({ prefix: 'nkrv_search_chunk_', cursor, limit: 1000 });
+    const list = await env.COMMENTARY_KV.list({ prefix: chunkPrefix, cursor, limit: 1000 });
     for (const k of list.keys) chunks.push(k.name);
     if (list.list_complete || !list.cursor) break;
     cursor = list.cursor;
@@ -1212,7 +1264,7 @@ async function handleMergeIndex(env, url, cors) {
   chunks.sort();
 
   if (chunks.length === 0) {
-    return new Response(JSON.stringify({error:'no_chunks', hint:'run /admin/build-index first'}), {status:400, headers:{...cors,'Content-Type':'application/json'}});
+    return new Response(JSON.stringify({error:'no_chunks', hint:`run /admin/build-index?v=${cfg.prefix.toUpperCase()} first`}), {status:400, headers:{...cors,'Content-Type':'application/json'}});
   }
 
   const merged = [];
@@ -1226,18 +1278,18 @@ async function handleMergeIndex(env, url, cors) {
   }
 
   const payload = JSON.stringify(merged);
-  await env.COMMENTARY_KV.put('nkrv_search_index', payload);
+  await env.COMMENTARY_KV.put(indexKey, payload);
 
-  // Bust the per-isolate cache (this isolate at least).
-  SEARCH_INDEX = null;
-  SEARCH_INDEX_PROMISE = null;
+  // Bust the per-isolate cache for this version (this isolate at least).
+  bustKoSearchIndex(cfg.prefix);
 
   return new Response(JSON.stringify({
     ok: true,
+    version: cfg.prefix,
     chunksRead: chunks.length,
     totalVerses: merged.length,
     indexBytes: payload.length,
-    storedAt: 'nkrv_search_index'
+    storedAt: indexKey
   }, null, 2), {headers:{...cors,'Content-Type':'application/json'}});
 }
 
@@ -2109,14 +2161,18 @@ async function handleKoreanSearch(env, url, cors) {
     return new Response(JSON.stringify({results:[], hasMore:false}), {headers:{...cors,'Content-Type':'application/json'}});
   }
 
-  const index = await getSearchIndex(env);
+  // Which Korean version's index to search (NKRV default; KLB never reaches
+  // here — the app routes it to /search/apibible).
+  const cfg = koIndexConfig(url.searchParams.get('v'));
+  const index = await getKoSearchIndexByPrefix(env, cfg.prefix);
   if (!index) {
     // Fall back to a clear error rather than silently scanning KV.  This makes index-build status visible.
     return new Response(JSON.stringify({
       results: [],
       hasMore: false,
       error: 'index_not_built',
-      hint: 'Run /admin/build-index then /admin/merge-index'
+      version: cfg.prefix,
+      hint: `Run /admin/build-index?v=${cfg.prefix.toUpperCase()} then /admin/merge-index?v=${cfg.prefix.toUpperCase()}`
     }), {status:503, headers:{...cors,'Content-Type':'application/json'}});
   }
 
