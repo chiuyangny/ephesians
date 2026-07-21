@@ -103,7 +103,12 @@ const USFM_CODES = [
 const API_BIBLE_TRANSLATIONS = {
   'd6e14a625393b4da-01': { abbreviation: 'NLT', name: 'New Living Translation' },
   '78a9f6124f344018-01': { abbreviation: 'NIV', name: 'New International Version' },
-  '6f11a7de016f942e-01': { abbreviation: 'MSG', name: 'The Message' }
+  '6f11a7de016f942e-01': { abbreviation: 'MSG', name: 'The Message' },
+  // KLB (현대인의 성경 / Korean Living Bible, 1985) — a KOREAN translation served
+  // through /apibible like the English ones; the app lists it under its Korean
+  // translations.  MSG stays whitelisted (no longer selectable in the app, but
+  // keeping the entry preserves its cache and costs nothing).
+  'e959e47176271f18-01': { abbreviation: 'KLB', name: 'Korean Living Bible' }
 };
 
 // 30 days, in seconds — matches api.bible's required cache-refresh cadence.
@@ -408,6 +413,12 @@ async function parseEsvHtmlForHeadingsAndCrossrefs(htmlStr) {
   let pendingHeading = null;
   let headingBuf = '';
   let inHeading = false;
+  // ESV embeds cross-reference / footnote markers inside a heading as a
+  // nested <sup> (e.g. "A Psalm of <sup ...>b</sup>Asaph."), and the text
+  // handler below fires for EVERY descendant text node — so without this
+  // the marker letter gets glued into the title ("A Psalm of bAsaph.").
+  // Track sup depth and skip its text while collecting the heading.
+  let supDepth = 0;
 
   const rewriter = new HTMLRewriter()
     .on('h2, h3, h4', {
@@ -426,7 +437,17 @@ async function parseEsvHtmlForHeadingsAndCrossrefs(htmlStr) {
         });
       },
       text(t) {
-        if (inHeading) headingBuf += t.text;
+        if (inHeading && supDepth === 0) headingBuf += t.text;
+      }
+    })
+    // Suppress marker text (cross-ref / footnote superscripts) inside a
+    // heading.  Registered globally but only consulted while inHeading.
+    .on('sup', {
+      element(el) {
+        supDepth++;
+        el.onEndTag(() => {
+          if (supDepth > 0) supDepth--;
+        });
       }
     })
     .on('b.verse-num', {
@@ -472,7 +493,10 @@ async function fetchAndCacheEsv(q, wantsExtras, env) {
   // throttled while the main text fetch happened to succeed (confirmed:
   // Romans 11's English headings went missing this way).  Bumping so
   // every chapter gets one more chance at a real fetch.
-  const cacheKey = 'esv_raw_v5_' + (wantsExtras ? 'x1_' : 'x0_') + q;
+  // v6: heading parser now strips cross-ref / footnote <sup> markers that
+  // were being glued into titles (e.g. Psalm 73 "A Psalm of bAsaph.").
+  // Bump busts every cached heading so corrupted ones re-fetch clean.
+  const cacheKey = 'esv_raw_v6_' + (wantsExtras ? 'x1_' : 'x0_') + q;
   if (env.COMMENTARY_KV) {
     const cached = await env.COMMENTARY_KV.get(cacheKey);
     if (cached) return { ok: true, cached: true, body: cached };
@@ -697,6 +721,92 @@ async function fetchAndCacheSaebeon(bookNum, chapter, env) {
   return { ok: true, cached: false, data };
 }
 
+// ---- 새한글성경 (New Korean Translation, NKT) — the 2024 KBS translation ----
+// Unlike GAE/SAENEW (scraped from the legacy korbibReadpage.php reader, which
+// does NOT serve 새한글), NKT lives on bskorea's newer Angular platform at
+// bible.bskorea.or.kr, addressed by USFM code (e.g. GEN.1).  Verses are in the
+// prerendered HTML but the host (CloudFront) 403s a bare fetch — it needs
+// browser-like headers.  See parseNktHtml for the markup shape.
+async function fetchChapterFromNktPlatform(bookNum, chapter) {
+  const book = USFM_CODES[bookNum - 1];
+  const url = `https://bible.bskorea.or.kr/bible/NKT/${book}.${chapter}`;
+  const resp = await fetch(url, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept-Language": "ko-KR,ko;q=0.9",
+      "Referer": "https://bible.bskorea.or.kr/"
+    }
+  });
+  if (!resp.ok) throw new Error(`nkt ${resp.status} for ${book} ${chapter}`);
+  return parseNktHtml(await resp.text());
+}
+
+// Parse a bible.bskorea.or.kr NKT chapter page.  Each verse is anchored by
+// id="NKT.<BOOK>.<CHAP>.<V>", and a single verse's text can be SPLIT across
+// several <ibep-verse-text-renderer> segments (새한글's poetic line breaks), so
+// we concatenate the distinct segments per verse number in document order
+// (deduping identical strings so a repeated pane can't double the text).
+// Returns the same shape as parseNkrvHtml, minus headings/footnotes (not
+// extracted for NKT yet).
+function parseNktHtml(html) {
+  const stripTags = (s) => s
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/​/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const anchor = /\bid="NKT\.[A-Z0-9]+\.\d+\.(\d+)"/g;
+  const segs = {};
+  let m;
+  while ((m = anchor.exec(html)) !== null) {
+    const v = parseInt(m[1], 10);
+    const after = html.slice(m.index, m.index + 12000);
+    const r = /<ibep-verse-text-renderer[^>]*>([\s\S]*?)<\/ibep-verse-text-renderer>/.exec(after);
+    if (!r) continue;
+    const t = stripTags(r[1]);
+    if (!t) continue;
+    (segs[v] = segs[v] || []).push(t);
+  }
+
+  const verses = [];
+  for (const v of Object.keys(segs).map(Number).sort((a, b) => a - b)) {
+    const seen = new Set();
+    const parts = [];
+    for (const t of segs[v]) if (!seen.has(t)) { seen.add(t); parts.push(t); }
+    const text = parts.join(' ')
+      .replace(/\s+/g, ' ')
+      .replace(/“\s+/g, '“')
+      .replace(/\s+”/g, '”')
+      .trim();
+    if (text) verses.push({ verse: v, text });
+  }
+  return { verses, footnotes: {}, headings: [] };
+}
+
+// NKT fetch + cache, mirroring fetchAndCacheSaebeon.  No heading-translation
+// step (NKT headings aren't extracted), so the cache write is unconditional.
+async function fetchAndCacheNkt(bookNum, chapter, env) {
+  const verseKey = `nkt_v1_${bookNum}_${chapter}`;
+  if (env.COMMENTARY_KV) {
+    const cached = await env.COMMENTARY_KV.get(verseKey);
+    if (cached) return { ok: true, cached: true, data: JSON.parse(cached) };
+  }
+  const data = await fetchChapterFromNktPlatform(bookNum, chapter);
+  if (data.verses.length === 0) {
+    return { ok: false, error: 'parse_failed' };
+  }
+  if (env.COMMENTARY_KV) {
+    await env.COMMENTARY_KV.put(verseKey, JSON.stringify(data));
+  }
+  return { ok: true, cached: false, data };
+}
+
 // Generates (or returns the cached) QT reflection for one (book,
 // chapter, verseStart, verseEnd) tuple.  Extracted from the
 // /qt-reflection HTTP handler so the scheduled() cron trigger below
@@ -704,13 +814,29 @@ async function fetchAndCacheSaebeon(bookNum, chapter, env) {
 // HTTP round-trip.  Returns { ok, status?, json } — json is always the
 // stringified body to send/cache, status is only set on failure.
 async function getOrCreateQtReflection(bookNum, chapter, verseStart, verseEnd, env) {
-  // v3: asks for 4-6 short paragraphs instead of 2-3 — versioned so
-  // already-cached, coarser-grained reflections regenerate instead of
-  // sticking around indefinitely (this cache has no TTL).
-  const cacheKey = `qt_reflection_v3_${bookNum}_${chapter}_${verseStart}_${verseEnd}`;
+  // Regenerate the meditation for each fresh OCCURRENCE of a passage
+  // rather than caching one copy forever: the QT plan cycles roughly
+  // every ~10 years, and when a passage comes back around the reader
+  // should get a NEW reflection, not the decade-old one.  Keying the
+  // cache by year gives exactly one (Opus) generation per occurrence —
+  // the first request in a calendar year — while still serving that
+  // day's cached copy on every later request that day.  `latestKey`
+  // holds the most recent successful reflection for the passage,
+  // year-independent: the fallback served when a fresh generation fails
+  // (e.g. API credits exhausted) so the reader still sees something.
+  const base = `${bookNum}_${chapter}_${verseStart}_${verseEnd}`;
+  const year = new Date().getUTCFullYear();
+  const cacheKey = `qt_reflection_v4_${base}_${year}`;
+  const latestKey = `qt_reflection_latest_${base}`;
 
   const cached = env.COMMENTARY_KV ? await env.COMMENTARY_KV.get(cacheKey) : null;
   if (cached) return { ok: true, json: cached, cached: true };
+
+  async function fallbackOrError(status, errJson) {
+    const saved = env.COMMENTARY_KV ? await env.COMMENTARY_KV.get(latestKey) : null;
+    if (saved) return { ok: true, json: saved, cached: true, fallback: true };
+    return { ok: false, status, json: errJson };
+  }
 
   const nkrvResult = await fetchAndCacheNkrv(bookNum, chapter, env);
   if (!nkrvResult.ok) {
@@ -757,7 +883,10 @@ Respond in this exact JSON format, no markdown, no preamble. Each paragraph is i
       'anthropic-version': '2023-06-01'
     },
     body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
+      // Daily QT meditation runs on Opus for higher-quality reflections
+      // (the rest of the AI endpoints stay on Haiku).  Cached forever in
+      // KV, so each unique passage is an Opus call exactly once.
+      model: 'claude-opus-4-8',
       max_tokens: 2500,
       messages: [{role:'user', content: prompt}]
     })
@@ -765,7 +894,9 @@ Respond in this exact JSON format, no markdown, no preamble. Each paragraph is i
 
   if (!aiResp.ok) {
     const err = await aiResp.text();
-    return { ok: false, status: 500, json: JSON.stringify({ error: 'ai_failed', detail: err }) };
+    // Generation failed (e.g. credits exhausted) — serve the last saved
+    // reflection for this passage if there is one, rather than erroring.
+    return await fallbackOrError(500, JSON.stringify({ error: 'ai_failed', detail: err }));
   }
 
   const aiData = await aiResp.json();
@@ -774,7 +905,7 @@ Respond in this exact JSON format, no markdown, no preamble. Each paragraph is i
 
   let reflection;
   try { reflection = JSON.parse(cleanText); }
-  catch (e) { return { ok: false, status: 500, json: JSON.stringify({ error: 'parse_failed', raw: text }) }; }
+  catch (e) { return await fallbackOrError(500, JSON.stringify({ error: 'parse_failed', raw: text })); }
 
   reflection.book_en = bookName;
   reflection.book_ko = bookNameKo;
@@ -783,7 +914,10 @@ Respond in this exact JSON format, no markdown, no preamble. Each paragraph is i
   reflection.verseEnd = verseEnd;
 
   const result = JSON.stringify(reflection);
-  if (env.COMMENTARY_KV) await env.COMMENTARY_KV.put(cacheKey, result);
+  if (env.COMMENTARY_KV) {
+    await env.COMMENTARY_KV.put(cacheKey, result);   // this year's occurrence
+    await env.COMMENTARY_KV.put(latestKey, result);  // fallback for future failures
+  }
   return { ok: true, json: result, cached: false };
 }
 
@@ -1004,6 +1138,55 @@ async function handleWarmSaebeon(env, url, cors, request) {
     totalChapters: TOTAL_CHAPTERS,
     nextFrom,
     nextUrl: nextFrom === null ? null : `/admin/warm-saebeon?from=${nextFrom}&size=${size} (with X-Admin-Secret header)`,
+    done: nextFrom === null
+  }, null, 2), {headers:{...cors,'Content-Type':'application/json'}});
+}
+
+// ---- /admin/warm-nkt — same as warm-saebeon but for 새한글 (NKT).  Each
+// uncached chapter is a single bskorea-platform scrape (no heading-translation
+// step), so concurrency defaults a touch higher.
+async function handleWarmNkt(env, url, cors, request) {
+  const secret = request.headers.get('X-Admin-Secret') || url.searchParams.get('secret');
+  if (!env.ADMIN_SECRET || secret !== env.ADMIN_SECRET) {
+    return new Response(JSON.stringify({error:'forbidden'}), {status:403, headers:{...cors,'Content-Type':'application/json'}});
+  }
+  const from = Math.max(0, parseInt(url.searchParams.get('from') || '0'));
+  const size = Math.min(100, Math.max(1, parseInt(url.searchParams.get('size') || '25')));
+  const concurrency = Math.min(4, Math.max(1, parseInt(url.searchParams.get('concurrency') || '2')));
+
+  const ordinals = [];
+  for (let o = from; o < Math.min(from + size, TOTAL_CHAPTERS); o++) ordinals.push(o);
+
+  let warmed = 0, alreadyCached = 0, errored = 0;
+  const errors = [];
+
+  for (let i = 0; i < ordinals.length; i += concurrency) {
+    const batch = ordinals.slice(i, i + concurrency);
+    await Promise.all(batch.map(async (ord) => {
+      const [bookIdx, chapter] = ordinalToBookChapter(ord);
+      const bookNum = bookIdx + 1;
+      try {
+        const result = await fetchAndCacheNkt(bookNum, chapter, env);
+        if (!result.ok) {
+          errored++;
+          errors.push({ bookNum, chapter, error: result.error });
+          return;
+        }
+        if (result.cached) alreadyCached++; else warmed++;
+      } catch (e) {
+        errored++;
+        errors.push({ bookNum, chapter, error: e.message });
+      }
+    }));
+  }
+
+  const nextFrom = from + size < TOTAL_CHAPTERS ? from + size : null;
+  return new Response(JSON.stringify({
+    from, size, warmed, alreadyCached, errored,
+    errors: errors.slice(0, 20),
+    totalChapters: TOTAL_CHAPTERS,
+    nextFrom,
+    nextUrl: nextFrom === null ? null : `/admin/warm-nkt?from=${nextFrom}&size=${size} (with X-Admin-Secret header)`,
     done: nextFrom === null
   }, null, 2), {headers:{...cors,'Content-Type':'application/json'}});
 }
@@ -2155,6 +2338,7 @@ Only output valid JSON, no markdown, no preamble.`;
     if (path === '/admin/build-index') return handleBuildIndex(env, url, cors);
     if (path === '/admin/warm-esv') return handleWarmEsv(env, url, cors, request);
     if (path === '/admin/warm-saebeon') return handleWarmSaebeon(env, url, cors, request);
+    if (path === '/admin/warm-nkt') return handleWarmNkt(env, url, cors, request);
     if (path === '/admin/merge-index') return handleMergeIndex(env, url, cors);
     if (path === '/admin/build-en-index') return handleBuildEnIndex(env, url, cors);
     if (path === '/admin/merge-en-index') return handleMergeEnIndex(env, url, cors);
@@ -2190,7 +2374,14 @@ Only output valid JSON, no markdown, no preamble.`;
     if (path.startsWith('/votd')) {
       const now = new Date();
       const today = now.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
-      const votdKey = `votd3_${today}`;
+      // Verse and photo are cached under SEPARATE keys so refreshing the
+      // photo (or redeploying photo logic) never re-rolls the verse.  The
+      // verse is written once per day and then left alone — labs.bible.org's
+      // votd rotates through the day, so first-fetch-of-the-day wins and
+      // stays fixed via its own write-once key.  (Old combined `votd4_` key
+      // is now unused; it just expires.)
+      const verseKey = `votdverse_${today}`;
+      const photoKey = `votdphoto2_${today}`;
 
       const tomorrowDateET = new Date(now.getTime() + 86400000).toLocaleDateString('en-CA', {timeZone:'America/New_York'});
       const midnightET = new Date(`${tomorrowDateET}T00:00:00`);
@@ -2200,24 +2391,44 @@ Only output valid JSON, no markdown, no preamble.`;
       const secondsUntilMidnight = Math.max(60, Math.floor((midnightUTC - now) / 1000));
       const votdHeaders = { ...cors, "Content-Type": "application/json", "Cache-Control": `public, max-age=${secondsUntilMidnight}` };
 
+      let votdData = null;
+      // photoRaw: null = not cached yet; any JSON string (including "null",
+      // the color-card sentinel) = already resolved for today.
+      let photoRaw = null;
       if (env.COMMENTARY_KV) {
-        const cached = await env.COMMENTARY_KV.get(votdKey);
-        if (cached) return new Response(cached, { headers: votdHeaders });
+        const [vRaw, pRaw] = await Promise.all([
+          env.COMMENTARY_KV.get(verseKey),
+          env.COMMENTARY_KV.get(photoKey),
+        ]);
+        if (vRaw) { try { votdData = JSON.parse(vRaw); } catch { votdData = null; } }
+        photoRaw = pRaw;
+      }
+      const needVerse = !votdData;
+      const needPhoto = photoRaw === null;
+
+      // Both parts already resolved for today -> assemble and return.
+      if (!needVerse && !needPhoto) {
+        let cachedPhoto = null;
+        try { cachedPhoto = JSON.parse(photoRaw); } catch { cachedPhoto = null; }
+        return new Response(JSON.stringify({ verses: votdData, photo: cachedPhoto }), { headers: votdHeaders });
       }
 
+      // Topics lean toward bright, clear-sky scenes (sunrise / golden
+      // hour / blue sky / sunny) — the first line of defense against a
+      // gloomy overcast shot, backed up by the isGloomy re-roll below.
       const topics = [
-        'wheat field golden sunrise',
-        'rolling pasture hills countryside',
-        'olive trees ancient landscape',
-        'mountain valley mist sunrise',
-        'wildflower meadow no people',
-        'calm lake reflection mountains',
-        'rolling green hills countryside',
-        'lavender field provence landscape',
+        'wheat field golden sunrise clear sky',
+        'rolling pasture hills countryside blue sky',
+        'olive trees ancient landscape sunny',
+        'mountain valley sunrise clear sky',
+        'wildflower meadow sunny no people',
+        'calm lake reflection mountains blue sky',
+        'rolling green hills countryside sunny',
+        'lavender field provence sunshine',
         'vineyard hills golden hour',
         'desert canyon landscape sunrise',
-        'forest light rays peaceful',
-        'coastal cliffs ocean horizon'
+        'forest light rays peaceful sunbeam',
+        'coastal cliffs ocean horizon sunny'
       ];
 
       // Anything in the photo's description/tags that hints at a person being
@@ -2228,17 +2439,43 @@ Only output valid JSON, no markdown, no preamble.`;
         'baby','family','group','crowd','farmer','shepherd','hiker','rider',
         'face','portrait','silhouette','model','tourist','traveler'
       ];
-      const photoHasPeople = (pd) => {
-        const text = [
-          pd.description || '',
-          pd.alt_description || '',
-          ...(pd.tags || []).map(t => (t && t.title) || ''),
-          ...(pd.tags_preview || []).map(t => (t && t.title) || '')
-        ].join(' ').toLowerCase();
-        return PEOPLE_KEYWORDS.some(k =>
-          new RegExp(`\\b${k}\\b`).test(text)
-        );
+      // Anything hinting at a grey / overcast / stormy sky — we re-roll
+      // to keep VOTD backgrounds bright and hopeful.  Deliberately omits
+      // 'mist'/'clouds' (a misty sunrise or puffy white clouds are fine);
+      // targets the genuinely dreary signals.
+      const GLOOMY_KEYWORDS = [
+        'overcast','storm','stormy','gloomy','moody','bleak','ominous',
+        'dreary','grey','gray','fog','foggy','rain','rainy','drizzle',
+        'thunder','dusk','twilight','dark clouds','dramatic sky','night'
+      ];
+      const metaText = (pd) => [
+        pd.description || '',
+        pd.alt_description || '',
+        ...(pd.tags || []).map(t => (t && t.title) || ''),
+        ...(pd.tags_preview || []).map(t => (t && t.title) || '')
+      ].join(' ').toLowerCase();
+      const photoHasPeople = (pd) =>
+        PEOPLE_KEYWORDS.some(k => new RegExp(`\\b${k}\\b`).test(metaText(pd)));
+      const photoIsGloomy = (pd) =>
+        GLOOMY_KEYWORDS.some(k => new RegExp(`\\b${k}\\b`).test(metaText(pd)));
+
+      // Brightness gate — the keyword filters miss photos that are simply
+      // dark (deep-shadow forest, dim sunset) without any 'gloomy' tag.
+      // Unsplash returns a dominant color per photo; reject when its
+      // perceived luminance (0..255) is low.  Threshold 108 keeps bright
+      // sky/field/golden-hour tones and drops genuinely dark frames.
+      const DARK_THRESHOLD = 108;
+      const hexLuminance = (hex) => {
+        if (!hex || typeof hex !== 'string') return 255; // unknown -> don't reject
+        const m = hex.replace('#', '');
+        if (m.length < 6) return 255;
+        const r = parseInt(m.slice(0, 2), 16);
+        const g = parseInt(m.slice(2, 4), 16);
+        const b = parseInt(m.slice(4, 6), 16);
+        if ([r, g, b].some(Number.isNaN)) return 255;
+        return 0.299 * r + 0.587 * g + 0.114 * b;
       };
+      const photoTooDark = (pd) => hexLuminance(pd.color) < DARK_THRESHOLD;
 
       const unsplashKey = 'jdBAQs04z5PyhHphjzUKIJCjl3SyMhQS2rSMfBLQOpk';
       const fetchOnePhoto = async () => {
@@ -2251,46 +2488,62 @@ Only output valid JSON, no markdown, no preamble.`;
         return await r.json();
       };
 
-      // First photo attempt runs in parallel with the verse fetch so we don't
-      // pay for the retry loop on the common path.
-      const [votdResp, firstPhotoResp] = await Promise.allSettled([
-        fetch('https://labs.bible.org/api/?passage=votd&type=json', {
-          headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/json" }
-        }),
-        fetchOnePhoto()
+      // Fetch only the missing piece(s), in parallel — the first photo
+      // attempt overlaps the verse fetch so we don't pay for the retry
+      // loop on a fully-cold day.
+      const [verseResp, firstPhotoResp] = await Promise.allSettled([
+        needVerse
+          ? fetch('https://labs.bible.org/api/?passage=votd&type=json', {
+              headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/json" }
+            })
+          : Promise.resolve(null),
+        needPhoto ? fetchOnePhoto() : Promise.resolve(null),
       ]);
 
-      const votdData = votdResp.status === 'fulfilled' ? await votdResp.value.json() : [];
-
-      let pd = firstPhotoResp.status === 'fulfilled' ? firstPhotoResp.value : null;
-      // If the first attempt has people, re-roll up to 3 more times.  VOTD
-      // only fires once a day so the extra Unsplash calls are cheap.
-      let attempts = 1;
-      while (pd && photoHasPeople(pd) && attempts < 4) {
-        pd = await fetchOnePhoto();
-        attempts++;
+      // ---- Verse (write-once for the day) ----
+      if (needVerse) {
+        votdData = verseResp.status === 'fulfilled' && verseResp.value
+          ? await verseResp.value.json()
+          : [];
+        if (env.COMMENTARY_KV && Array.isArray(votdData) && votdData.length) {
+          await env.COMMENTARY_KV.put(verseKey, JSON.stringify(votdData), { expirationTtl: secondsUntilMidnight });
+        }
       }
-      // If we ran out of retries and still have a people-shot, drop the photo
-      // rather than serve a bad image — the front end falls back to the solid
-      // color card when photo is null.
-      if (pd && photoHasPeople(pd)) pd = null;
 
+      // ---- Photo (cached independently; bustable without touching verse) ----
       let photo = null;
-      if (pd) {
-        photo = {
-          url: pd.urls?.regular || null,
-          color: pd.color || '#555555',
-          credit: pd.user?.name || null,
-          creditLink: pd.user?.links?.html || null
-        };
+      if (needPhoto) {
+        let pd = firstPhotoResp.status === 'fulfilled' ? firstPhotoResp.value : null;
+        // Re-roll on people, gloomy tags, OR a too-dark dominant color.
+        // Up to 6 tries — VOTD fires once a day so the calls are cheap.
+        let attempts = 1;
+        while (pd && (photoHasPeople(pd) || photoIsGloomy(pd) || photoTooDark(pd)) && attempts < 6) {
+          pd = await fetchOnePhoto();
+          attempts++;
+        }
+        // A people-shot or a still-too-dark frame is never acceptable —
+        // drop to the solid color card.  A gloomy-tagged-but-bright shot
+        // that survived the retries is kept (better than no photo).
+        if (pd && (photoHasPeople(pd) || photoTooDark(pd))) pd = null;
+        if (pd) {
+          photo = {
+            url: pd.urls?.regular || null,
+            color: pd.color || '#555555',
+            credit: pd.user?.name || null,
+            creditLink: pd.user?.links?.html || null
+          };
+        }
+        // Cache the photo — or the null "color card" sentinel — so we don't
+        // re-roll on every request.  Deleting THIS key alone refreshes the
+        // photo while leaving the verse fixed.
+        if (env.COMMENTARY_KV) {
+          await env.COMMENTARY_KV.put(photoKey, JSON.stringify(photo), { expirationTtl: secondsUntilMidnight });
+        }
+      } else {
+        try { photo = JSON.parse(photoRaw); } catch { photo = null; }
       }
 
-      const result = JSON.stringify({ verses: votdData, photo });
-
-      if (env.COMMENTARY_KV) {
-        await env.COMMENTARY_KV.put(votdKey, result, { expirationTtl: secondsUntilMidnight });
-      }
-
+      const result = JSON.stringify({ verses: votdData || [], photo });
       return new Response(result, { headers: votdHeaders });
     }
 
@@ -2305,6 +2558,23 @@ Only output valid JSON, no markdown, no preamble.`;
         const result = await fetchAndCacheSaebeon(bookNum, chapter, env);
         if (!result.ok) {
           return new Response(JSON.stringify({error: result.error || 'saebeon_fetch_failed'}), {headers:{...cors,"Content-Type":"application/json"}});
+        }
+        return new Response(JSON.stringify(result.data), {headers:{...cors,"Content-Type":"application/json","Cache-Control":"public, max-age=2592000, stale-while-revalidate=86400"}});
+      } catch (e) {
+        return new Response(JSON.stringify({error: e.message}), {status:500, headers:{...cors,"Content-Type":"application/json"}});
+      }
+    }
+
+    // ---- 새한글성경 (NKT) chapter fetch — bskorea's new platform, see
+    // fetchAndCacheNkt.  Must run before the nkrv fallback so /nkt/... doesn't
+    // fall through to the "Use /nkrv/..." error. ----
+    const nktMatch = path.match(/\/nkt\/(\d+)\/(\d+)/);
+    if (nktMatch) {
+      const bookNum = +nktMatch[1], chapter = +nktMatch[2];
+      try {
+        const result = await fetchAndCacheNkt(bookNum, chapter, env);
+        if (!result.ok) {
+          return new Response(JSON.stringify({error: result.error || 'nkt_fetch_failed'}), {headers:{...cors,"Content-Type":"application/json"}});
         }
         return new Response(JSON.stringify(result.data), {headers:{...cors,"Content-Type":"application/json","Cache-Control":"public, max-age=2592000, stale-while-revalidate=86400"}});
       } catch (e) {
