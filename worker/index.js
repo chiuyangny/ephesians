@@ -108,7 +108,10 @@ const API_BIBLE_TRANSLATIONS = {
   // through /apibible like the English ones; the app lists it under its Korean
   // translations.  MSG stays whitelisted (no longer selectable in the app, but
   // keeping the entry preserves its cache and costs nothing).
-  'e959e47176271f18-01': { abbreviation: 'KLB', name: 'Korean Living Bible' }
+  'e959e47176271f18-01': { abbreviation: 'KLB', name: 'Korean Living Bible' },
+  // KJV (1611/1769) — public domain, so unlike the others above it carries no
+  // licensing obligation; api.bible still serves it through the same route.
+  'de4e12af7f28f599-01': { abbreviation: 'KJV', name: 'King James Version' }
 };
 
 // 30 days, in seconds — matches api.bible's required cache-refresh cadence.
