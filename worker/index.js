@@ -108,10 +108,11 @@ const API_BIBLE_TRANSLATIONS = {
   // through /apibible like the English ones; the app lists it under its Korean
   // translations.  MSG stays whitelisted (no longer selectable in the app, but
   // keeping the entry preserves its cache and costs nothing).
-  'e959e47176271f18-01': { abbreviation: 'KLB', name: 'Korean Living Bible' },
-  // KJV (1611/1769) — public domain, so unlike the others above it carries no
-  // licensing obligation; api.bible still serves it through the same route.
-  'de4e12af7f28f599-01': { abbreviation: 'KJV', name: 'King James Version' }
+  'e959e47176271f18-01': { abbreviation: 'KLB', name: 'Korean Living Bible' }
+  // KJV is intentionally NOT here.  It's public domain, so routing it through
+  // api.bible only spent quota for text we can serve ourselves — see the
+  // dedicated /kjv route, which reads no-TTL KV populated from a public-domain
+  // dataset and never calls api.bible at all.
 };
 
 // 30 days, in seconds — matches api.bible's required cache-refresh cadence.
@@ -124,6 +125,11 @@ let SEARCH_INDEX = null;
 let SEARCH_INDEX_PROMISE = null;
 let EN_SEARCH_INDEX = null;
 let EN_SEARCH_INDEX_PROMISE = null;
+// KJV flat search index, same shape as EN_SEARCH_INDEX, retained per isolate.
+// KJV is public domain and served from KV we populate ourselves (see the /kjv
+// route) — it never touches api.bible, so it has no quota, no FUMS, no TTL.
+let KJV_SEARCH_INDEX = null;
+let KJV_SEARCH_INDEX_PROMISE = null;
 // Per-translation api.bible index cache: { [translationId]: tuples[] }.
 // Same shape as EN_SEARCH_INDEX; loaded lazily, retained for the isolate's lifetime.
 const APIBIBLE_INDEXES = Object.create(null);
@@ -1526,6 +1532,93 @@ async function handleEnglishSearch(env, url, cors) {
   }), {headers:{...cors,'Content-Type':'application/json'}});
 }
 
+// ---- KJV chapter handler ----
+// Route: GET /kjv/{bookNum}/{chapter}
+//
+// KJV is public domain, so unlike NLT/NIV it does NOT go through api.bible.
+// Its text was imported once into KV under no-TTL keys (kjv_{bookNum}_{chapter})
+// from a public-domain dataset — the same reason the Korean translations have
+// their own routes.  There is no upstream to fetch on a miss: a missing key
+// means the import hasn't run, so we say so with a 404 rather than pretending.
+//
+// The stored value is the SAME {data:{content:"[1]...[2]..."}} shape the app's
+// parseApibible already handles, so the client reuses that parser unchanged.
+async function handleKjvChapter(env, cors, bookNum, chapter) {
+  const respHeaders = { ...cors, 'Content-Type': 'application/json' };
+  const bookIdx = bookNum - 1;
+  if (bookIdx < 0 || bookIdx >= BOOK_CHAPTERS.length) {
+    return new Response(JSON.stringify({ error: 'bad_book', bookNum }), { status: 400, headers: respHeaders });
+  }
+  if (chapter < 1 || chapter > BOOK_CHAPTERS[bookIdx]) {
+    return new Response(JSON.stringify({ error: 'bad_chapter', bookNum, chapter, max: BOOK_CHAPTERS[bookIdx] }), {
+      status: 400, headers: respHeaders,
+    });
+  }
+  if (!env.COMMENTARY_KV) {
+    return new Response(JSON.stringify({ error: 'kv_unset' }), { status: 503, headers: respHeaders });
+  }
+  const cached = await env.COMMENTARY_KV.get(`kjv_${bookNum}_${chapter}`, 'json');
+  if (!cached) {
+    return new Response(JSON.stringify({ error: 'kjv_not_imported', bookNum, chapter }), {
+      status: 404, headers: respHeaders,
+    });
+  }
+  return new Response(JSON.stringify({
+    data: cached.data,
+    meta: {},
+    fumsToken: null,
+    cached: true,
+    translation: { abbreviation: 'KJV', name: 'King James Version' },
+  }), { headers: respHeaders });
+}
+
+// ---- KJV search ----
+// Route: GET /search/kjv?q=...&page=...
+// Identical in-memory flat-index scan as /search/en, over kjv_search_index.
+async function getKjvSearchIndex(env) {
+  if (KJV_SEARCH_INDEX) return KJV_SEARCH_INDEX;
+  if (KJV_SEARCH_INDEX_PROMISE) return KJV_SEARCH_INDEX_PROMISE;
+  KJV_SEARCH_INDEX_PROMISE = (async () => {
+    const raw = await env.COMMENTARY_KV.get('kjv_search_index');
+    if (!raw) { KJV_SEARCH_INDEX_PROMISE = null; return null; }
+    try { KJV_SEARCH_INDEX = JSON.parse(raw); } catch (e) { KJV_SEARCH_INDEX = null; }
+    KJV_SEARCH_INDEX_PROMISE = null;
+    return KJV_SEARCH_INDEX;
+  })();
+  return KJV_SEARCH_INDEX_PROMISE;
+}
+
+async function handleKjvSearch(env, url, cors) {
+  const q = url.searchParams.get('q');
+  const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'));
+  const pageSize = 20;
+  const offset = (page - 1) * pageSize;
+  if (!q || q.trim().length < 2) {
+    return new Response(JSON.stringify({ results: [], hasMore: false }), { headers: { ...cors, 'Content-Type': 'application/json' } });
+  }
+  const index = await getKjvSearchIndex(env);
+  if (!index) {
+    return new Response(JSON.stringify({ results: [], hasMore: false, error: 'index_not_built' }), {
+      status: 503, headers: { ...cors, 'Content-Type': 'application/json' },
+    });
+  }
+  const term = q.trim().toLowerCase();
+  const matches = [];
+  for (let i = 0; i < index.length; i++) {
+    if (index[i][3].toLowerCase().indexOf(term) !== -1) matches.push(index[i]);
+  }
+  const slice = matches.slice(offset, offset + pageSize);
+  const results = slice.map(([b, c, v, text]) => ({
+    book: b, chapter: c, verse: v, text, ref: BOOK_NAMES_EN[b] + ' ' + c + ':' + v,
+  }));
+  const hasMore = (offset + pageSize) < matches.length;
+  const bookSet = new Set();
+  for (const m of matches) bookSet.add(m[0]);
+  return new Response(JSON.stringify({
+    results, hasMore, nextPage: hasMore ? (page + 1) : -1, total: matches.length, bookCount: bookSet.size,
+  }), { headers: { ...cors, 'Content-Type': 'application/json' } });
+}
+
 // ---- api.bible chapter handler ----
 // Route: GET /apibible/{translationId}/{bookNum}/{chapter}
 //   - translationId must be in API_BIBLE_TRANSLATIONS whitelist
@@ -2428,6 +2521,13 @@ Only output valid JSON, no markdown, no preamble.`;
 
     // ---- /search/en (fast in-memory index) ----
     if (path.startsWith('/search/en')) return handleEnglishSearch(env, url, cors);
+
+    // ---- /search/kjv (fast in-memory index, public-domain KJV) ----
+    if (path.startsWith('/search/kjv')) return handleKjvSearch(env, url, cors);
+
+    // ---- /kjv/{bookNum}/{chapter} (public domain, KV-only, no api.bible) ----
+    const kjvm = path.match(/^\/kjv\/(\d+)\/(\d+)\/?$/);
+    if (kjvm) return handleKjvChapter(env, cors, parseInt(kjvm[1]), parseInt(kjvm[2]));
 
     // ---- /votd ----
     if (path.startsWith('/votd')) {
