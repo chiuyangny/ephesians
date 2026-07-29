@@ -1032,12 +1032,23 @@ var PROGRESS_KEY='krengbible_progress';
 function progLoad(){try{return JSON.parse(localStorage.getItem(PROGRESS_KEY)||'{}');}catch(e){return {};}}
 function progSave(d){try{localStorage.setItem(PROGRESS_KEY,JSON.stringify(d));}catch(e){}}
 function progKey(b,c){return b+'_'+c;}
-function progMarkRead(b,c,src){var d=progLoad(),k=progKey(b,c);if(!d[k]){d[k]={date:new Date().toISOString().slice(0,10),source:src};progSave(d);if(typeof stampProg==='function'){stampProg(k);fbPushProgress(k);}}}
+function progMarkRead(b,c,src){
+  var d=progLoad(),k=progKey(b,c);
+  if(!d[k]){d[k]={date:new Date().toISOString().slice(0,10),source:src};progSave(d);if(typeof stampProg==='function'){stampProg(k);fbPushProgress(k);}}
+  // Outside the !d[k] guard on purpose: re-opening a chapter you have already
+  // read still means you read TODAY, and that is the signal the evening
+  // reminder checks.  The progress doc itself stays write-once.
+  if(typeof fbPushReadingSignal==='function') fbPushReadingSignal();
+}
 function progToggleManual(b,c){
   var d=progLoad(),k=progKey(b,c);
+  var marked=!d[k];
   if(d[k])delete d[k];else d[k]={date:new Date().toISOString().slice(0,10),source:'manual'};
   progSave(d);
   if(typeof stampProg==='function'){stampProg(k);fbPushProgress(k);}
+  // A grid check-off counts as reading today (the app treats it the same way),
+  // but un-checking one must not claim you read.
+  if(marked&&typeof fbPushReadingSignal==='function') fbPushReadingSignal();
   var grid=document.getElementById('prog-ch-'+b);
   if(grid&&grid.style.display!=='none'){
     var bk=BOOKS[b],data=progLoad(),h='';
@@ -6861,6 +6872,47 @@ function fbPushProgress(key){
   } else {
     window.fb.setDoc(window.fb.doc(window.fbDB,'users',fbActiveUid,'progress',key), {deleted:true,_updatedAt:t}).catch(function(){});
   }
+}
+
+/**
+ * Publish the account-level "read today" signal the evening reminder reads.
+ *
+ * The reminder is a scheduled Cloud Function (functions/src/streakReminder.ts
+ * in the app repo).  It stays quiet when users/{uid}/prefs/reading.lastReadDate
+ * equals the device's local today.  That doc used to be written ONLY by the iOS
+ * app, so reading here and not opening the phone that day left lastReadDate on
+ * yesterday and the 8pm push fired anyway — the exact "read on the web and the
+ * phone never finds out" case the server job was created to fix.
+ *
+ * The progress docs cannot answer this: their `date` is UTC (see progMarkRead)
+ * and write-once, so a re-read never restamps it.  Hence a separate signal.
+ *
+ * LOCAL date, not UTC — the server compares against a local calendar day, so a
+ * chapter read at night in a zone behind UTC has to count as that night.
+ *
+ * streakDays is deliberately NOT written.  The app computes it (readingDayStreak)
+ * and only the banner's wording uses it; duplicating that logic here would give
+ * two repos two different streak counts.  merge:true leaves the app's value alone.
+ */
+var fbLastReadingSignal='';
+function fbLocalIsoDate(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function fbPushReadingSignal(){
+  if(fbIsSuppressed() || !fbActiveUid || !window.fb) return;
+  var today=fbLocalIsoDate(new Date());
+  var sig=fbActiveUid+'|'+today;
+  if(sig===fbLastReadingSignal) return;  // once per account per day is enough
+  fbLastReadingSignal=sig;
+  window.fb.setDoc(
+    window.fb.doc(window.fbDB,'users',fbActiveUid,'prefs','reading'),
+    {lastReadDate:today,updatedAt:Date.now()},
+    {merge:true}
+  ).catch(function(){
+    // Best-effort, same as the app: a miss just means the server cannot see
+    // today's read yet, which errs toward one extra nudge rather than silence.
+    fbLastReadingSignal='';
+  });
 }
 
 // ---------- Notes sync ----------
