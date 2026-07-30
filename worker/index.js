@@ -11,6 +11,8 @@
 //   /votd                                 -> Verse of the day + photo
 //   /votd/next                            -> Tomorrow's STAGED photo (public, read-only, never rolls)
 //   /admin/votd-next?date=YYYY-MM-DD      -> (X-Admin-Secret) re-roll the staged photo for a date
+//   /votd/reroll?date=...&t=<hmac>        -> One-tap re-roll from the preview email.  HMAC of the date,
+//                                            keyed by ADMIN_SECRET — scoped to one day, secret never in URL.
 //   /nkrv/{book}/{chapter}                -> Korean Bible (NKRV), cached per chapter
 //   /admin/warm-esv?from=N&size=M&concurrency=N (X-Admin-Secret header, not ?secret= — keeps it out of URL logs)
 //                                                   -> Pre-fetch every ESV chapter into KV (live /esv/
@@ -2434,6 +2436,96 @@ function votdSecondsUntilEndOf(dateET) {
 }
 
 /**
+ * Public origin used in emailed links.  A cron has no inbound request to read
+ * the host from, so it cannot be derived — set VOTD_PUBLIC_ORIGIN if the
+ * worker ever moves behind a custom domain.
+ */
+const VOTD_ORIGIN_FALLBACK = 'https://krengbible.pauljkim22.workers.dev';
+
+/**
+ * One-tap re-roll links go in an email, so the admin secret cannot travel in
+ * the URL — the whole reason /admin/* prefers the X-Admin-Secret header is to
+ * keep it out of Cloudflare's URL logs, and mailing it would undo that twice
+ * over (logs plus the reader's inbox forever).
+ *
+ * Instead the link carries an HMAC of the DATE it is for, keyed by the same
+ * secret.  That makes it scoped and self-expiring: a token only ever unlocks
+ * the one day it was minted for, and that day stops being re-rollable the
+ * moment it goes live.  A leaked link is worth at most one day's photo, and
+ * the secret itself is never derivable from it.
+ */
+async function votdRerollToken(dateET, env) {
+  const key = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(env.ADMIN_SECRET || ''),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`votd-reroll:${dateET}`));
+  // 128 bits is far past what a single-day, single-purpose token needs; the
+  // rest is dropped only to keep the link short enough to tap comfortably.
+  return [...new Uint8Array(sig)].slice(0, 16).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** Length-independent compare, so a wrong token cannot be narrowed by timing. */
+function votdSafeEqual(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+/**
+ * Email the staged photo with a one-tap re-roll link.
+ *
+ * Sender, recipient, and API key are all env-provided: this repo is public,
+ * so an address hardcoded here would be scraped.  Missing any of them makes
+ * this a no-op rather than an error — staging is the job that matters, and it
+ * must not fail because mail is unconfigured.
+ */
+async function votdSendPreviewEmail(dateET, photo, env) {
+  if (!env.RESEND_KEY || !env.VOTD_EMAIL_TO || !env.VOTD_EMAIL_FROM) return;
+  const origin = env.VOTD_PUBLIC_ORIGIN || VOTD_ORIGIN_FALLBACK;
+  const esc = (v) => String(v ?? '').replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+
+  let html;
+  if (photo) {
+    const token = await votdRerollToken(dateET, env);
+    const reroll = `${origin}/votd/reroll?date=${encodeURIComponent(dateET)}&t=${token}`;
+    html =
+      `<div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:560px">` +
+      `<p style="font-size:15px;margin:0 0 12px">Verse-of-the-Day photo for <b>${esc(dateET)}</b></p>` +
+      `<img src="${esc(photo.url)}" alt="" style="width:100%;border-radius:12px;display:block">` +
+      `<p style="font-size:13px;color:#666;margin:10px 0 18px">` +
+      `${esc(photo.credit || 'Unknown')} · ${esc(photo.color)}</p>` +
+      `<p style="font-size:14px;margin:0 0 18px">This goes live at midnight ET on its own — ` +
+      `no reply needed if you like it.</p>` +
+      `<a href="${reroll}" style="display:inline-block;background:#111;color:#fff;` +
+      `padding:11px 18px;border-radius:8px;text-decoration:none;font-size:14px">Get a different photo</a>` +
+      `</div>`;
+  } else {
+    // Worth one line rather than silence: the fallback is graceful (midnight
+    // rolls as it always did), but a preview system failing quietly every day
+    // is how you find out months later.
+    html =
+      `<div style="font-family:-apple-system,Segoe UI,sans-serif">` +
+      `<p>No photo could be staged for <b>${esc(dateET)}</b> — every roll came back ` +
+      `unusable, or Unsplash was unreachable.</p>` +
+      `<p>Nothing is broken: with nothing staged, /votd rolls at midnight the way it ` +
+      `always has. There is just no preview today.</p></div>`;
+  }
+
+  await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${env.RESEND_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from: env.VOTD_EMAIL_FROM,
+      to: [env.VOTD_EMAIL_TO],
+      subject: photo ? `VOTD photo for ${dateET}` : `VOTD photo for ${dateET} — none staged`,
+      html
+    })
+  }).catch(() => {});  // mail failing must never take the cron down with it
+}
+
+/**
  * Choose and store the photo for an ET date.  Writing `votdphoto2_<date>`
  * ahead of time is the whole mechanism: when that date arrives, /votd sees a
  * non-null key, `needPhoto` is false, and it serves this photo instead of
@@ -2687,6 +2779,48 @@ Only output valid JSON, no markdown, no preamble.`;
     const kjvm = path.match(/^\/kjv\/(\d+)\/(\d+)\/?$/);
     if (kjvm) return handleKjvChapter(env, cors, parseInt(kjvm[1]), parseInt(kjvm[2]));
 
+    // ---- /votd/reroll — one-tap re-roll from the preview email ----
+    // Like /votd/next, MUST precede the startsWith('/votd') block below.
+    //
+    // Authenticated by an HMAC of the date rather than the admin secret, so
+    // the link is safe to sit in an inbox: it unlocks exactly one day, and
+    // only while that day is still in the future.  Returns HTML, not JSON —
+    // this is opened by tapping a button in a mail client, and landing on a
+    // wall of JSON would be a poor answer to "show me another".
+    if (path === '/votd/reroll') {
+      const date = url.searchParams.get('date') || '';
+      const token = url.searchParams.get('t') || '';
+      const page = (title, body, status = 200) => new Response(
+        `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">` +
+        `<div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:560px;margin:40px auto;padding:0 20px">` +
+        `<h2 style="font-size:18px;margin:0 0 14px">${title}</h2>${body}</div>`,
+        { status, headers: { ...cors, 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } }
+      );
+
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return page('Bad link', '<p>That date is not valid.</p>', 400);
+      const expected = await votdRerollToken(date, env);
+      if (!env.ADMIN_SECRET || !votdSafeEqual(token, expected)) {
+        return page('Link not valid', '<p>This re-roll link is not valid for that date.</p>', 403);
+      }
+      if (date < votdDateET(0)) {
+        return page('Too late', `<p>${date} is already live to readers, so its photo can no longer be changed.</p>`, 400);
+      }
+
+      const photo = await votdStagePhoto(date, env);
+      if (!photo) {
+        return page('No usable photo',
+          `<p>Every roll came back unusable just now. Nothing was changed — tap again to retry.</p>` +
+          `<p><a href="/votd/reroll?date=${encodeURIComponent(date)}&t=${expected}">Try again</a></p>`);
+      }
+      return page(`New photo for ${date}`,
+        `<img src="${photo.url}" alt="" style="width:100%;border-radius:12px;display:block">` +
+        `<p style="font-size:13px;color:#666;margin:10px 0 18px">${photo.credit || 'Unknown'} · ${photo.color}</p>` +
+        `<p style="font-size:14px">This is now the photo for ${date}. It goes live at midnight ET.</p>` +
+        `<p><a href="/votd/reroll?date=${encodeURIComponent(date)}&t=${expected}" ` +
+        `style="display:inline-block;background:#111;color:#fff;padding:11px 18px;border-radius:8px;` +
+        `text-decoration:none;font-size:14px">Get a different photo</a></p>`);
+    }
+
     // ---- /votd/next — read tomorrow's STAGED photo (public, read-only) ----
     // MUST be tested before the /votd block below: that block matches with
     // startsWith('/votd'), so it would otherwise swallow this path.
@@ -2913,7 +3047,10 @@ Only output valid JSON, no markdown, no preamble.`;
     // Cloudflare crons are UTC-only, so the one-hour DST drift is accepted
     // rather than worked around.
     if (event.cron === '0 16 * * *') {
-      ctx.waitUntil(votdStagePhoto(votdDateET(1), env));
+      const date = votdDateET(1);
+      ctx.waitUntil(
+        votdStagePhoto(date, env).then((photo) => votdSendPreviewEmail(date, photo, env))
+      );
       return;
     }
 

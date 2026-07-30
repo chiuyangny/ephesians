@@ -20,3 +20,13 @@ crons = ["0 8 * * *", "0 16 * * *"]
 
 # Secrets ESV_TOKEN, ANTHROPIC_KEY, ADMIN_SECRET are managed via
 # `wrangler secret put NAME` and persist across deploys — not declared here.
+#
+# The VOTD preview email needs three more, same mechanism:
+#   RESEND_KEY        Resend API key
+#   VOTD_EMAIL_FROM   sender on a domain verified with Resend, e.g. votd@krengbible.com
+#   VOTD_EMAIL_TO     recipient
+# Kept as secrets rather than [vars] because this repo is public and the
+# recipient is a personal address.  If any is unset the cron still stages the
+# photo and simply skips the email — staging must not depend on mail working.
+# VOTD_PUBLIC_ORIGIN is optional; set it only if the worker moves to a custom
+# domain, since a cron has no request to read its own host from.
