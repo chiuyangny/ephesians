@@ -2441,7 +2441,14 @@ function votdSecondsUntilEndOf(dateET) {
  */
 async function votdStagePhoto(dateET, env) {
   const photo = await votdRollPhoto(null);
-  if (env.COMMENTARY_KV) {
+  // Only stage a REAL photo.  votdRollPhoto returns null both when every roll
+  // was a people-shot / too dark AND when Unsplash could not be reached at
+  // all, and staging that null would pin a solid-colour card to the whole day
+  // over what might be a momentary outage at noon.  Writing nothing instead
+  // leaves the key absent, so midnight falls back to exactly the old
+  // behaviour: roll on first request.  The cost of a failed staging is
+  // therefore "no preview today", never "a worse photo tomorrow".
+  if (photo && env.COMMENTARY_KV) {
     await env.COMMENTARY_KV.put(
       `votdphoto2_${dateET}`,
       JSON.stringify(photo),
@@ -2732,7 +2739,9 @@ Only output valid JSON, no markdown, no preamble.`;
         });
       }
       const photo = await votdStagePhoto(date, env);
-      return new Response(JSON.stringify({ date, staged: true, photo }), {
+      // staged reflects whether anything was actually written — see
+      // votdStagePhoto for why a failed roll writes nothing at all.
+      return new Response(JSON.stringify({ date, staged: !!photo, photo }), {
         headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
       });
     }
