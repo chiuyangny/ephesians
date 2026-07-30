@@ -9,6 +9,8 @@
 //   /search/ko?q=...&offset=...           -> Korean full-text search (FAST: uses pre-built index)
 //   /search/en?q=...&page=...             -> English full-text search (FAST: uses pre-built index)
 //   /votd                                 -> Verse of the day + photo
+//   /votd/next                            -> Tomorrow's STAGED photo (public, read-only, never rolls)
+//   /admin/votd-next?date=YYYY-MM-DD      -> (X-Admin-Secret) re-roll the staged photo for a date
 //   /nkrv/{book}/{chapter}                -> Korean Bible (NKRV), cached per chapter
 //   /admin/warm-esv?from=N&size=M&concurrency=N (X-Admin-Secret header, not ?secret= — keeps it out of URL logs)
 //                                                   -> Pre-fetch every ESV chapter into KV (live /esv/
@@ -2300,6 +2302,155 @@ async function handleKoreanSearch(env, url, cors) {
   }), {headers:{...cors,'Content-Type':'application/json'}});
 }
 
+// ---- VOTD photo selection (module scope so both the live /votd route and
+// the noon staging cron use the SAME topics, filters, and thresholds).  These
+// used to live inside the /votd handler; they were hoisted when photo staging
+// was added, so a previewed photo is chosen by exactly the rules that would
+// have chosen it at midnight.  Duplicating them would let preview and live
+// drift apart, which is the one thing a preview must not do.
+//
+// Topics lean toward bright, clear-sky scenes (sunrise / golden hour / blue
+// sky / sunny) — the first line of defense against a gloomy overcast shot,
+// backed up by the isGloomy re-roll below.
+const VOTD_TOPICS = [
+  'wheat field golden sunrise clear sky',
+  'rolling pasture hills countryside blue sky',
+  'olive trees ancient landscape sunny',
+  'mountain valley sunrise clear sky',
+  'wildflower meadow sunny no people',
+  'calm lake reflection mountains blue sky',
+  'rolling green hills countryside sunny',
+  'lavender field provence sunshine',
+  'vineyard hills golden hour',
+  'desert canyon landscape sunrise',
+  'forest light rays peaceful sunbeam',
+  'coastal cliffs ocean horizon sunny'
+];
+
+// Anything in the photo's description/tags that hints at a person being in
+// frame.  Unsplash has no native no-people filter, so we re-roll if any of
+// these show up in the metadata of the returned photo.
+const VOTD_PEOPLE_KEYWORDS = [
+  'person','people','human','man','woman','boy','girl','child','kid',
+  'baby','family','group','crowd','farmer','shepherd','hiker','rider',
+  'face','portrait','silhouette','model','tourist','traveler'
+];
+// Anything hinting at a grey / overcast / stormy sky — we re-roll to keep
+// VOTD backgrounds bright and hopeful.  Deliberately omits 'mist'/'clouds'
+// (a misty sunrise or puffy white clouds are fine); targets the genuinely
+// dreary signals.
+const VOTD_GLOOMY_KEYWORDS = [
+  'overcast','storm','stormy','gloomy','moody','bleak','ominous',
+  'dreary','grey','gray','fog','foggy','rain','rainy','drizzle',
+  'thunder','dusk','twilight','dark clouds','dramatic sky','night'
+];
+const votdMetaText = (pd) => [
+  pd.description || '',
+  pd.alt_description || '',
+  ...(pd.tags || []).map(t => (t && t.title) || ''),
+  ...(pd.tags_preview || []).map(t => (t && t.title) || '')
+].join(' ').toLowerCase();
+const votdHasPeople = (pd) =>
+  VOTD_PEOPLE_KEYWORDS.some(k => new RegExp(`\\b${k}\\b`).test(votdMetaText(pd)));
+const votdIsGloomy = (pd) =>
+  VOTD_GLOOMY_KEYWORDS.some(k => new RegExp(`\\b${k}\\b`).test(votdMetaText(pd)));
+
+// Brightness gate — the keyword filters miss photos that are simply dark
+// (deep-shadow forest, dim sunset) without any 'gloomy' tag.  Unsplash
+// returns a dominant color per photo; reject when its perceived luminance
+// (0..255) is low.  Threshold 108 keeps bright sky/field/golden-hour tones
+// and drops genuinely dark frames.
+const VOTD_DARK_THRESHOLD = 108;
+const votdHexLuminance = (hex) => {
+  if (!hex || typeof hex !== 'string') return 255; // unknown -> don't reject
+  const m = hex.replace('#', '');
+  if (m.length < 6) return 255;
+  const r = parseInt(m.slice(0, 2), 16);
+  const g = parseInt(m.slice(2, 4), 16);
+  const b = parseInt(m.slice(4, 6), 16);
+  if ([r, g, b].some(Number.isNaN)) return 255;
+  return 0.299 * r + 0.587 * g + 0.114 * b;
+};
+const votdTooDark = (pd) => votdHexLuminance(pd.color) < VOTD_DARK_THRESHOLD;
+
+const VOTD_UNSPLASH_KEY = 'jdBAQs04z5PyhHphjzUKIJCjl3SyMhQS2rSMfBLQOpk';
+const votdFetchOnePhoto = async () => {
+  const t = VOTD_TOPICS[Math.floor(Math.random() * VOTD_TOPICS.length)];
+  const r = await fetch(
+    `https://api.unsplash.com/photos/random?query=${encodeURIComponent(t)}` +
+    `&orientation=landscape&content_filter=high&client_id=${VOTD_UNSPLASH_KEY}`
+  );
+  if (!r.ok) return null;
+  return await r.json();
+};
+
+/**
+ * Roll one acceptable VOTD photo, or null for the solid-color card.
+ * `first` lets the live route hand in the photo it already fetched in
+ * parallel with the verse, so a cold day still costs one round trip.
+ * Re-rolls on people, gloomy tags, OR a too-dark dominant color; up to 6
+ * tries, since VOTD fires once a day and the calls are cheap.  A people-shot
+ * or a still-too-dark frame is never acceptable — drop to the color card.  A
+ * gloomy-tagged-but-bright shot that survived the retries is kept (better
+ * than no photo).
+ */
+async function votdRollPhoto(first) {
+  let pd = first ?? await votdFetchOnePhoto();
+  let attempts = 1;
+  while (pd && (votdHasPeople(pd) || votdIsGloomy(pd) || votdTooDark(pd)) && attempts < 6) {
+    pd = await votdFetchOnePhoto();
+    attempts++;
+  }
+  if (pd && (votdHasPeople(pd) || votdTooDark(pd))) pd = null;
+  if (!pd) return null;
+  return {
+    url: pd.urls?.regular || null,
+    color: pd.color || '#555555',
+    credit: pd.user?.name || null,
+    creditLink: pd.user?.links?.html || null
+  };
+}
+
+/** ET calendar date, `YYYY-MM-DD`, `offsetDays` from now. */
+function votdDateET(offsetDays = 0) {
+  return new Date(Date.now() + offsetDays * 86400000)
+    .toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+}
+
+/**
+ * Seconds from now until the END of the given ET date — the TTL a photo key
+ * for that date needs.  Staging tomorrow at noon means a ~36h TTL, which is
+ * why this cannot reuse the live route's secondsUntilMidnight.
+ */
+function votdSecondsUntilEndOf(dateET) {
+  const now = new Date();
+  const nextDay = new Date(`${dateET}T00:00:00Z`);
+  nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+  const endLocal = new Date(nextDay.toISOString().slice(0, 10) + 'T00:00:00');
+  const nowET = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  const offsetMs = now - nowET;
+  const endUTC = new Date(endLocal.getTime() + offsetMs);
+  return Math.max(60, Math.floor((endUTC - now) / 1000));
+}
+
+/**
+ * Choose and store the photo for an ET date.  Writing `votdphoto2_<date>`
+ * ahead of time is the whole mechanism: when that date arrives, /votd sees a
+ * non-null key, `needPhoto` is false, and it serves this photo instead of
+ * rolling a fresh one.  No change to the read path was needed.
+ */
+async function votdStagePhoto(dateET, env) {
+  const photo = await votdRollPhoto(null);
+  if (env.COMMENTARY_KV) {
+    await env.COMMENTARY_KV.put(
+      `votdphoto2_${dateET}`,
+      JSON.stringify(photo),
+      { expirationTtl: votdSecondsUntilEndOf(dateET) }
+    );
+  }
+  return photo;
+}
+
 export default {
   async fetch(request, env) {
     const cors = {
@@ -2529,6 +2680,63 @@ Only output valid JSON, no markdown, no preamble.`;
     const kjvm = path.match(/^\/kjv\/(\d+)\/(\d+)\/?$/);
     if (kjvm) return handleKjvChapter(env, cors, parseInt(kjvm[1]), parseInt(kjvm[2]));
 
+    // ---- /votd/next — read tomorrow's STAGED photo (public, read-only) ----
+    // MUST be tested before the /votd block below: that block matches with
+    // startsWith('/votd'), so it would otherwise swallow this path.
+    //
+    // Never rolls.  `staged:false` means the noon cron has not run yet (or the
+    // worker was deployed mid-day); it is a plain "nothing chosen yet", not an
+    // error, and tomorrow's /votd will roll normally at midnight as it always
+    // has.  Deliberately unauthenticated: reading which photo is queued is
+    // harmless, while ROLLING costs an Unsplash call and is what /admin
+    // protects.
+    if (path === '/votd/next') {
+      const date = votdDateET(1);
+      let photo = null, staged = false;
+      if (env.COMMENTARY_KV) {
+        const raw = await env.COMMENTARY_KV.get(`votdphoto2_${date}`);
+        if (raw !== null) {
+          staged = true;
+          try { photo = JSON.parse(raw); } catch { photo = null; }
+        }
+      }
+      return new Response(JSON.stringify({ date, staged, photo }), {
+        // no-store: a preview that can be re-rolled must never be read from a
+        // stale edge cache, or an approved photo could be reported wrongly.
+        headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
+      });
+    }
+
+    // ---- /admin/votd-next — re-roll the staged photo for a date ----
+    // ?date=YYYY-MM-DD to target a specific ET date (default: tomorrow).
+    // Overwrites votdphoto2_<date>, so calling it repeatedly is how a photo
+    // gets rejected until an acceptable one appears.  Safe to run right up to
+    // midnight; after that the date has gone live and this would be editing a
+    // photo readers are already seeing, so it refuses a past date.
+    if (path === '/admin/votd-next') {
+      const secret = request.headers.get('X-Admin-Secret') || url.searchParams.get('secret');
+      if (!env.ADMIN_SECRET || secret !== env.ADMIN_SECRET) {
+        return new Response(JSON.stringify({ error: 'forbidden' }), {
+          status: 403, headers: { ...cors, 'Content-Type': 'application/json' }
+        });
+      }
+      const date = url.searchParams.get('date') || votdDateET(1);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return new Response(JSON.stringify({ error: 'bad date' }), {
+          status: 400, headers: { ...cors, 'Content-Type': 'application/json' }
+        });
+      }
+      if (date < votdDateET(0)) {
+        return new Response(JSON.stringify({ error: 'date already past' }), {
+          status: 400, headers: { ...cors, 'Content-Type': 'application/json' }
+        });
+      }
+      const photo = await votdStagePhoto(date, env);
+      return new Response(JSON.stringify({ date, staged: true, photo }), {
+        headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
+      });
+    }
+
     // ---- /votd ----
     if (path.startsWith('/votd')) {
       const now = new Date();
@@ -2573,80 +2781,10 @@ Only output valid JSON, no markdown, no preamble.`;
       }
 
       // Topics lean toward bright, clear-sky scenes (sunrise / golden
-      // hour / blue sky / sunny) — the first line of defense against a
-      // gloomy overcast shot, backed up by the isGloomy re-roll below.
-      const topics = [
-        'wheat field golden sunrise clear sky',
-        'rolling pasture hills countryside blue sky',
-        'olive trees ancient landscape sunny',
-        'mountain valley sunrise clear sky',
-        'wildflower meadow sunny no people',
-        'calm lake reflection mountains blue sky',
-        'rolling green hills countryside sunny',
-        'lavender field provence sunshine',
-        'vineyard hills golden hour',
-        'desert canyon landscape sunrise',
-        'forest light rays peaceful sunbeam',
-        'coastal cliffs ocean horizon sunny'
-      ];
-
-      // Anything in the photo's description/tags that hints at a person being
-      // in frame.  Unsplash has no native no-people filter, so we re-roll if
-      // any of these show up in the metadata of the returned photo.
-      const PEOPLE_KEYWORDS = [
-        'person','people','human','man','woman','boy','girl','child','kid',
-        'baby','family','group','crowd','farmer','shepherd','hiker','rider',
-        'face','portrait','silhouette','model','tourist','traveler'
-      ];
-      // Anything hinting at a grey / overcast / stormy sky — we re-roll
-      // to keep VOTD backgrounds bright and hopeful.  Deliberately omits
-      // 'mist'/'clouds' (a misty sunrise or puffy white clouds are fine);
-      // targets the genuinely dreary signals.
-      const GLOOMY_KEYWORDS = [
-        'overcast','storm','stormy','gloomy','moody','bleak','ominous',
-        'dreary','grey','gray','fog','foggy','rain','rainy','drizzle',
-        'thunder','dusk','twilight','dark clouds','dramatic sky','night'
-      ];
-      const metaText = (pd) => [
-        pd.description || '',
-        pd.alt_description || '',
-        ...(pd.tags || []).map(t => (t && t.title) || ''),
-        ...(pd.tags_preview || []).map(t => (t && t.title) || '')
-      ].join(' ').toLowerCase();
-      const photoHasPeople = (pd) =>
-        PEOPLE_KEYWORDS.some(k => new RegExp(`\\b${k}\\b`).test(metaText(pd)));
-      const photoIsGloomy = (pd) =>
-        GLOOMY_KEYWORDS.some(k => new RegExp(`\\b${k}\\b`).test(metaText(pd)));
-
-      // Brightness gate — the keyword filters miss photos that are simply
-      // dark (deep-shadow forest, dim sunset) without any 'gloomy' tag.
-      // Unsplash returns a dominant color per photo; reject when its
-      // perceived luminance (0..255) is low.  Threshold 108 keeps bright
-      // sky/field/golden-hour tones and drops genuinely dark frames.
-      const DARK_THRESHOLD = 108;
-      const hexLuminance = (hex) => {
-        if (!hex || typeof hex !== 'string') return 255; // unknown -> don't reject
-        const m = hex.replace('#', '');
-        if (m.length < 6) return 255;
-        const r = parseInt(m.slice(0, 2), 16);
-        const g = parseInt(m.slice(2, 4), 16);
-        const b = parseInt(m.slice(4, 6), 16);
-        if ([r, g, b].some(Number.isNaN)) return 255;
-        return 0.299 * r + 0.587 * g + 0.114 * b;
-      };
-      const photoTooDark = (pd) => hexLuminance(pd.color) < DARK_THRESHOLD;
-
-      const unsplashKey = 'jdBAQs04z5PyhHphjzUKIJCjl3SyMhQS2rSMfBLQOpk';
-      const fetchOnePhoto = async () => {
-        const t = topics[Math.floor(Math.random() * topics.length)];
-        const r = await fetch(
-          `https://api.unsplash.com/photos/random?query=${encodeURIComponent(t)}` +
-          `&orientation=landscape&content_filter=high&client_id=${unsplashKey}`
-        );
-        if (!r.ok) return null;
-        return await r.json();
-      };
-
+      // Topics, people/gloomy/dark filters, and the Unsplash fetch now live at
+      // module scope (see votdRollPhoto) so the noon staging cron picks a photo
+      // by exactly these rules.  Only the parallel first-fetch stays here, to
+      // overlap the photo call with the verse call on a fully-cold day.
       // Fetch only the missing piece(s), in parallel — the first photo
       // attempt overlaps the verse fetch so we don't pay for the retry
       // loop on a fully-cold day.
@@ -2656,7 +2794,7 @@ Only output valid JSON, no markdown, no preamble.`;
               headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/json" }
             })
           : Promise.resolve(null),
-        needPhoto ? fetchOnePhoto() : Promise.resolve(null),
+        needPhoto ? votdFetchOnePhoto() : Promise.resolve(null),
       ]);
 
       // ---- Verse (write-once for the day) ----
@@ -2672,26 +2810,11 @@ Only output valid JSON, no markdown, no preamble.`;
       // ---- Photo (cached independently; bustable without touching verse) ----
       let photo = null;
       if (needPhoto) {
-        let pd = firstPhotoResp.status === 'fulfilled' ? firstPhotoResp.value : null;
-        // Re-roll on people, gloomy tags, OR a too-dark dominant color.
-        // Up to 6 tries — VOTD fires once a day so the calls are cheap.
-        let attempts = 1;
-        while (pd && (photoHasPeople(pd) || photoIsGloomy(pd) || photoTooDark(pd)) && attempts < 6) {
-          pd = await fetchOnePhoto();
-          attempts++;
-        }
-        // A people-shot or a still-too-dark frame is never acceptable —
-        // drop to the solid color card.  A gloomy-tagged-but-bright shot
-        // that survived the retries is kept (better than no photo).
-        if (pd && (photoHasPeople(pd) || photoTooDark(pd))) pd = null;
-        if (pd) {
-          photo = {
-            url: pd.urls?.regular || null,
-            color: pd.color || '#555555',
-            credit: pd.user?.name || null,
-            creditLink: pd.user?.links?.html || null
-          };
-        }
+        // Hand votdRollPhoto the photo already fetched alongside the verse, so
+        // a cold day still costs one round trip before any re-roll.
+        photo = await votdRollPhoto(
+          firstPhotoResp.status === 'fulfilled' ? firstPhotoResp.value : null
+        );
         // Cache the photo — or the null "color card" sentinel — so we don't
         // re-roll on every request.  Deleting THIS key alone refreshes the
         // photo while leaving the verse fixed.
@@ -2770,6 +2893,22 @@ Only output valid JSON, no markdown, no preamble.`;
   // getReadingForDate's bookIdx is 0-indexed; the /qt-reflection route
   // (and getOrCreateQtReflection) wants a 1-indexed book number.
   async scheduled(event, env, ctx) {
+    // TWO triggers now, so this must dispatch on which one fired — without
+    // the check, adding the noon cron would have silently doubled the QT
+    // warm-up as well.
+    //
+    // 16:00 UTC — stage tomorrow's VOTD photo so it can be previewed and
+    // re-rolled during the day.  That is noon in EDT and 11am in EST; the
+    // exact hour does not matter, only that it lands during waking hours on
+    // the day BEFORE, with time to reject a photo before midnight ET.
+    // Cloudflare crons are UTC-only, so the one-hour DST drift is accepted
+    // rather than worked around.
+    if (event.cron === '0 16 * * *') {
+      ctx.waitUntil(votdStagePhoto(votdDateET(1), env));
+      return;
+    }
+
+    // 08:00 UTC — warm tomorrow's Daily QT reflection.
     const tomorrow = new Date();
     tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
     const reading = getReadingForDate(tomorrow);

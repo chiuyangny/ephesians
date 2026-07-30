@@ -8,11 +8,15 @@ account_id = "a3c32a9275ac5df0061e7913f05ce6c5"
 binding = "COMMENTARY_KV"
 id = "5f36020ad8334b02ab9ffcdfa8788c63"
 
-# Daily QT cache-warming cron — see index.js's scheduled() handler.
-# 08:00 UTC gives every timezone (as far out as UTC+14) at least a
-# 2-hour head start before their local midnight for the date it warms.
+# Crons — see index.js's scheduled() handler, which dispatches on event.cron.
+#   0 8  * * *  Daily QT cache-warming.  08:00 UTC gives every timezone (as
+#               far out as UTC+14) at least a 2-hour head start before their
+#               local midnight for the date it warms.
+#   0 16 * * *  Stage tomorrow's VOTD photo so it can be previewed and
+#               re-rolled before it goes live.  Noon EDT / 11am EST — crons
+#               are UTC-only, so the DST hour is accepted, not corrected.
 [triggers]
-crons = ["0 8 * * *"]
+crons = ["0 8 * * *", "0 16 * * *"]
 
 # Secrets ESV_TOKEN, ANTHROPIC_KEY, ADMIN_SECRET are managed via
 # `wrangler secret put NAME` and persist across deploys — not declared here.
