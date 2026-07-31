@@ -2670,7 +2670,7 @@ Respond in this exact JSON format with no markdown, no preamble:
 
 Write commentary for ${bookName} chapter ${chapter} with these two sections:
 
-1. **Summary** (2-3 sentences): What happens in this chapter in plain language anyone can understand.
+1. **Summary** (2-3 sentences): What happens in this chapter in plain language anyone can understand. Start with the content itself — do NOT open by naming the book and chapter ("${bookName} ${chapter} describes…", "In ${bookName} ${chapter}, …"). The reader is already looking at the chapter heading.
 
 2. **Reflection** (3-4 sentences): Key theological themes and one practical takeaway for a modern reader. Keep it warm, pastoral, and grounded in the text.
 
