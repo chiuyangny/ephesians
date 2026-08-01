@@ -3011,6 +3011,9 @@ Only output valid JSON, no markdown, no preamble.`;
       const action = path === '/votd/queue-add' ? 'queue' : 'reject';
       const slug = url.searchParams.get('slug') || '';
       const token = url.searchParams.get('t') || '';
+      // Local copy: the identical helper inside the two email builders is
+      // function-scoped and not visible here.
+      const esc = (v) => String(v ?? '').replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
       const page = (title, body) => new Response(
         `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">` +
         `<div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:520px;margin:40px auto;padding:0 18px">` +
@@ -3025,25 +3028,35 @@ Only output valid JSON, no markdown, no preamble.`;
       const rec = (cands || []).find((c) => c.slug === slug);
       if (!rec) return page('Photo not found', '<p>That photo is no longer in the current suggestion set.</p>');
 
+      // Every one of these messages names THE PHOTO, never the photographer.
+      // Blocking, queueing and the used log are all keyed on the image slug,
+      // so saying "Kyle Yen will not be suggested again" describes the wrong
+      // thing entirely — other photos by that photographer are still fair
+      // game, and the copy has to make that obvious.
+      const desc = (r) => esc(r.alt ? `"${r.alt}"` : 'This photo');
+      const by = (r) => (r.credit ? ` <span style="color:#666">by ${esc(r.credit)}</span>` : '');
       if (action === 'reject') {
         const rejected = await votdReadJson(env, 'votd_rejected', {});
         rejected[slug] = { credit: rec.credit, alt: rec.alt, at: new Date().toISOString() };
         await votdWriteJson(env, 'votd_rejected', rejected);
-        return page('Blocked', `<p>${rec.credit || 'That photo'} will not be suggested again.</p>`);
+        return page('Photo blocked',
+          `<p>${desc(rec)}${by(rec)} will not be suggested again.</p>` +
+          `<p style="font-size:13px;color:#666">Only this photo is blocked — other photos ` +
+          `${rec.credit ? 'by ' + esc(rec.credit) + ' ' : ''}can still appear.</p>`);
       }
       const queue = await votdReadJson(env, 'votd_queue', []);
       if (queue.some((q) => q.slug === slug)) {
-        return page('Already queued', `<p>${rec.credit || 'That photo'} is already in the queue (${queue.length} waiting).</p>`);
+        return page('Already queued', `<p>${desc(rec)}${by(rec)} is already in the queue (${queue.length} waiting).</p>`);
       }
       const used = await votdReadJson(env, 'votd_used', {});
       if (used[slug]) {
-        return page('Already used', `<p>${rec.credit || 'That photo'} ran on ${used[slug].date}. Not re-queued.</p>`);
+        return page('Already used', `<p>${desc(rec)}${by(rec)} ran on ${esc(used[slug].date)}. Not re-queued.</p>`);
       }
       queue.push({ ...rec, source: 'email', addedAt: new Date().toISOString() });
       await votdWriteJson(env, 'votd_queue', queue);
       return page('Queued',
-        `<img src="${String(rec.url).replace(/&w=\d+/, '&w=420')}" alt="" style="width:100%;border-radius:10px">` +
-        `<p>${rec.credit || 'Photo'} added — ${queue.length} now queued.</p>`);
+        `<img src="${esc(String(rec.url).replace(/&w=\d+/, '&w=420'))}" alt="" style="width:100%;border-radius:10px">` +
+        `<p>${desc(rec)}${by(rec)} added — ${queue.length} now queued.</p>`);
     }
 
     // ---- /admin/votd-chooser — send the chooser email on demand ----
