@@ -2314,19 +2314,26 @@ async function handleKoreanSearch(env, url, cors) {
 // Topics lean toward bright, clear-sky scenes (sunrise / golden hour / blue
 // sky / sunny) — the first line of defense against a gloomy overcast shot,
 // backed up by the isGloomy re-roll below.
+// Search terms are the ones that actually produced photos worth keeping —
+// field, pasture, sky, ocean, harvest, flower field — plus close neighbours.
+// The SUBJECT being agricultural (a field, a harvest) is fine and wanted; what
+// is not wanted is human construction in frame, which VOTD_MANMADE below
+// rejects.  That split matters: 'wheat field' as a topic with 'barn' as a
+// reject gives open grain under sky, where rejecting 'field' outright would
+// throw away the whole category.
 const VOTD_TOPICS = [
+  'open field tall grass blue sky',
+  'pasture rolling hills blue sky',
+  'blue sky white clouds sunlight',
+  'ocean horizon blue water sunny',
+  'harvest golden field sunlight',
+  'wildflower field blue sky',
   'wheat field golden sunrise clear sky',
-  'rolling pasture hills countryside blue sky',
-  'olive trees ancient landscape sunny',
-  'mountain valley sunrise clear sky',
-  'wildflower meadow sunny no people',
-  'calm lake reflection mountains blue sky',
-  'rolling green hills countryside sunny',
-  'lavender field provence sunshine',
-  'vineyard hills golden hour',
-  'desert canyon landscape sunrise',
-  'forest light rays peaceful sunbeam',
-  'coastal cliffs ocean horizon sunny'
+  'grassland horizon sunny',
+  'sea waves coastline clear sky',
+  'meadow wildflowers sunshine',
+  'calm lake reflection sky',
+  'coastal ocean cliffs sunny'
 ];
 
 // Anything in the photo's description/tags that hints at a person being in
@@ -2356,6 +2363,39 @@ const votdHasPeople = (pd) =>
   VOTD_PEOPLE_KEYWORDS.some(k => new RegExp(`\\b${k}\\b`).test(votdMetaText(pd)));
 const votdIsGloomy = (pd) =>
   VOTD_GLOOMY_KEYWORDS.some(k => new RegExp(`\\b${k}\\b`).test(votdMetaText(pd)));
+
+// Human construction in frame.  Deliberately NOT 'field' / 'pasture' /
+// 'harvest' / 'farm land as a subject' — an open grain field under sky is
+// exactly what we want; a barn, a fence line, or a village in the shot is not.
+// Listing 'farm' itself would reject most harvest photos on their tags alone,
+// so the structures are named instead of the land use.
+const VOTD_MANMADE_KEYWORDS = [
+  'barn','house','houses','building','buildings','village','town','city','urban',
+  'street','road','highway','fence','wall','gate','tractor','windmill','mill',
+  'church','tower','bridge','boat','ship','dock','pier','lighthouse','ruins',
+  'castle','architecture','roof','cabin','hut','shed','car','vehicle','train',
+  'pylon','powerline','rooftop','skyline','bench','fencepost'
+];
+const votdIsManmade = (pd) =>
+  VOTD_MANMADE_KEYWORDS.some(k => new RegExp(`\\b${k}\\b`).test(votdMetaText(pd)));
+
+// A photo's stable identity across the queue, the used log, and the reject
+// list.  The Unsplash image slug is present in every stored `url`, including
+// for photos rolled at random where the short id was never captured.
+const votdSlug = (url) => (String(url || '').match(/photo-[\w-]+/) || [null])[0];
+
+/** Read a JSON KV key, defaulting rather than throwing on absent/corrupt. */
+async function votdReadJson(env, key, fallback) {
+  if (!env.COMMENTARY_KV) return fallback;
+  const raw = await env.COMMENTARY_KV.get(key);
+  if (raw === null) return fallback;
+  try { return JSON.parse(raw); } catch { return fallback; }
+}
+/** Queue / used / rejected are long-lived — written without a TTL. */
+async function votdWriteJson(env, key, value) {
+  if (!env.COMMENTARY_KV) return;
+  await env.COMMENTARY_KV.put(key, JSON.stringify(value));
+}
 
 // Brightness gate — the keyword filters miss photos that are simply dark
 // (deep-shadow forest, dim sunset) without any 'gloomy' tag.  Unsplash
@@ -2396,20 +2436,38 @@ const votdFetchOnePhoto = async () => {
  * gloomy-tagged-but-bright shot that survived the retries is kept (better
  * than no photo).
  */
-async function votdRollPhoto(first) {
+async function votdRollPhoto(first, seen) {
+  // `seen` is a Set of slugs already used or explicitly rejected — a repeat is
+  // re-rolled like any other miss, so the daily photo keeps moving even once
+  // the good-topic pool starts repeating itself.
+  const isRepeat = (pd) => !!(seen && seen.has(votdSlug(pd?.urls?.regular)));
+  const unusable = (pd) =>
+    votdHasPeople(pd) || votdIsGloomy(pd) || votdTooDark(pd) || votdIsManmade(pd) || isRepeat(pd);
   let pd = first ?? await votdFetchOnePhoto();
   let attempts = 1;
-  while (pd && (votdHasPeople(pd) || votdIsGloomy(pd) || votdTooDark(pd)) && attempts < 6) {
+  while (pd && unusable(pd) && attempts < 8) {
     pd = await votdFetchOnePhoto();
     attempts++;
   }
-  if (pd && (votdHasPeople(pd) || votdTooDark(pd))) pd = null;
+  // People, darkness, construction and repeats are never acceptable; a
+  // gloomy-TAGGED but bright frame that survived the retries is still kept,
+  // as before.
+  if (pd && (votdHasPeople(pd) || votdTooDark(pd) || votdIsManmade(pd) || isRepeat(pd))) pd = null;
   if (!pd) return null;
+  return votdNormalize(pd);
+}
+
+/** Unsplash payload -> the record shape stored in KV and rendered by clients. */
+function votdNormalize(pd) {
+  const url = pd.urls?.regular || null;
   return {
-    url: pd.urls?.regular || null,
+    url,
     color: pd.color || '#555555',
     credit: pd.user?.name || null,
-    creditLink: pd.user?.links?.html || null
+    creditLink: pd.user?.links?.html || null,
+    slug: votdSlug(url),
+    id: pd.id || null,
+    alt: pd.alt_description || '',
   };
 }
 
@@ -2481,6 +2539,102 @@ function votdSafeEqual(a, b) {
  * this a no-op rather than an error — staging is the job that matters, and it
  * must not fail because mail is unconfigured.
  */
+/** Roll `n` distinct, acceptable candidates for the daily chooser email. */
+async function votdRollCandidates(n, seen, env) {
+  const picks = [];
+  const taken = new Set(seen);
+  for (let i = 0; i < n * 6 && picks.length < n; i++) {
+    const pd = await votdFetchOnePhoto();
+    if (!pd || !pd.urls) continue;
+    if (votdHasPeople(pd) || votdIsGloomy(pd) || votdTooDark(pd) || votdIsManmade(pd)) continue;
+    const slug = votdSlug(pd.urls.regular);
+    if (!slug || taken.has(slug)) continue;
+    taken.add(slug);
+    picks.push(votdNormalize(pd));
+  }
+  // Parked so the emailed links can resolve a slug back to a full record —
+  // the email itself carries only slugs, never whole photo objects in a URL.
+  await votdWriteJson(env, 'votd_candidates', picks);
+  return picks;
+}
+
+/** HMAC for a one-tap email action.  Scoped to the action AND its value, so a
+ *  token minted to queue one photo cannot be replayed to reject another. */
+async function votdActionToken(action, value, env) {
+  if (!env.ADMIN_SECRET) return '';
+  const key = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(env.ADMIN_SECRET),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`votd-${action}:${value}`));
+  return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 32);
+}
+
+/** The noon chooser email: what is staged for tomorrow, ten candidates to
+ *  queue or block, and the current queue so the backlog is visible. */
+async function votdSendChooserEmail(dateET, staged, env) {
+  if (!env.RESEND_KEY || !env.VOTD_EMAIL_TO || !env.VOTD_EMAIL_FROM) return;
+  const origin = env.VOTD_PUBLIC_ORIGIN || VOTD_ORIGIN_FALLBACK;
+  const esc = (v) => String(v ?? '').replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+  const thumb = (u) => esc(String(u).replace(/&w=\d+/, '&w=400'));
+
+  const usedMap = await votdReadJson(env, 'votd_used', {});
+  const rejectedMap = await votdReadJson(env, 'votd_rejected', {});
+  const queue = await votdReadJson(env, 'votd_queue', []);
+  const seen = new Set([...Object.keys(usedMap || {}), ...Object.keys(rejectedMap || {}), ...(queue || []).map(q => q.slug)]);
+  const cands = await votdRollCandidates(10, seen, env);
+
+  const rows = [];
+  for (const c of cands) {
+    const qTok = await votdActionToken('queue', c.slug, env);
+    const rTok = await votdActionToken('reject', c.slug, env);
+    rows.push(
+      `<tr><td style="padding:0 0 18px">` +
+      `<img src="${thumb(c.url)}" alt="" style="width:100%;max-width:520px;border-radius:10px;display:block">` +
+      `<p style="font-size:12px;color:#666;margin:6px 0 8px">${esc(c.credit || 'Unknown')} · ${esc(c.color)} · ${esc(c.alt.slice(0, 60))}</p>` +
+      `<a href="${origin}/votd/queue-add?slug=${encodeURIComponent(c.slug)}&t=${qTok}" ` +
+      `style="display:inline-block;background:#111;color:#fff;padding:8px 14px;border-radius:7px;` +
+      `text-decoration:none;font-size:13px;margin-right:8px">Add to queue</a>` +
+      `<a href="${origin}/votd/reject?slug=${encodeURIComponent(c.slug)}&t=${rTok}" ` +
+      `style="display:inline-block;background:#eee;color:#900;padding:8px 14px;border-radius:7px;` +
+      `text-decoration:none;font-size:13px">✕ Never show</a>` +
+      `</td></tr>`
+    );
+  }
+
+  const queueList = (queue || []).length
+    ? `<ol style="font-size:13px;color:#333;padding-left:18px;margin:0 0 20px">` +
+      queue.map(q => `<li style="margin-bottom:4px">${esc(q.credit || 'Unknown')} — ${esc((q.alt || '').slice(0, 55))}</li>`).join('') +
+      `</ol>`
+    : `<p style="font-size:13px;color:#900;margin:0 0 20px">Queue is empty — tomorrow will auto-roll.</p>`;
+
+  const stagedBlock = staged
+    ? `<img src="${thumb(staged.url)}" alt="" style="width:100%;max-width:520px;border-radius:10px;display:block">` +
+      `<p style="font-size:12px;color:#666;margin:6px 0 20px">${esc(staged.credit || 'Unknown')} · ${esc(staged.color)}</p>`
+    : `<p style="font-size:13px;color:#900;margin:0 0 20px">Nothing staged — midnight will roll on its own.</p>`;
+
+  const html =
+    `<div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:560px">` +
+    `<p style="font-size:15px;margin:0 0 10px"><b>Tomorrow (${esc(dateET)})</b></p>` +
+    stagedBlock +
+    `<p style="font-size:15px;margin:0 0 8px"><b>Queued (${(queue || []).length})</b></p>` +
+    queueList +
+    `<p style="font-size:15px;margin:0 0 12px"><b>Add to the queue</b> — tap as many as you like; ` +
+    `each is added on its own, so you can pick several.</p>` +
+    `<table style="width:100%;border-collapse:collapse">${rows.join('')}</table>` +
+    `</div>`;
+
+  await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${env.RESEND_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from: env.VOTD_EMAIL_FROM, to: [env.VOTD_EMAIL_TO],
+      subject: `VOTD — ${esc(dateET)} staged, ${(queue || []).length} queued, 10 to choose from`,
+      html
+    })
+  }).catch(() => {});
+}
+
 async function votdSendPreviewEmail(dateET, photo, env) {
   if (!env.RESEND_KEY || !env.VOTD_EMAIL_TO || !env.VOTD_EMAIL_FROM) return;
   const origin = env.VOTD_PUBLIC_ORIGIN || VOTD_ORIGIN_FALLBACK;
@@ -2532,7 +2686,34 @@ async function votdSendPreviewEmail(dateET, photo, env) {
  * rolling a fresh one.  No change to the read path was needed.
  */
 async function votdStagePhoto(dateET, env) {
-  const photo = await votdRollPhoto(null);
+  // An approved photo waiting in the queue always wins over a fresh roll —
+  // that is the whole point of queueing.  Taken from the head and removed, so
+  // the same photo can never be staged twice even if staging runs again.
+  const queue = await votdReadJson(env, 'votd_queue', []);
+  if (Array.isArray(queue) && queue.length) {
+    const next = queue.shift();
+    if (env.COMMENTARY_KV) {
+      await env.COMMENTARY_KV.put(
+        `votdphoto2_${dateET}`,
+        JSON.stringify({ url: next.url, color: next.color, credit: next.credit, creditLink: next.creditLink }),
+        { expirationTtl: votdSecondsUntilEndOf(dateET) }
+      );
+      await votdWriteJson(env, 'votd_queue', queue);
+      const used = await votdReadJson(env, 'votd_used', {});
+      used[next.slug || votdSlug(next.url)] = { date: dateET, credit: next.credit, note: 'from queue' };
+      await votdWriteJson(env, 'votd_used', used);
+    }
+    return next;
+  }
+
+  const usedMap = await votdReadJson(env, 'votd_used', {});
+  const rejectedMap = await votdReadJson(env, 'votd_rejected', {});
+  const seen = new Set([...Object.keys(usedMap || {}), ...Object.keys(rejectedMap || {})]);
+  const photo = await votdRollPhoto(null, seen);
+  if (photo && env.COMMENTARY_KV) {
+    usedMap[photo.slug] = { date: dateET, credit: photo.credit, note: 'auto-rolled' };
+    await votdWriteJson(env, 'votd_used', usedMap);
+  }
   // Only stage a REAL photo.  votdRollPhoto returns null both when every roll
   // was a people-shot / too dark AND when Unsplash could not be reached at
   // all, and staging that null would pin a solid-colour card to the whole day
@@ -2821,6 +3002,50 @@ Only output valid JSON, no markdown, no preamble.`;
         `text-decoration:none;font-size:14px">Get a different photo</a></p>`);
     }
 
+    // ---- /votd/queue-add and /votd/reject — one-tap actions from the
+    // chooser email.  Like /votd/reroll, these MUST precede the /votd block
+    // below, which matches on startsWith('/votd').  Each link carries an HMAC
+    // scoped to its action AND slug, so a queue link cannot be replayed as a
+    // reject, and neither works without ADMIN_SECRET. ----
+    if (path === '/votd/queue-add' || path === '/votd/reject') {
+      const action = path === '/votd/queue-add' ? 'queue' : 'reject';
+      const slug = url.searchParams.get('slug') || '';
+      const token = url.searchParams.get('t') || '';
+      const page = (title, body) => new Response(
+        `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">` +
+        `<div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:520px;margin:40px auto;padding:0 18px">` +
+        `<h2 style="font-size:19px">${title}</h2>${body}</div>`,
+        { headers: { ...cors, 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } }
+      );
+      const expected = await votdActionToken(action, slug, env);
+      if (!env.ADMIN_SECRET || !slug || !votdSafeEqual(token, expected)) {
+        return page('Link not valid', '<p>That link is expired or malformed.</p>');
+      }
+      const cands = await votdReadJson(env, 'votd_candidates', []);
+      const rec = (cands || []).find((c) => c.slug === slug);
+      if (!rec) return page('Photo not found', '<p>That photo is no longer in the current suggestion set.</p>');
+
+      if (action === 'reject') {
+        const rejected = await votdReadJson(env, 'votd_rejected', {});
+        rejected[slug] = { credit: rec.credit, alt: rec.alt, at: new Date().toISOString() };
+        await votdWriteJson(env, 'votd_rejected', rejected);
+        return page('Blocked', `<p>${rec.credit || 'That photo'} will not be suggested again.</p>`);
+      }
+      const queue = await votdReadJson(env, 'votd_queue', []);
+      if (queue.some((q) => q.slug === slug)) {
+        return page('Already queued', `<p>${rec.credit || 'That photo'} is already in the queue (${queue.length} waiting).</p>`);
+      }
+      const used = await votdReadJson(env, 'votd_used', {});
+      if (used[slug]) {
+        return page('Already used', `<p>${rec.credit || 'That photo'} ran on ${used[slug].date}. Not re-queued.</p>`);
+      }
+      queue.push({ ...rec, source: 'email', addedAt: new Date().toISOString() });
+      await votdWriteJson(env, 'votd_queue', queue);
+      return page('Queued',
+        `<img src="${String(rec.url).replace(/&w=\d+/, '&w=420')}" alt="" style="width:100%;border-radius:10px">` +
+        `<p>${rec.credit || 'Photo'} added — ${queue.length} now queued.</p>`);
+    }
+
     // ---- /votd/next — read tomorrow's STAGED photo (public, read-only) ----
     // MUST be tested before the /votd block below: that block matches with
     // startsWith('/votd'), so it would otherwise swallow this path.
@@ -3049,7 +3274,11 @@ Only output valid JSON, no markdown, no preamble.`;
     if (event.cron === '0 16 * * *') {
       const date = votdDateET(1);
       ctx.waitUntil(
-        votdStagePhoto(date, env).then((photo) => votdSendPreviewEmail(date, photo, env))
+        // Stage tomorrow (from the queue if anything is waiting), then send the
+        // chooser: what is staged, the remaining queue, and ten fresh
+        // candidates to add or block.  votdSendPreviewEmail is kept for the
+        // /votd/reroll flow, which still previews a single photo.
+        votdStagePhoto(date, env).then((photo) => votdSendChooserEmail(date, photo, env))
       );
       return;
     }
