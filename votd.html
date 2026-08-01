@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>VOTD picker</title>
+<!--
+  Unlisted admin page for choosing Verse-of-the-Day photos.
+
+  Not linked from anywhere on the site and excluded from indexing, but that is
+  obscurity, not security — the actual gate is ADMIN_SECRET, which every API
+  call carries in an X-Admin-Secret header (never a query param, so it stays
+  out of URLs and access logs).  The secret is held in localStorage on this
+  device only; nothing here is served by the worker, so a visitor without the
+  secret gets an empty shell and a 403.
+-->
+<style>
+  :root{
+    --bg:#f6f7f8; --panel:#fff; --line:#e3e6e9; --ink:#14181c; --dim:#6b7480;
+    --accent:#14181c; --danger:#b3261e; --ok:#1c6b3f;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{ --bg:#111417; --panel:#181c20; --line:#272c31; --ink:#e9edf1; --dim:#9aa4ae; --accent:#e9edf1; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  header{display:flex;align-items:baseline;gap:14px;padding:18px 22px;border-bottom:1px solid var(--line)}
+  h1{font-size:17px;margin:0;font-weight:640;letter-spacing:-.01em}
+  .stats{font-size:13px;color:var(--dim)}
+  .wrap{display:grid;grid-template-columns:1fr 300px;gap:22px;padding:22px;align-items:start}
+  @media (max-width:900px){ .wrap{grid-template-columns:1fr} }
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;
+        display:flex;flex-direction:column;transition:opacity .18s,transform .18s}
+  .card.busy{opacity:.35;transform:scale(.98);pointer-events:none}
+  .card img{width:100%;aspect-ratio:3/2;object-fit:cover;display:block;background:var(--line)}
+  .meta{padding:9px 11px;font-size:12px;color:var(--dim);flex:1;
+        display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .row{display:flex;gap:8px;padding:0 11px 11px}
+  button{font:inherit;font-size:13px;border:1px solid var(--line);border-radius:8px;
+         padding:7px 12px;cursor:pointer;background:var(--panel);color:var(--ink)}
+  button.add{background:var(--accent);color:var(--bg);border-color:var(--accent);flex:1;font-weight:560}
+  button.x{color:var(--danger);width:42px;flex:none}
+  button:disabled{opacity:.5;cursor:default}
+
+  aside{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;
+        position:sticky;top:22px}
+  aside h2{font-size:13px;margin:0 0 10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)}
+  .q{display:flex;gap:9px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+  .q:last-child{border-bottom:0}
+  .q img{width:52px;height:36px;object-fit:cover;border-radius:5px;flex:none;background:var(--line)}
+  .q .t{flex:1;font-size:12px;line-height:1.35;overflow:hidden;
+        display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .q .n{color:var(--dim);font-variant-numeric:tabular-nums;font-size:11px;width:15px;flex:none}
+  .q button{padding:2px 7px;font-size:12px;color:var(--dim)}
+  .empty{color:var(--dim);font-size:13px;padding:6px 0}
+  .msg{padding:22px;color:var(--dim)}
+  .err{color:var(--danger)}
+</style>
+</head>
+<body>
+<header>
+  <h1>VOTD picker</h1>
+  <span class="stats" id="stats"></span>
+</header>
+<div id="boot" class="msg">Loading…</div>
+<div class="wrap" id="wrap" hidden>
+  <main><div class="grid" id="grid"></div></main>
+  <aside>
+    <h2>Queue — <span id="qn">0</span></h2>
+    <div id="queue"></div>
+  </aside>
+</div>
+
+<script>
+const WORKER = 'https://krengbible.pauljkim22.workers.dev';
+const KEY = 'krengbible_admin_secret';
+
+function secret(){
+  let s = localStorage.getItem(KEY);
+  if(!s){
+    s = prompt('Admin secret');
+    if(s) localStorage.setItem(KEY, s.trim());
+  }
+  return (s || '').trim();
+}
+
+async function call(path){
+  const r = await fetch(WORKER + path, { headers: { 'X-Admin-Secret': secret() } });
+  if(r.status === 403){
+    localStorage.removeItem(KEY);          // wrong secret — don't keep re-sending it
+    throw new Error('Rejected. Reload and re-enter the secret.');
+  }
+  if(!r.ok) throw new Error('Worker ' + r.status);
+  return r.json();
+}
+
+// Ask Unsplash for a bigger rendition than the stored url carries.  The saved
+// url is w=1080; the grid shows these at ~300–500px CSS, so w=900 keeps them
+// crisp on a 2x display without pulling full-size originals for ten photos.
+const big = (u, w) => String(u).replace(/&w=\d+/, '&w=' + w);
+
+function render(b){
+  document.getElementById('boot').hidden = true;
+  document.getElementById('wrap').hidden = false;
+  document.getElementById('stats').textContent =
+    b.candidates.length + ' shown · ' + b.queue.length + ' queued · ' +
+    b.usedCount + ' used · ' + b.rejectedCount + ' blocked';
+
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  for(const c of b.candidates){
+    const el = document.createElement('div');
+    el.className = 'card';
+    el.innerHTML =
+      '<img loading="lazy" src="' + big(c.url, 900) + '" alt="">' +
+      '<div class="meta">' + (c.alt || 'Untitled') + ' — ' + (c.credit || 'Unknown') + '</div>' +
+      '<div class="row"><button class="add">Add to queue</button><button class="x" title="Never show this photo">✕</button></div>';
+    el.querySelector('.add').onclick = () => act(el, 'queue', c.slug);
+    el.querySelector('.x').onclick   = () => act(el, 'reject', c.slug);
+    grid.appendChild(el);
+  }
+
+  const q = document.getElementById('queue');
+  document.getElementById('qn').textContent = b.queue.length;
+  q.innerHTML = '';
+  if(!b.queue.length){ q.innerHTML = '<div class="empty">Empty — tomorrow will auto-roll.</div>'; return; }
+  b.queue.forEach((item, i) => {
+    const el = document.createElement('div');
+    el.className = 'q';
+    el.innerHTML =
+      '<span class="n">' + (i + 1) + '</span>' +
+      '<img src="' + big(item.url, 200) + '" alt="">' +
+      '<span class="t">' + (item.alt || 'Untitled') + '</span>' +
+      '<button title="Remove from queue">✕</button>';
+    el.querySelector('button').onclick = () => act(el, 'unqueue', item.slug);
+    q.appendChild(el);
+  });
+}
+
+async function act(el, action, slug){
+  el.classList.add('busy');
+  try{ render(await call('/admin/votd-act?action=' + action + '&slug=' + encodeURIComponent(slug))); }
+  catch(e){ el.classList.remove('busy'); alert(e.message); }
+}
+
+(async () => {
+  try{ render(await call('/admin/votd-board')); }
+  catch(e){ document.getElementById('boot').innerHTML = '<span class="err">' + e.message + '</span>'; }
+})();
+</script>
+</body>
+</html>

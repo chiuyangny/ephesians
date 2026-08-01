@@ -2558,6 +2558,45 @@ async function votdRollCandidates(n, seen, env) {
   return picks;
 }
 
+/**
+ * The picker board: exactly `n` live candidates, plus the queue.
+ *
+ * Candidates persist in KV rather than being re-rolled per request, so the
+ * grid is stable while you look at it — only the photo you act on changes.
+ * Anything that has since been queued, used, or blocked is dropped and
+ * backfilled, which is what keeps ten in view after an X.
+ */
+async function votdBoard(env, n = 10) {
+  const used = await votdReadJson(env, 'votd_used', {});
+  const rejected = await votdReadJson(env, 'votd_rejected', {});
+  const queue = await votdReadJson(env, 'votd_queue', []);
+  const seen = new Set([
+    ...Object.keys(used || {}), ...Object.keys(rejected || {}),
+    ...(queue || []).map((q) => q.slug),
+  ]);
+
+  let cands = (await votdReadJson(env, 'votd_candidates', []) || [])
+    .filter((c) => c && c.slug && !seen.has(c.slug));
+
+  const have = new Set(cands.map((c) => c.slug));
+  for (let i = 0; i < n * 8 && cands.length < n; i++) {
+    const pd = await votdFetchOnePhoto();
+    if (!pd || !pd.urls) continue;
+    if (votdHasPeople(pd) || votdIsGloomy(pd) || votdTooDark(pd) || votdIsManmade(pd)) continue;
+    const slug = votdSlug(pd.urls.regular);
+    if (!slug || seen.has(slug) || have.has(slug)) continue;
+    have.add(slug);
+    cands.push(votdNormalize(pd));
+  }
+  await votdWriteJson(env, 'votd_candidates', cands);
+  return {
+    candidates: cands,
+    queue: queue || [],
+    usedCount: Object.keys(used || {}).length,
+    rejectedCount: Object.keys(rejected || {}).length,
+  };
+}
+
 /** HMAC for a one-tap email action.  Scoped to the action AND its value, so a
  *  token minted to queue one photo cannot be replayed to reject another. */
 async function votdActionToken(action, value, env) {
@@ -2736,6 +2775,11 @@ export default {
     const cors = {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, OPTIONS",
+      // The VOTD picker page on krengbible.com sends the admin secret as a
+      // request header rather than a query param, so it never lands in a URL
+      // or an access log.  A custom header makes the request preflighted,
+      // which fails without this.
+      "Access-Control-Allow-Headers": "X-Admin-Secret, Content-Type",
       "Cache-Control": "public, max-age=86400"
     };
     if (request.method === "OPTIONS") return new Response(null, { headers: cors });
@@ -3057,6 +3101,53 @@ Only output valid JSON, no markdown, no preamble.`;
       return page('Queued',
         `<img src="${esc(String(rec.url).replace(/&w=\d+/, '&w=420'))}" alt="" style="width:100%;border-radius:10px">` +
         `<p>${desc(rec)}${by(rec)} added — ${queue.length} now queued.</p>`);
+    }
+
+    // ---- /admin/votd-board and /admin/votd-act — the picker page's API ----
+    // Both are secret-gated and return the SAME board shape, so the page can
+    // render one response type and every action is a single round trip that
+    // leaves the grid topped back up to ten.
+    if (path === '/admin/votd-board' || path === '/admin/votd-act') {
+      const secret = request.headers.get('X-Admin-Secret') || url.searchParams.get('secret');
+      const json = (obj, status = 200) => new Response(JSON.stringify(obj), {
+        status, headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
+      });
+      if (!env.ADMIN_SECRET || secret !== env.ADMIN_SECRET) return json({ error: 'forbidden' }, 403);
+
+      if (path === '/admin/votd-act') {
+        const action = url.searchParams.get('action');
+        const slug = url.searchParams.get('slug') || '';
+        // A queued photo is deliberately absent from the candidate grid, so
+        // unqueue has to resolve against the queue instead — looking only in
+        // candidates would make undo impossible for the exact photos it is
+        // meant to undo.
+        const cands = await votdReadJson(env, 'votd_candidates', []);
+        const queued = await votdReadJson(env, 'votd_queue', []);
+        const rec = (cands || []).find((c) => c.slug === slug)
+          || (queued || []).find((q) => q.slug === slug);
+        if (!rec) return json({ error: 'unknown slug' }, 400);
+
+        if (action === 'reject') {
+          const rejected = await votdReadJson(env, 'votd_rejected', {});
+          rejected[slug] = { credit: rec.credit, alt: rec.alt, at: new Date().toISOString() };
+          await votdWriteJson(env, 'votd_rejected', rejected);
+        } else if (action === 'queue') {
+          const queue = await votdReadJson(env, 'votd_queue', []);
+          const used = await votdReadJson(env, 'votd_used', {});
+          if (!queue.some((q) => q.slug === slug) && !used[slug]) {
+            queue.push({ ...rec, source: 'picker', addedAt: new Date().toISOString() });
+            await votdWriteJson(env, 'votd_queue', queue);
+          }
+        } else if (action === 'unqueue') {
+          // Undo, for a mis-tap.  Removing from the queue does NOT block the
+          // photo — it simply goes back to being suggestible.
+          const queue = await votdReadJson(env, 'votd_queue', []);
+          await votdWriteJson(env, 'votd_queue', queue.filter((q) => q.slug !== slug));
+        } else {
+          return json({ error: 'bad action' }, 400);
+        }
+      }
+      return json(await votdBoard(env, 10));
     }
 
     // ---- /admin/votd-chooser — send the chooser email on demand ----
