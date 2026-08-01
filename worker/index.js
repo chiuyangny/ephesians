@@ -3046,6 +3046,31 @@ Only output valid JSON, no markdown, no preamble.`;
         `<p>${rec.credit || 'Photo'} added — ${queue.length} now queued.</p>`);
     }
 
+    // ---- /admin/votd-chooser — send the chooser email on demand ----
+    // The cron sends it once a day at noon; this exists so the mail path can
+    // be tested (and the queue reviewed) without waiting for 16:00 UTC.  Does
+    // NOT stage anything — it reports whatever is already staged for the
+    // target date, so calling it repeatedly is harmless.
+    if (path === '/admin/votd-chooser') {
+      const secret = request.headers.get('X-Admin-Secret') || url.searchParams.get('secret');
+      if (!env.ADMIN_SECRET || secret !== env.ADMIN_SECRET) {
+        return new Response(JSON.stringify({ error: 'forbidden' }), {
+          status: 403, headers: { ...cors, 'Content-Type': 'application/json' }
+        });
+      }
+      const date = url.searchParams.get('date') || votdDateET(1);
+      const raw = env.COMMENTARY_KV ? await env.COMMENTARY_KV.get(`votdphoto2_${date}`) : null;
+      let staged = null;
+      try { staged = raw ? JSON.parse(raw) : null; } catch { staged = null; }
+      const mailable = !!(env.RESEND_KEY && env.VOTD_EMAIL_TO && env.VOTD_EMAIL_FROM);
+      await votdSendChooserEmail(date, staged, env);
+      const queue = await votdReadJson(env, 'votd_queue', []);
+      return new Response(JSON.stringify({
+        date, staged: !!staged, queued: (queue || []).length, mailable,
+        note: mailable ? 'email sent' : 'RESEND_KEY / VOTD_EMAIL_FROM / VOTD_EMAIL_TO not all set — nothing sent'
+      }), { headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
+    }
+
     // ---- /votd/next — read tomorrow's STAGED photo (public, read-only) ----
     // MUST be tested before the /votd block below: that block matches with
     // startsWith('/votd'), so it would otherwise swallow this path.
