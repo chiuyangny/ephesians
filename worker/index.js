@@ -3421,11 +3421,15 @@ Only output valid JSON, no markdown, no preamble.`;
     if (event.cron === '0 16 * * *') {
       const date = votdDateET(1);
       ctx.waitUntil(
-        // Stage tomorrow (from the queue if anything is waiting), then send the
-        // chooser: what is staged, the remaining queue, and ten fresh
-        // candidates to add or block.  votdSendPreviewEmail is kept for the
-        // /votd/reroll flow, which still previews a single photo.
-        votdStagePhoto(date, env).then((photo) => votdSendChooserEmail(date, photo, env))
+        // Stage tomorrow, from the queue if anything is waiting.
+        //
+        // The daily email is OFF: the picker page at krengbible.com/votd.html
+        // does the same job better — full-resolution photos, backfill as you
+        // act, and a reorderable queue — so a ten-photo email every day is
+        // just noise.  Nothing about the email path was deleted: re-enable by
+        // chaining .then((photo) => votdSendChooserEmail(date, photo, env))
+        // here, and /admin/votd-chooser still sends one on demand.
+        votdStagePhoto(date, env)
       );
       return;
     }

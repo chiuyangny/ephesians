@@ -55,7 +55,7 @@
   .q.drag{opacity:.4;cursor:grabbing}
   .q.over{border-top:2px solid var(--accent)}
   .q img{width:52px;height:36px;object-fit:cover;border-radius:5px;flex:none;background:var(--line);
-         pointer-events:none}
+         cursor:zoom-in}
   .q .t{flex:1;font-size:12px;line-height:1.35;overflow:hidden;pointer-events:none;
         display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
   .q .n{color:var(--dim);font-variant-numeric:tabular-nums;font-size:11px;width:15px;flex:none;
@@ -63,6 +63,13 @@
   .q button{padding:1px 5px;font-size:11px;color:var(--dim);line-height:1.2}
   .q .mv{display:flex;flex-direction:column;gap:2px;flex:none}
   .hint{font-size:11px;color:var(--dim);margin:0 0 8px}
+
+  #lb{position:fixed;inset:0;background:rgba(0,0,0,.86);display:none;z-index:50;
+      align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
+  #lb.on{display:flex}
+  #lb img{max-width:100%;max-height:88vh;border-radius:10px;display:block}
+  #lb .cap{position:absolute;bottom:16px;left:0;right:0;text-align:center;
+           color:#fff;font-size:13px;opacity:.85;padding:0 24px}
   .empty{color:var(--dim);font-size:13px;padding:6px 0}
   .msg{padding:22px;color:var(--dim)}
   .err{color:var(--danger)}
@@ -74,6 +81,7 @@
   <span class="stats" id="stats"></span>
 </header>
 <div id="boot" class="msg">Loading…</div>
+<div id="lb"><img alt=""><div class="cap"></div></div>
 <div class="wrap" id="wrap" hidden>
   <main><div class="grid" id="grid"></div></main>
   <aside>
@@ -156,8 +164,22 @@ function render(b){
     el.querySelector('.rm').onclick = () => act(el, 'unqueue', item.slug);
     el.querySelector('.up').onclick = () => nudge(item.slug, -1);
     el.querySelector('.dn').onclick = () => nudge(item.slug, +1);
-    el.ondragstart = (e) => { dragging = item.slug; el.classList.add('drag');
-                              e.dataTransfer.effectAllowed = 'move'; };
+    // An <img> is natively draggable and would hijack the row's drag with an
+    // image drag of its own, so it opts out — the row still starts the drag
+    // because the event bubbles to the draggable parent.  That leaves the
+    // image free to take a click for the lightbox.
+    const thumbEl = el.querySelector('img');
+    thumbEl.draggable = false;
+    thumbEl.onclick = (e) => { e.stopPropagation(); lightbox(item); };
+    el.ondragstart = (e) => {
+      dragging = item.slug;
+      el.classList.add('drag');
+      e.dataTransfer.effectAllowed = 'move';
+      // Required: Firefox (and others) refuse to start a drag at all unless
+      // the payload is set.  Its absence is why dragging did nothing while
+      // the ▲▼ buttons worked.
+      e.dataTransfer.setData('text/plain', item.slug);
+    };
     el.ondragend   = () => { dragging = null; el.classList.remove('drag');
                              [...q.children].forEach(c => c.classList.remove('over')); };
     el.ondragover  = (e) => { e.preventDefault(); if(item.slug !== dragging) el.classList.add('over'); };
@@ -167,6 +189,21 @@ function render(b){
     q.appendChild(el);
   });
 }
+
+// Full-size view for a queued photo — the 52px rail thumbnail is a locator,
+// not something you can judge a photo by.  Pulls w=1600 rather than reusing
+// the thumb, so enlarging actually shows more detail.
+function lightbox(item){
+  const lb = document.getElementById('lb');
+  lb.querySelector('img').src = big(item.url, 1600);
+  lb.querySelector('.cap').textContent =
+    (item.alt || 'Untitled') + ' — ' + (item.credit || 'Unknown');
+  lb.classList.add('on');
+}
+document.getElementById('lb').onclick = function(){ this.classList.remove('on'); };
+document.addEventListener('keydown', (e) => {
+  if(e.key === 'Escape') document.getElementById('lb').classList.remove('on');
+});
 
 // Reordering sends the WHOLE new order, which the worker accepts only if it is
 // a permutation of what is currently queued — so a stale tab gets a 409 and a
