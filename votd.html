@@ -61,7 +61,6 @@
   .q .n{color:var(--dim);font-variant-numeric:tabular-nums;font-size:11px;width:15px;flex:none;
         pointer-events:none}
   .q button{padding:1px 5px;font-size:11px;color:var(--dim);line-height:1.2}
-  .q .mv{display:flex;flex-direction:column;gap:2px;flex:none}
   .hint{font-size:11px;color:var(--dim);margin:0 0 8px}
 
   #lb{position:fixed;inset:0;background:rgba(0,0,0,.86);display:none;z-index:50;
@@ -147,7 +146,7 @@ function render(b){
   // Inside #queue, not before it — render() clears this container on every
   // action, and a sibling would stack up one copy per click.
   if(b.queue.length > 1){
-    q.innerHTML = '<p class="hint">Drag to reorder, or use ▲▼. Top of the list runs first.</p>';
+    q.innerHTML = '<p class="hint">Drag to reorder. Top of the list runs first. Click a thumbnail to enlarge.</p>';
   }
   b.queue.forEach((item, i) => {
     const el = document.createElement('div');
@@ -158,12 +157,8 @@ function render(b){
       '<span class="n">' + (i + 1) + '</span>' +
       '<img src="' + big(item.url, 200) + '" alt="">' +
       '<span class="t">' + (item.alt || 'Untitled') + '</span>' +
-      '<span class="mv"><button class="up" title="Move up">▲</button>' +
-      '<button class="dn" title="Move down">▼</button></span>' +
       '<button class="rm" title="Remove from queue">✕</button>';
     el.querySelector('.rm').onclick = () => act(el, 'unqueue', item.slug);
-    el.querySelector('.up').onclick = () => nudge(item.slug, -1);
-    el.querySelector('.dn').onclick = () => nudge(item.slug, +1);
     // An <img> is natively draggable and would hijack the row's drag with an
     // image drag of its own, so it opts out — the row still starts the drag
     // because the event bubbles to the draggable parent.  That leaves the
@@ -222,13 +217,6 @@ function commit(next){
 function moveTo(slug, beforeSlug){
   const next = order.filter(s => s !== slug);
   next.splice(next.indexOf(beforeSlug), 0, slug);
-  commit(next);
-}
-function nudge(slug, dir){
-  const i = order.indexOf(slug), j = i + dir;
-  if(i < 0 || j < 0 || j >= order.length) return;
-  const next = order.slice();
-  [next[i], next[j]] = [next[j], next[i]];
   commit(next);
 }
 

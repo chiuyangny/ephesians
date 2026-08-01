@@ -2724,7 +2724,54 @@ async function votdSendPreviewEmail(dateET, photo, env) {
  * non-null key, `needPhoto` is false, and it serves this photo instead of
  * rolling a fresh one.  No change to the read path was needed.
  */
+/**
+ * Record a photo as used, keeping enough of it to serve again.
+ *
+ * The log stores the WHOLE record — url, color, credit, creditLink, alt — not
+ * just a slug and a date.  Without the url a past photo is only a tombstone
+ * saying "don't suggest this", which is useless on the day the well runs dry.
+ * `dates` accumulates every run rather than being overwritten, so recycling
+ * can pick the least-recently-seen photo instead of an arbitrary one.
+ */
+async function votdMarkUsed(env, photo, dateET, note) {
+  const used = await votdReadJson(env, 'votd_used', {});
+  const slug = photo.slug || votdSlug(photo.url);
+  if (!slug) return;
+  const prev = used[slug] || {};
+  const dates = Array.isArray(prev.dates) ? prev.dates.slice() : (prev.date ? [prev.date] : []);
+  if (!dates.includes(dateET)) dates.push(dateET);
+  used[slug] = {
+    url: photo.url || prev.url || null,
+    color: photo.color || prev.color || '#555555',
+    credit: photo.credit ?? prev.credit ?? null,
+    creditLink: photo.creditLink ?? prev.creditLink ?? null,
+    alt: photo.alt || prev.alt || '',
+    dates,
+    date: dates[dates.length - 1],   // kept for anything reading the old shape
+    note,
+  };
+  await votdWriteJson(env, 'votd_used', used);
+}
+
+/** The least-recently-run past photo, for when nothing fresh is available. */
+function votdOldestUsed(usedMap, rejectedMap) {
+  const last = (e) => (Array.isArray(e.dates) && e.dates.length ? e.dates[e.dates.length - 1] : (e.date || ''));
+  return Object.entries(usedMap || {})
+    .filter(([slug, e]) => e && e.url && !(rejectedMap || {})[slug])
+    .sort((a, b) => (last(a[1]) < last(b[1]) ? -1 : last(a[1]) > last(b[1]) ? 1 : 0))
+    .map(([slug, e]) => ({ ...e, slug }))[0] || null;
+}
+
 async function votdStagePhoto(dateET, env) {
+  const write = async (photo) => {
+    if (!env.COMMENTARY_KV) return;
+    await env.COMMENTARY_KV.put(
+      `votdphoto2_${dateET}`,
+      JSON.stringify({ url: photo.url, color: photo.color, credit: photo.credit, creditLink: photo.creditLink }),
+      { expirationTtl: votdSecondsUntilEndOf(dateET) }
+    );
+  };
+
   // An approved photo waiting in the queue always wins over a fresh roll —
   // that is the whole point of queueing.  Taken from the head and removed, so
   // the same photo can never be staged twice even if staging runs again.
@@ -2732,15 +2779,9 @@ async function votdStagePhoto(dateET, env) {
   if (Array.isArray(queue) && queue.length) {
     const next = queue.shift();
     if (env.COMMENTARY_KV) {
-      await env.COMMENTARY_KV.put(
-        `votdphoto2_${dateET}`,
-        JSON.stringify({ url: next.url, color: next.color, credit: next.credit, creditLink: next.creditLink }),
-        { expirationTtl: votdSecondsUntilEndOf(dateET) }
-      );
+      await write(next);
       await votdWriteJson(env, 'votd_queue', queue);
-      const used = await votdReadJson(env, 'votd_used', {});
-      used[next.slug || votdSlug(next.url)] = { date: dateET, credit: next.credit, note: 'from queue' };
-      await votdWriteJson(env, 'votd_used', used);
+      await votdMarkUsed(env, next, dateET, 'from queue');
     }
     return next;
   }
@@ -2749,25 +2790,31 @@ async function votdStagePhoto(dateET, env) {
   const rejectedMap = await votdReadJson(env, 'votd_rejected', {});
   const seen = new Set([...Object.keys(usedMap || {}), ...Object.keys(rejectedMap || {})]);
   const photo = await votdRollPhoto(null, seen);
-  if (photo && env.COMMENTARY_KV) {
-    usedMap[photo.slug] = { date: dateET, credit: photo.credit, note: 'auto-rolled' };
-    await votdWriteJson(env, 'votd_used', usedMap);
-  }
+
   // Only stage a REAL photo.  votdRollPhoto returns null both when every roll
   // was a people-shot / too dark AND when Unsplash could not be reached at
   // all, and staging that null would pin a solid-colour card to the whole day
-  // over what might be a momentary outage at noon.  Writing nothing instead
-  // leaves the key absent, so midnight falls back to exactly the old
-  // behaviour: roll on first request.  The cost of a failed staging is
-  // therefore "no preview today", never "a worse photo tomorrow".
+  // over what might be a momentary outage at noon.
   if (photo && env.COMMENTARY_KV) {
-    await env.COMMENTARY_KV.put(
-      `votdphoto2_${dateET}`,
-      JSON.stringify(photo),
-      { expirationTtl: votdSecondsUntilEndOf(dateET) }
-    );
+    await write(photo);
+    await votdMarkUsed(env, photo, dateET, 'auto-rolled');
+    return photo;
   }
-  return photo;
+
+  // Nothing fresh survived the filters.  Rather than fall through to a solid
+  // colour card, re-run the photo that has gone the longest without being
+  // seen — a repeat from months ago beats no photograph at all, and this is
+  // the whole reason the log keeps full records.  Blocked photos stay blocked.
+  const recycled = votdOldestUsed(usedMap, rejectedMap);
+  if (recycled && env.COMMENTARY_KV) {
+    await write(recycled);
+    await votdMarkUsed(env, recycled, dateET, 'recycled');
+    return recycled;
+  }
+
+  // Genuinely nothing to serve — leave the key absent so midnight falls back
+  // to exactly the old behaviour: roll on first request.
+  return null;
 }
 
 export default {
