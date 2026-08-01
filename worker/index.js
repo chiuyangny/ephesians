@@ -2674,6 +2674,53 @@ async function votdSendChooserEmail(dateET, staged, env) {
   }).catch(() => {});
 }
 
+/**
+ * Nudge when the queue is nearly dry.  Sent AFTER staging, so the count is
+ * what remains for the days beyond tomorrow — at 1 there is a day of slack,
+ * at 0 the next day auto-rolls or recycles.
+ *
+ * Deliberately silent above the threshold: the whole reason the daily chooser
+ * email was turned off is that a mail you receive every day stops being read.
+ * This one only arrives when it needs an action.
+ */
+const VOTD_LOW_QUEUE = 2;
+async function votdWarnLowQueue(dateET, staged, env, forceCount) {
+  if (!env.RESEND_KEY || !env.VOTD_EMAIL_TO || !env.VOTD_EMAIL_FROM) return;
+  // `forceCount` exists only so the admin test route can exercise this exact
+  // function without touching the queue — an earlier version blanked
+  // votd_queue and restored it afterwards, which would have destroyed the
+  // real queue had the worker been killed mid-request.
+  const queue = await votdReadJson(env, 'votd_queue', []);
+  const n = typeof forceCount === 'number' ? forceCount : (queue || []).length;
+  if (n >= VOTD_LOW_QUEUE) return;
+
+  const esc = (v) => String(v ?? '').replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+  const picker = 'https://krengbible.com/votd.html';
+  const left = n === 0
+    ? 'The queue is now <b>empty</b>. After tomorrow the photo will be auto-rolled, or recycled from ones already used.'
+    : 'That leaves <b>1 photo</b> queued — enough for one more day.';
+  const stagedLine = staged
+    ? `<p style="font-size:14px;margin:0 0 6px">Tomorrow (${esc(dateET)}) is set: ` +
+      `${esc(staged.credit || 'Unknown')}${staged.alt ? ' — ' + esc(staged.alt) : ''}.</p>`
+    : `<p style="font-size:14px;margin:0 0 6px">Nothing could be staged for ${esc(dateET)}.</p>`;
+
+  await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${env.RESEND_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from: env.VOTD_EMAIL_FROM, to: [env.VOTD_EMAIL_TO],
+      subject: n === 0 ? 'VOTD queue is empty' : 'VOTD queue is down to 1',
+      html:
+        `<div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:520px">` +
+        stagedLine +
+        `<p style="font-size:14px;margin:0 0 18px">${left}</p>` +
+        `<a href="${picker}" style="display:inline-block;background:#111;color:#fff;` +
+        `padding:11px 18px;border-radius:8px;text-decoration:none;font-size:14px">Pick more photos</a>` +
+        `</div>`
+    })
+  }).catch(() => {});   // mail failing must never take the cron down with it
+}
+
 async function votdSendPreviewEmail(dateET, photo, env) {
   if (!env.RESEND_KEY || !env.VOTD_EMAIL_TO || !env.VOTD_EMAIL_FROM) return;
   const origin = env.VOTD_PUBLIC_ORIGIN || VOTD_ORIGIN_FALLBACK;
@@ -3215,6 +3262,36 @@ Only output valid JSON, no markdown, no preamble.`;
       return json(await votdBoard(env, 10));
     }
 
+    // ---- /admin/votd-lowcheck — run the low-queue check on demand ----
+    // Same call the cron makes, so it verifies the real path rather than a
+    // parallel one.  Silent when the queue is healthy; ?force=1 sends anyway,
+    // which is the only way to confirm mail delivery without first draining
+    // the queue.
+    if (path === '/admin/votd-lowcheck') {
+      const secret = request.headers.get('X-Admin-Secret') || url.searchParams.get('secret');
+      const json = (o, s = 200) => new Response(JSON.stringify(o), {
+        status: s, headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
+      });
+      if (!env.ADMIN_SECRET || secret !== env.ADMIN_SECRET) return json({ error: 'forbidden' }, 403);
+
+      const date = votdDateET(1);
+      const queue = await votdReadJson(env, 'votd_queue', []);
+      const n = (queue || []).length;
+      const raw = env.COMMENTARY_KV ? await env.COMMENTARY_KV.get(`votdphoto2_${date}`) : null;
+      let staged = null;
+      try { staged = raw ? JSON.parse(raw) : null; } catch { staged = null; }
+      const mailable = !!(env.RESEND_KEY && env.VOTD_EMAIL_TO && env.VOTD_EMAIL_FROM);
+
+      if (url.searchParams.get('force') === '1') {
+        // Real function, real email body — only the count is overridden, so
+        // the queue in KV is never written to.
+        await votdWarnLowQueue(date, staged, env, 0);
+        return json({ queued: n, threshold: VOTD_LOW_QUEUE, mailable, sent: mailable, forced: true });
+      }
+      await votdWarnLowQueue(date, staged, env);
+      return json({ queued: n, threshold: VOTD_LOW_QUEUE, mailable, sent: mailable && n < VOTD_LOW_QUEUE });
+    }
+
     // ---- /admin/votd-chooser — send the chooser email on demand ----
     // The cron sends it once a day at noon; this exists so the mail path can
     // be tested (and the queue reviewed) without waiting for 16:00 UTC.  Does
@@ -3476,7 +3553,10 @@ Only output valid JSON, no markdown, no preamble.`;
         // just noise.  Nothing about the email path was deleted: re-enable by
         // chaining .then((photo) => votdSendChooserEmail(date, photo, env))
         // here, and /admin/votd-chooser still sends one on demand.
-        votdStagePhoto(date, env)
+        //
+        // The one mail that DOES go out is the low-queue nudge, which stays
+        // silent unless the queue has fallen below VOTD_LOW_QUEUE.
+        votdStagePhoto(date, env).then((photo) => votdWarnLowQueue(date, photo, env))
       );
       return;
     }
