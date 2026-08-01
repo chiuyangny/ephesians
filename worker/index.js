@@ -3123,6 +3123,24 @@ Only output valid JSON, no markdown, no preamble.`;
         // meant to undo.
         const cands = await votdReadJson(env, 'votd_candidates', []);
         const queued = await votdReadJson(env, 'votd_queue', []);
+
+        // Reorder carries a whole slug list instead of one `slug`, so it is
+        // resolved before the single-record lookup below — which would
+        // otherwise reject it as an unknown slug.
+        if (action === 'reorder') {
+          // Whole new order, not a swap: idempotent, and it cannot half-apply.
+          // Refused unless the submitted slugs are exactly a permutation of
+          // what is queued right now, so a stale tab showing a photo that has
+          // since been staged or removed can't resurrect or drop it.
+          const want = (url.searchParams.get('slugs') || '').split(',').filter(Boolean);
+          const have = (queued || []).map((q) => q.slug);
+          const same = want.length === have.length && new Set(want).size === want.length
+            && want.every((s) => have.includes(s));
+          if (!same) return json({ error: 'queue changed since this view — reload' }, 409);
+          await votdWriteJson(env, 'votd_queue', want.map((s) => queued.find((q) => q.slug === s)));
+          return json(await votdBoard(env, 10));
+        }
+
         const rec = (cands || []).find((c) => c.slug === slug)
           || (queued || []).find((q) => q.slug === slug);
         if (!rec) return json({ error: 'unknown slug' }, 400);
