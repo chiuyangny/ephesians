@@ -2415,16 +2415,58 @@ const votdHexLuminance = (hex) => {
 };
 const votdTooDark = (pd) => votdHexLuminance(pd.color) < VOTD_DARK_THRESHOLD;
 
-const VOTD_UNSPLASH_KEY = 'jdBAQs04z5PyhHphjzUKIJCjl3SyMhQS2rSMfBLQOpk';
-const votdFetchOnePhoto = async () => {
+/**
+ * Fetch up to `count` random photos in ONE Unsplash call.
+ *
+ * Was one photo per request, which made the picker board cost up to 80 calls to
+ * fill ten slots — against a demo key's 50/hour ceiling, so a SINGLE board
+ * render could exhaust the whole quota and every later fetch 403'd.  Rejecting
+ * a few photos in a row guaranteed it, and because a failure returned null
+ * indistinguishably from "nothing matched", the board just came back short with
+ * no explanation.  `count` (max 30) collapses that to one or two calls.
+ *
+ * Returns the reason on failure so callers can say WHY rather than showing an
+ * unexplained short list.
+ */
+const votdFetchPhotos = async (count, env) => {
+  const key = env && env.VOTD_UNSPLASH_KEY;
+  // Was hardcoded here — in a public repo, so anyone could spend the quota.
+  // Set with: wrangler secret put VOTD_UNSPLASH_KEY
+  if (!key) return { photos: [], error: 'no-key' };
   const t = VOTD_TOPICS[Math.floor(Math.random() * VOTD_TOPICS.length)];
-  const r = await fetch(
-    `https://api.unsplash.com/photos/random?query=${encodeURIComponent(t)}` +
-    `&orientation=landscape&content_filter=high&client_id=${VOTD_UNSPLASH_KEY}`
-  );
-  if (!r.ok) return null;
-  return await r.json();
+  const n = Math.max(1, Math.min(30, count | 0));
+  let r;
+  try {
+    r = await fetch(
+      `https://api.unsplash.com/photos/random?query=${encodeURIComponent(t)}` +
+      `&orientation=landscape&content_filter=high&count=${n}&client_id=${key}`
+    );
+  } catch {
+    return { photos: [], error: 'network' };
+  }
+  if (r.status === 403) {
+    // Unsplash spends 403 for BOTH an exhausted quota and a bad key; the
+    // remaining-count header is what tells them apart.
+    const remaining = r.headers.get('x-ratelimit-remaining');
+    const limit = r.headers.get('x-ratelimit-limit');
+    return {
+      photos: [],
+      error: remaining === '0' ? 'rate-limit' : 'forbidden',
+      limit: limit ? Number(limit) : null,
+    };
+  }
+  if (!r.ok) return { photos: [], error: `http-${r.status}` };
+  let j;
+  try {
+    j = await r.json();
+  } catch {
+    return { photos: [], error: 'bad-json' };
+  }
+  // `count` makes the endpoint return an array; without it, a bare object.
+  return { photos: Array.isArray(j) ? j : [j], error: null };
 };
+
+const votdFetchOnePhoto = async (env) => (await votdFetchPhotos(1, env)).photos[0] || null;
 
 /**
  * Roll one acceptable VOTD photo, or null for the solid-color card.
@@ -2436,17 +2478,17 @@ const votdFetchOnePhoto = async () => {
  * gloomy-tagged-but-bright shot that survived the retries is kept (better
  * than no photo).
  */
-async function votdRollPhoto(first, seen) {
+async function votdRollPhoto(first, seen, env) {
   // `seen` is a Set of slugs already used or explicitly rejected — a repeat is
   // re-rolled like any other miss, so the daily photo keeps moving even once
   // the good-topic pool starts repeating itself.
   const isRepeat = (pd) => !!(seen && seen.has(votdSlug(pd?.urls?.regular)));
   const unusable = (pd) =>
     votdHasPeople(pd) || votdIsGloomy(pd) || votdTooDark(pd) || votdIsManmade(pd) || isRepeat(pd);
-  let pd = first ?? await votdFetchOnePhoto();
+  let pd = first ?? await votdFetchOnePhoto(env);
   let attempts = 1;
   while (pd && unusable(pd) && attempts < 8) {
-    pd = await votdFetchOnePhoto();
+    pd = await votdFetchOnePhoto(env);
     attempts++;
   }
   // People, darkness, construction and repeats are never acceptable; a
@@ -2543,14 +2585,21 @@ function votdSafeEqual(a, b) {
 async function votdRollCandidates(n, seen, env) {
   const picks = [];
   const taken = new Set(seen);
-  for (let i = 0; i < n * 6 && picks.length < n; i++) {
-    const pd = await votdFetchOnePhoto();
-    if (!pd || !pd.urls) continue;
-    if (votdHasPeople(pd) || votdIsGloomy(pd) || votdTooDark(pd) || votdIsManmade(pd)) continue;
-    const slug = votdSlug(pd.urls.regular);
-    if (!slug || taken.has(slug)) continue;
-    taken.add(slug);
-    picks.push(votdNormalize(pd));
+  // Batched: 30 per call rather than one, so filling this costs a couple of
+  // requests instead of dozens.  Bounded rounds so a quota failure returns
+  // promptly rather than retrying into a wall.
+  for (let round = 0; round < 3 && picks.length < n; round++) {
+    const { photos, error } = await votdFetchPhotos(30, env);
+    if (error) break;
+    for (const pd of photos) {
+      if (picks.length >= n) break;
+      if (!pd || !pd.urls) continue;
+      if (votdHasPeople(pd) || votdIsGloomy(pd) || votdTooDark(pd) || votdIsManmade(pd)) continue;
+      const slug = votdSlug(pd.urls.regular);
+      if (!slug || taken.has(slug)) continue;
+      taken.add(slug);
+      picks.push(votdNormalize(pd));
+    }
   }
   // Parked so the emailed links can resolve a slug back to a full record —
   // the email itself carries only slugs, never whole photo objects in a URL.
@@ -2579,14 +2628,23 @@ async function votdBoard(env, n = 10) {
     .filter((c) => c && c.slug && !seen.has(c.slug));
 
   const have = new Set(cands.map((c) => c.slug));
-  for (let i = 0; i < n * 8 && cands.length < n; i++) {
-    const pd = await votdFetchOnePhoto();
-    if (!pd || !pd.urls) continue;
-    if (votdHasPeople(pd) || votdIsGloomy(pd) || votdTooDark(pd) || votdIsManmade(pd)) continue;
-    const slug = votdSlug(pd.urls.regular);
-    if (!slug || seen.has(slug) || have.has(slug)) continue;
-    have.add(slug);
-    cands.push(votdNormalize(pd));
+  // Batched backfill.  The old loop made up to n*8 = 80 single-photo calls to
+  // refill ten slots, which on a 50/hour demo key meant one board render could
+  // exhaust the entire quota — after which every fetch 403'd and the board
+  // silently came back short.  Three rounds of 30 is at most three calls.
+  let fetchError = null;
+  for (let round = 0; round < 3 && cands.length < n; round++) {
+    const { photos, error } = await votdFetchPhotos(30, env);
+    if (error) { fetchError = error; break; }
+    for (const pd of photos) {
+      if (cands.length >= n) break;
+      if (!pd || !pd.urls) continue;
+      if (votdHasPeople(pd) || votdIsGloomy(pd) || votdTooDark(pd) || votdIsManmade(pd)) continue;
+      const slug = votdSlug(pd.urls.regular);
+      if (!slug || seen.has(slug) || have.has(slug)) continue;
+      have.add(slug);
+      cands.push(votdNormalize(pd));
+    }
   }
   await votdWriteJson(env, 'votd_candidates', cands);
   return {
@@ -2594,6 +2652,11 @@ async function votdBoard(env, n = 10) {
     queue: queue || [],
     usedCount: Object.keys(used || {}).length,
     rejectedCount: Object.keys(rejected || {}).length,
+    // Why the board is short, when it is.  Without this a quota failure looks
+    // identical to "nothing matched the filters", which is exactly the
+    // confusion that made a half-empty board impossible to diagnose.
+    short: cands.length < n,
+    error: fetchError,
   };
 }
 
@@ -2836,7 +2899,7 @@ async function votdStagePhoto(dateET, env) {
   const usedMap = await votdReadJson(env, 'votd_used', {});
   const rejectedMap = await votdReadJson(env, 'votd_rejected', {});
   const seen = new Set([...Object.keys(usedMap || {}), ...Object.keys(rejectedMap || {})]);
-  const photo = await votdRollPhoto(null, seen);
+  const photo = await votdRollPhoto(null, seen, env);
 
   // Only stage a REAL photo.  votdRollPhoto returns null both when every roll
   // was a people-shot / too dark AND when Unsplash could not be reached at
@@ -3433,7 +3496,7 @@ Only output valid JSON, no markdown, no preamble.`;
               headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/json" }
             })
           : Promise.resolve(null),
-        needPhoto ? votdFetchOnePhoto() : Promise.resolve(null),
+        needPhoto ? votdFetchOnePhoto(env) : Promise.resolve(null),
       ]);
 
       // ---- Verse (write-once for the day) ----
@@ -3452,7 +3515,9 @@ Only output valid JSON, no markdown, no preamble.`;
         // Hand votdRollPhoto the photo already fetched alongside the verse, so
         // a cold day still costs one round trip before any re-roll.
         photo = await votdRollPhoto(
-          firstPhotoResp.status === 'fulfilled' ? firstPhotoResp.value : null
+          firstPhotoResp.status === 'fulfilled' ? firstPhotoResp.value : null,
+          null,
+          env
         );
         // Cache the photo — or the null "color card" sentinel — so we don't
         // re-roll on every request.  Deleting THIS key alone refreshes the
