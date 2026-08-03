@@ -106,7 +106,22 @@
   "",
   "요한계시록 12 stays as it is: 새한글 has 18 verses, ESV 17, and the extra one",
   "(그 용은 바닷가 모래 위에 자리를 잡고 섰습니다) is a real manuscript variant that",
-  "editions place at either 12:18 or 13:1a.  Not a defect on either side."
+  "editions place at either 12:18 or 13:1a.  Not a defect on either side.",
+  "",
+  "RULE (from the author): do NOT split a 새한글 verse.  Merging is fine — 새한글",
+  "sometimes carries in one verse what 개역개정 numbers as two, and joining two",
+  "새한글 verses into one canonical verse only follows the source.  Splitting one",
+  "into two invents a division the translation does not make, and the split point",
+  "is my judgement rather than the translator's.",
+  "",
+  "Five splits were made before this rule was stated and have all been undone:",
+  "이사야 64:1, 시편 13:5, 사도행전 19:40, 느헤미야 7:68, 열왕기상 22:52.  Each is",
+  "back to one verse holding both canonical verses' text, keeping the FIRST of the",
+  "two numbers.  The second number is simply absent — 이사야 64 runs 1,3,4..12.",
+  "That gap is honest: it says the text is there and 새한글 did not divide it.",
+  "",
+  "The MERGE in 열왕기상 22 stands (NKT 44+45 -> canonical 43), since that is two",
+  "새한글 verses becoming one canonical verse, not the reverse."
  ],
  "shift": [
   {
@@ -1366,7 +1381,7 @@
    "missingVerseNumbers": [
     43
    ],
-   "status": "UNRESOLVED — reverted, see doc"
+   "status": "repaired (merge only; the split was undone per the no-split rule)"
   },
   {
    "book": 13,
