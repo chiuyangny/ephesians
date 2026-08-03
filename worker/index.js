@@ -793,7 +793,9 @@ async function fetchChapterFromNktPlatform(bookNum, chapter) {
     }
   });
   if (!resp.ok) throw new Error(`nkt ${resp.status} for ${book} ${chapter}`);
-  return parseNktHtml(await resp.text());
+  // Book + chapter are passed through so the parser can bind its anchors to
+  // the chapter we ASKED for — see parseNktHtml.
+  return parseNktHtml(await resp.text(), book, chapter);
 }
 
 // Parse a bible.bskorea.or.kr NKT chapter page.  Each verse is anchored by
@@ -803,7 +805,24 @@ async function fetchChapterFromNktPlatform(bookNum, chapter) {
 // (deduping identical strings so a repeated pane can't double the text).
 // Returns the same shape as parseNkrvHtml, minus headings/footnotes (not
 // extracted for NKT yet).
-function parseNktHtml(html) {
+//
+// `book` and `chapter` are the USFM code and chapter we requested, and the
+// anchor pattern is built to match THOSE.  It used to wildcard both, keying
+// only off the trailing verse number, which was wrong twice over:
+//
+//   1. A page carrying more than one chapter's anchors merged them.  Joel is
+//      the clear case — 새한글 follows the Hebrew division where 2:28-32 is its
+//      own chapter 3, that chapter's markup sits on the same page, and its
+//      verses 1-5 were concatenated onto chapter 2's verses 1-5.  요엘 2:1 read
+//      as its own text followed by "내가 내 영을 모든 생명체 위에 쏟아부어 주겠다"
+//      — the Acts 2 passage, silently glued onto an unrelated verse.
+//   2. A chapter that does not exist (Joel 4, Genesis 51) makes the platform
+//      serve its default page, which is GEN.1.  Wildcard anchors matched it
+//      happily, so the route returned Genesis 1 as though it were the chapter
+//      asked for — and fetchAndCacheNkt then WROTE that to KV.  Scoped
+//      anchors find nothing on that page, so the fetch reports parse_failed
+//      and caches nothing.
+function parseNktHtml(html, book, chapter) {
   const stripTags = (s) => s
     .replace(/<!--[\s\S]*?-->/g, '')
     .replace(/<[^>]+>/g, '')
@@ -815,7 +834,11 @@ function parseNktHtml(html) {
     .replace(/\s+/g, ' ')
     .trim();
 
-  const anchor = /\bid="NKT\.[A-Z0-9]+\.\d+\.(\d+)"/g;
+  // Escaped even though USFM codes are plain A-Z0-9 — the value reaches here
+  // from a route parameter, and a pattern built from input is not the place to
+  // rely on that staying true.
+  const esc = (x) => String(x).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const anchor = new RegExp(`\\bid="NKT\\.${esc(book)}\\.${esc(chapter)}\\.(\\d+)"`, 'g');
   const segs = {};
   let m;
   while ((m = anchor.exec(html)) !== null) {

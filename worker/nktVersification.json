@@ -1,0 +1,1119 @@
+{
+ "_doc": [
+  "새한글성경 (NKT) versification -> canonical (개역개정/ESV) numbering.",
+  "Derived offline from the 1,189 cached nkt_v1_* chapters in COMMENTARY_KV,",
+  "compared against VERSE_COUNTS in the app's src/data/verseCounts.ts.",
+  "No bible.bskorea.or.kr traffic was involved in producing this.",
+  "",
+  "shift: NKT numbers the same verses N higher within the same chapter",
+  "  (Hebrew counts the psalm superscription as a verse).",
+  "  canonical verse V  ==  NKT verse V + offset, same chapter.",
+  "",
+  "review: the chapter BOUNDARY differs, so a canonical chapter is not",
+  "  contained in one NKT chapter. These are NOT auto-derived: inferring",
+  "  them from counts alone can silently misattribute scripture, so each",
+  "  needs its span confirmed against the text before being applied."
+ ],
+ "shift": [
+  {
+   "book": 1,
+   "chapter": 32,
+   "nktFirst": 2,
+   "nktLast": 33,
+   "nktCount": 32,
+   "canonCount": 32,
+   "offset": 1
+  },
+  {
+   "book": 4,
+   "chapter": 17,
+   "nktFirst": 16,
+   "nktLast": 28,
+   "nktCount": 13,
+   "canonCount": 13,
+   "offset": 15
+  },
+  {
+   "book": 4,
+   "chapter": 30,
+   "nktFirst": 2,
+   "nktLast": 17,
+   "nktCount": 16,
+   "canonCount": 16,
+   "offset": 1
+  },
+  {
+   "book": 5,
+   "chapter": 13,
+   "nktFirst": 2,
+   "nktLast": 19,
+   "nktCount": 18,
+   "canonCount": 18,
+   "offset": 1
+  },
+  {
+   "book": 5,
+   "chapter": 23,
+   "nktFirst": 2,
+   "nktLast": 26,
+   "nktCount": 25,
+   "canonCount": 25,
+   "offset": 1
+  },
+  {
+   "book": 9,
+   "chapter": 21,
+   "nktFirst": 2,
+   "nktLast": 16,
+   "nktCount": 15,
+   "canonCount": 15,
+   "offset": 1
+  },
+  {
+   "book": 9,
+   "chapter": 24,
+   "nktFirst": 2,
+   "nktLast": 23,
+   "nktCount": 22,
+   "canonCount": 22,
+   "offset": 1
+  },
+  {
+   "book": 10,
+   "chapter": 19,
+   "nktFirst": 2,
+   "nktLast": 44,
+   "nktCount": 43,
+   "canonCount": 43,
+   "offset": 1
+  },
+  {
+   "book": 11,
+   "chapter": 5,
+   "nktFirst": 15,
+   "nktLast": 32,
+   "nktCount": 18,
+   "canonCount": 18,
+   "offset": 14
+  },
+  {
+   "book": 12,
+   "chapter": 12,
+   "nktFirst": 2,
+   "nktLast": 22,
+   "nktCount": 21,
+   "canonCount": 21,
+   "offset": 1
+  },
+  {
+   "book": 16,
+   "chapter": 10,
+   "nktFirst": 2,
+   "nktLast": 40,
+   "nktCount": 39,
+   "canonCount": 39,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 3,
+   "nktFirst": 2,
+   "nktLast": 9,
+   "nktCount": 8,
+   "canonCount": 8,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 4,
+   "nktFirst": 2,
+   "nktLast": 9,
+   "nktCount": 8,
+   "canonCount": 8,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 5,
+   "nktFirst": 2,
+   "nktLast": 13,
+   "nktCount": 12,
+   "canonCount": 12,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 6,
+   "nktFirst": 2,
+   "nktLast": 11,
+   "nktCount": 10,
+   "canonCount": 10,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 7,
+   "nktFirst": 2,
+   "nktLast": 18,
+   "nktCount": 17,
+   "canonCount": 17,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 8,
+   "nktFirst": 2,
+   "nktLast": 10,
+   "nktCount": 9,
+   "canonCount": 9,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 9,
+   "nktFirst": 2,
+   "nktLast": 21,
+   "nktCount": 20,
+   "canonCount": 20,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 12,
+   "nktFirst": 2,
+   "nktLast": 9,
+   "nktCount": 8,
+   "canonCount": 8,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 18,
+   "nktFirst": 2,
+   "nktLast": 51,
+   "nktCount": 50,
+   "canonCount": 50,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 19,
+   "nktFirst": 2,
+   "nktLast": 15,
+   "nktCount": 14,
+   "canonCount": 14,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 20,
+   "nktFirst": 2,
+   "nktLast": 10,
+   "nktCount": 9,
+   "canonCount": 9,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 21,
+   "nktFirst": 2,
+   "nktLast": 14,
+   "nktCount": 13,
+   "canonCount": 13,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 22,
+   "nktFirst": 2,
+   "nktLast": 32,
+   "nktCount": 31,
+   "canonCount": 31,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 30,
+   "nktFirst": 2,
+   "nktLast": 13,
+   "nktCount": 12,
+   "canonCount": 12,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 31,
+   "nktFirst": 2,
+   "nktLast": 25,
+   "nktCount": 24,
+   "canonCount": 24,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 34,
+   "nktFirst": 2,
+   "nktLast": 23,
+   "nktCount": 22,
+   "canonCount": 22,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 36,
+   "nktFirst": 2,
+   "nktLast": 13,
+   "nktCount": 12,
+   "canonCount": 12,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 38,
+   "nktFirst": 2,
+   "nktLast": 23,
+   "nktCount": 22,
+   "canonCount": 22,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 39,
+   "nktFirst": 2,
+   "nktLast": 14,
+   "nktCount": 13,
+   "canonCount": 13,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 40,
+   "nktFirst": 2,
+   "nktLast": 18,
+   "nktCount": 17,
+   "canonCount": 17,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 41,
+   "nktFirst": 2,
+   "nktLast": 14,
+   "nktCount": 13,
+   "canonCount": 13,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 42,
+   "nktFirst": 2,
+   "nktLast": 12,
+   "nktCount": 11,
+   "canonCount": 11,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 44,
+   "nktFirst": 2,
+   "nktLast": 27,
+   "nktCount": 26,
+   "canonCount": 26,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 45,
+   "nktFirst": 2,
+   "nktLast": 18,
+   "nktCount": 17,
+   "canonCount": 17,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 46,
+   "nktFirst": 2,
+   "nktLast": 12,
+   "nktCount": 11,
+   "canonCount": 11,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 47,
+   "nktFirst": 2,
+   "nktLast": 10,
+   "nktCount": 9,
+   "canonCount": 9,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 48,
+   "nktFirst": 2,
+   "nktLast": 15,
+   "nktCount": 14,
+   "canonCount": 14,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 49,
+   "nktFirst": 2,
+   "nktLast": 21,
+   "nktCount": 20,
+   "canonCount": 20,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 51,
+   "nktFirst": 3,
+   "nktLast": 21,
+   "nktCount": 19,
+   "canonCount": 19,
+   "offset": 2
+  },
+  {
+   "book": 19,
+   "chapter": 52,
+   "nktFirst": 3,
+   "nktLast": 11,
+   "nktCount": 9,
+   "canonCount": 9,
+   "offset": 2
+  },
+  {
+   "book": 19,
+   "chapter": 53,
+   "nktFirst": 2,
+   "nktLast": 7,
+   "nktCount": 6,
+   "canonCount": 6,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 54,
+   "nktFirst": 3,
+   "nktLast": 9,
+   "nktCount": 7,
+   "canonCount": 7,
+   "offset": 2
+  },
+  {
+   "book": 19,
+   "chapter": 55,
+   "nktFirst": 2,
+   "nktLast": 24,
+   "nktCount": 23,
+   "canonCount": 23,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 56,
+   "nktFirst": 2,
+   "nktLast": 14,
+   "nktCount": 13,
+   "canonCount": 13,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 57,
+   "nktFirst": 2,
+   "nktLast": 12,
+   "nktCount": 11,
+   "canonCount": 11,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 58,
+   "nktFirst": 2,
+   "nktLast": 12,
+   "nktCount": 11,
+   "canonCount": 11,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 59,
+   "nktFirst": 2,
+   "nktLast": 18,
+   "nktCount": 17,
+   "canonCount": 17,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 60,
+   "nktFirst": 3,
+   "nktLast": 14,
+   "nktCount": 12,
+   "canonCount": 12,
+   "offset": 2
+  },
+  {
+   "book": 19,
+   "chapter": 61,
+   "nktFirst": 2,
+   "nktLast": 9,
+   "nktCount": 8,
+   "canonCount": 8,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 62,
+   "nktFirst": 2,
+   "nktLast": 13,
+   "nktCount": 12,
+   "canonCount": 12,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 63,
+   "nktFirst": 2,
+   "nktLast": 12,
+   "nktCount": 11,
+   "canonCount": 11,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 64,
+   "nktFirst": 2,
+   "nktLast": 11,
+   "nktCount": 10,
+   "canonCount": 10,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 65,
+   "nktFirst": 2,
+   "nktLast": 14,
+   "nktCount": 13,
+   "canonCount": 13,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 67,
+   "nktFirst": 2,
+   "nktLast": 8,
+   "nktCount": 7,
+   "canonCount": 7,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 68,
+   "nktFirst": 2,
+   "nktLast": 36,
+   "nktCount": 35,
+   "canonCount": 35,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 69,
+   "nktFirst": 2,
+   "nktLast": 37,
+   "nktCount": 36,
+   "canonCount": 36,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 70,
+   "nktFirst": 2,
+   "nktLast": 6,
+   "nktCount": 5,
+   "canonCount": 5,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 75,
+   "nktFirst": 2,
+   "nktLast": 11,
+   "nktCount": 10,
+   "canonCount": 10,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 76,
+   "nktFirst": 2,
+   "nktLast": 13,
+   "nktCount": 12,
+   "canonCount": 12,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 77,
+   "nktFirst": 2,
+   "nktLast": 21,
+   "nktCount": 20,
+   "canonCount": 20,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 80,
+   "nktFirst": 2,
+   "nktLast": 20,
+   "nktCount": 19,
+   "canonCount": 19,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 81,
+   "nktFirst": 2,
+   "nktLast": 17,
+   "nktCount": 16,
+   "canonCount": 16,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 83,
+   "nktFirst": 2,
+   "nktLast": 19,
+   "nktCount": 18,
+   "canonCount": 18,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 84,
+   "nktFirst": 2,
+   "nktLast": 13,
+   "nktCount": 12,
+   "canonCount": 12,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 85,
+   "nktFirst": 2,
+   "nktLast": 14,
+   "nktCount": 13,
+   "canonCount": 13,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 88,
+   "nktFirst": 2,
+   "nktLast": 19,
+   "nktCount": 18,
+   "canonCount": 18,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 89,
+   "nktFirst": 2,
+   "nktLast": 53,
+   "nktCount": 52,
+   "canonCount": 52,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 102,
+   "nktFirst": 2,
+   "nktLast": 29,
+   "nktCount": 28,
+   "canonCount": 28,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 108,
+   "nktFirst": 2,
+   "nktLast": 14,
+   "nktCount": 13,
+   "canonCount": 13,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 140,
+   "nktFirst": 2,
+   "nktLast": 14,
+   "nktCount": 13,
+   "canonCount": 13,
+   "offset": 1
+  },
+  {
+   "book": 19,
+   "chapter": 142,
+   "nktFirst": 2,
+   "nktLast": 8,
+   "nktCount": 7,
+   "canonCount": 7,
+   "offset": 1
+  },
+  {
+   "book": 22,
+   "chapter": 7,
+   "nktFirst": 2,
+   "nktLast": 14,
+   "nktCount": 13,
+   "canonCount": 13,
+   "offset": 1
+  },
+  {
+   "book": 26,
+   "chapter": 21,
+   "nktFirst": 6,
+   "nktLast": 37,
+   "nktCount": 32,
+   "canonCount": 32,
+   "offset": 5
+  },
+  {
+   "book": 27,
+   "chapter": 6,
+   "nktFirst": 2,
+   "nktLast": 29,
+   "nktCount": 28,
+   "canonCount": 28,
+   "offset": 1
+  },
+  {
+   "book": 28,
+   "chapter": 2,
+   "nktFirst": 3,
+   "nktLast": 25,
+   "nktCount": 23,
+   "canonCount": 23,
+   "offset": 2
+  },
+  {
+   "book": 28,
+   "chapter": 12,
+   "nktFirst": 2,
+   "nktLast": 15,
+   "nktCount": 14,
+   "canonCount": 14,
+   "offset": 1
+  },
+  {
+   "book": 28,
+   "chapter": 14,
+   "nktFirst": 2,
+   "nktLast": 10,
+   "nktCount": 9,
+   "canonCount": 9,
+   "offset": 1
+  },
+  {
+   "book": 32,
+   "chapter": 2,
+   "nktFirst": 2,
+   "nktLast": 11,
+   "nktCount": 10,
+   "canonCount": 10,
+   "offset": 1
+  },
+  {
+   "book": 34,
+   "chapter": 2,
+   "nktFirst": 2,
+   "nktLast": 14,
+   "nktCount": 13,
+   "canonCount": 13,
+   "offset": 1
+  },
+  {
+   "book": 38,
+   "chapter": 2,
+   "nktFirst": 5,
+   "nktLast": 17,
+   "nktCount": 13,
+   "canonCount": 13,
+   "offset": 4
+  },
+  {
+   "book": 39,
+   "chapter": 4,
+   "nktFirst": 19,
+   "nktLast": 24,
+   "nktCount": 6,
+   "canonCount": 6,
+   "offset": 18
+  }
+ ],
+ "review": [
+  {
+   "book": 1,
+   "chapter": 31,
+   "nktFirst": 1,
+   "nktLast": 54,
+   "nktCount": 54,
+   "canonCount": 55
+  },
+  {
+   "book": 2,
+   "chapter": 8,
+   "nktFirst": 1,
+   "nktLast": 29,
+   "nktCount": 29,
+   "canonCount": 32
+  },
+  {
+   "book": 3,
+   "chapter": 6,
+   "nktFirst": 1,
+   "nktLast": 26,
+   "nktCount": 26,
+   "canonCount": 30
+  },
+  {
+   "book": 4,
+   "chapter": 16,
+   "nktFirst": 1,
+   "nktLast": 35,
+   "nktCount": 35,
+   "canonCount": 50
+  },
+  {
+   "book": 4,
+   "chapter": 29,
+   "nktFirst": 1,
+   "nktLast": 39,
+   "nktCount": 39,
+   "canonCount": 40
+  },
+  {
+   "book": 5,
+   "chapter": 6,
+   "nktFirst": 1,
+   "nktLast": 25,
+   "nktCount": 25,
+   "canonCount": 24
+  },
+  {
+   "book": 5,
+   "chapter": 12,
+   "nktFirst": 1,
+   "nktLast": 31,
+   "nktCount": 31,
+   "canonCount": 32
+  },
+  {
+   "book": 5,
+   "chapter": 15,
+   "nktFirst": 1,
+   "nktLast": 23,
+   "nktCount": 23,
+   "canonCount": 22
+  },
+  {
+   "book": 5,
+   "chapter": 22,
+   "nktFirst": 1,
+   "nktLast": 29,
+   "nktCount": 29,
+   "canonCount": 30
+  },
+  {
+   "book": 5,
+   "chapter": 30,
+   "nktFirst": 1,
+   "nktLast": 20,
+   "nktCount": 20,
+   "canonCount": 19
+  },
+  {
+   "book": 9,
+   "chapter": 20,
+   "nktFirst": 1,
+   "nktLast": 41,
+   "nktCount": 41,
+   "canonCount": 42
+  },
+  {
+   "book": 9,
+   "chapter": 23,
+   "nktFirst": 1,
+   "nktLast": 28,
+   "nktCount": 28,
+   "canonCount": 29
+  },
+  {
+   "book": 10,
+   "chapter": 18,
+   "nktFirst": 1,
+   "nktLast": 32,
+   "nktCount": 32,
+   "canonCount": 33
+  },
+  {
+   "book": 11,
+   "chapter": 4,
+   "nktFirst": 1,
+   "nktLast": 20,
+   "nktCount": 20,
+   "canonCount": 34
+  },
+  {
+   "book": 12,
+   "chapter": 11,
+   "nktFirst": 1,
+   "nktLast": 20,
+   "nktCount": 20,
+   "canonCount": 21
+  },
+  {
+   "book": 13,
+   "chapter": 6,
+   "nktFirst": 1,
+   "nktLast": 66,
+   "nktCount": 66,
+   "canonCount": 81
+  },
+  {
+   "book": 13,
+   "chapter": 16,
+   "nktFirst": 1,
+   "nktLast": 43,
+   "nktCount": 43,
+   "canonCount": 42
+  },
+  {
+   "book": 16,
+   "chapter": 7,
+   "nktFirst": 1,
+   "nktLast": 72,
+   "nktCount": 72,
+   "canonCount": 73
+  },
+  {
+   "book": 16,
+   "chapter": 9,
+   "nktFirst": 1,
+   "nktLast": 37,
+   "nktCount": 37,
+   "canonCount": 38
+  },
+  {
+   "book": 18,
+   "chapter": 41,
+   "nktFirst": 1,
+   "nktLast": 32,
+   "nktCount": 32,
+   "canonCount": 34
+  },
+  {
+   "book": 19,
+   "chapter": 13,
+   "nktFirst": 2,
+   "nktLast": 6,
+   "nktCount": 5,
+   "canonCount": 6
+  },
+  {
+   "book": 19,
+   "chapter": 92,
+   "nktFirst": 2,
+   "nktLast": 16,
+   "nktCount": 15,
+   "canonCount": 13
+  },
+  {
+   "book": 19,
+   "chapter": 105,
+   "nktFirst": 1,
+   "nktLast": 45,
+   "nktCount": 45,
+   "canonCount": 44
+  },
+  {
+   "book": 21,
+   "chapter": 5,
+   "nktFirst": 1,
+   "nktLast": 19,
+   "nktCount": 19,
+   "canonCount": 20
+  },
+  {
+   "book": 22,
+   "chapter": 6,
+   "nktFirst": 1,
+   "nktLast": 12,
+   "nktCount": 12,
+   "canonCount": 13
+  },
+  {
+   "book": 23,
+   "chapter": 64,
+   "nktFirst": 1,
+   "nktLast": 11,
+   "nktCount": 11,
+   "canonCount": 12
+  },
+  {
+   "book": 24,
+   "chapter": 9,
+   "nktFirst": 1,
+   "nktLast": 25,
+   "nktCount": 25,
+   "canonCount": 26
+  },
+  {
+   "book": 24,
+   "chapter": 32,
+   "nktFirst": 1,
+   "nktLast": 44,
+   "nktCount": 44,
+   "canonCount": 42
+  },
+  {
+   "book": 24,
+   "chapter": 33,
+   "nktFirst": 1,
+   "nktLast": 26,
+   "nktCount": 26,
+   "canonCount": 25
+  },
+  {
+   "book": 26,
+   "chapter": 20,
+   "nktFirst": 1,
+   "nktLast": 44,
+   "nktCount": 44,
+   "canonCount": 49
+  },
+  {
+   "book": 26,
+   "chapter": 24,
+   "nktFirst": 1,
+   "nktLast": 27,
+   "nktCount": 27,
+   "canonCount": 26
+  },
+  {
+   "book": 27,
+   "chapter": 4,
+   "nktFirst": 1,
+   "nktLast": 34,
+   "nktCount": 34,
+   "canonCount": 37
+  },
+  {
+   "book": 27,
+   "chapter": 5,
+   "nktFirst": 1,
+   "nktLast": 30,
+   "nktCount": 30,
+   "canonCount": 31
+  },
+  {
+   "book": 28,
+   "chapter": 1,
+   "nktFirst": 1,
+   "nktLast": 9,
+   "nktCount": 9,
+   "canonCount": 11
+  },
+  {
+   "book": 28,
+   "chapter": 11,
+   "nktFirst": 1,
+   "nktLast": 11,
+   "nktCount": 11,
+   "canonCount": 12
+  },
+  {
+   "book": 28,
+   "chapter": 13,
+   "nktFirst": 1,
+   "nktLast": 15,
+   "nktCount": 15,
+   "canonCount": 16
+  },
+  {
+   "book": 29,
+   "chapter": 2,
+   "nktFirst": 1,
+   "nktLast": 27,
+   "nktCount": 27,
+   "canonCount": 32
+  },
+  {
+   "book": 32,
+   "chapter": 1,
+   "nktFirst": 1,
+   "nktLast": 16,
+   "nktCount": 16,
+   "canonCount": 17
+  },
+  {
+   "book": 33,
+   "chapter": 5,
+   "nktFirst": 1,
+   "nktLast": 14,
+   "nktCount": 14,
+   "canonCount": 15
+  },
+  {
+   "book": 34,
+   "chapter": 1,
+   "nktFirst": 1,
+   "nktLast": 14,
+   "nktCount": 14,
+   "canonCount": 15
+  },
+  {
+   "book": 38,
+   "chapter": 1,
+   "nktFirst": 1,
+   "nktLast": 17,
+   "nktCount": 17,
+   "canonCount": 21
+  },
+  {
+   "book": 44,
+   "chapter": 15,
+   "nktFirst": 1,
+   "nktLast": 41,
+   "nktCount": 41,
+   "canonCount": 40
+  },
+  {
+   "book": 44,
+   "chapter": 19,
+   "nktFirst": 1,
+   "nktLast": 40,
+   "nktCount": 40,
+   "canonCount": 41
+  },
+  {
+   "book": 45,
+   "chapter": 9,
+   "nktFirst": 1,
+   "nktLast": 33,
+   "nktCount": 33,
+   "canonCount": 32
+  },
+  {
+   "book": 66,
+   "chapter": 12,
+   "nktFirst": 1,
+   "nktLast": 18,
+   "nktCount": 18,
+   "canonCount": 17
+  }
+ ]
+}
