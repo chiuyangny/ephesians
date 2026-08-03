@@ -47,7 +47,16 @@
   "repaired chapters are unaffected — each was reconstructed from recovered text",
   "whose verse count balanced EXACTLY against the target and was spot-checked",
   "verse-by-verse against 개역개정 — but any future work here should verify the",
-  "canonical count against the ESV, not the table."
+  "canonical count against the ESV, not the table.",
+  "",
+  "combined-verse (4): 느헤미야 7, 이사야 64, 사도행전 19, 시편 13.  Each is one verse",
+  "  short, and the ESV was checked directly rather than trusting VERSE_COUNTS —",
+  "  ESV and the table agree, so these are real.  The CONTENT is present;  새한글",
+  "  simply carries in one verse what canonical numbering splits into two (이사야",
+  "  64:1 is Hebrew 63:19b).  Fixing them means cutting a verse's text at a",
+  "  semantic boundary, which cannot be done mechanically without risking wrong",
+  "  text on screen, so they are left as they are.  A reader sees one fewer verse",
+  "  in these four chapters;  nothing is missing."
  ],
  "shift": [
   {
@@ -974,7 +983,7 @@
    "nktLast": 72,
    "nktCount": 72,
    "canonCount": 73,
-   "status": "no-merged-text",
+   "status": "combined-verse",
    "analysis": {
     "preFixVerses": 72,
     "postFixVerses": 72,
@@ -1020,7 +1029,7 @@
    "nktLast": 6,
    "nktCount": 5,
    "canonCount": 6,
-   "status": "unresolved"
+   "status": "combined-verse"
   },
   {
    "book": 19,
@@ -1071,7 +1080,7 @@
    "nktLast": 11,
    "nktCount": 11,
    "canonCount": 12,
-   "status": "no-merged-text",
+   "status": "combined-verse",
    "analysis": {
     "preFixVerses": 11,
     "postFixVerses": 11,
@@ -1248,7 +1257,7 @@
    "nktLast": 40,
    "nktCount": 40,
    "canonCount": 41,
-   "status": "no-merged-text",
+   "status": "combined-verse",
    "analysis": {
     "preFixVerses": 40,
     "postFixVerses": 40,
