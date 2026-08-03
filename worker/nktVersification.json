@@ -12,7 +12,12 @@
   "review: the chapter BOUNDARY differs, so a canonical chapter is not",
   "  contained in one NKT chapter. These are NOT auto-derived: inferring",
   "  them from counts alone can silently misattribute scripture, so each",
-  "  needs its span confirmed against the text before being applied."
+  "  needs its span confirmed against the text before being applied.",
+  "",
+  "status on each review entry: repaired = canonical chapter now written to KV;",
+  "no-merged-text = the pre-fix cache held nothing extra, so the missing verses",
+  "  are not recoverable by prefix-splitting and the boundary is still unknown;",
+  "unresolved = not yet examined (the 'long' shape, NKT has MORE verses)."
  ],
  "shift": [
   {
@@ -761,7 +766,8 @@
    "nktFirst": 1,
    "nktLast": 54,
    "nktCount": 54,
-   "canonCount": 55
+   "canonCount": 55,
+   "status": "repaired"
   },
   {
    "book": 2,
@@ -769,7 +775,8 @@
    "nktFirst": 1,
    "nktLast": 29,
    "nktCount": 29,
-   "canonCount": 32
+   "canonCount": 32,
+   "status": "no-merged-text"
   },
   {
    "book": 3,
@@ -777,7 +784,8 @@
    "nktFirst": 1,
    "nktLast": 26,
    "nktCount": 26,
-   "canonCount": 30
+   "canonCount": 30,
+   "status": "no-merged-text"
   },
   {
    "book": 4,
@@ -785,7 +793,8 @@
    "nktFirst": 1,
    "nktLast": 35,
    "nktCount": 35,
-   "canonCount": 50
+   "canonCount": 50,
+   "status": "repaired"
   },
   {
    "book": 4,
@@ -793,7 +802,8 @@
    "nktFirst": 1,
    "nktLast": 39,
    "nktCount": 39,
-   "canonCount": 40
+   "canonCount": 40,
+   "status": "repaired"
   },
   {
    "book": 5,
@@ -801,7 +811,8 @@
    "nktFirst": 1,
    "nktLast": 25,
    "nktCount": 25,
-   "canonCount": 24
+   "canonCount": 24,
+   "status": "unresolved"
   },
   {
    "book": 5,
@@ -809,7 +820,8 @@
    "nktFirst": 1,
    "nktLast": 31,
    "nktCount": 31,
-   "canonCount": 32
+   "canonCount": 32,
+   "status": "repaired"
   },
   {
    "book": 5,
@@ -817,7 +829,8 @@
    "nktFirst": 1,
    "nktLast": 23,
    "nktCount": 23,
-   "canonCount": 22
+   "canonCount": 22,
+   "status": "unresolved"
   },
   {
    "book": 5,
@@ -825,7 +838,8 @@
    "nktFirst": 1,
    "nktLast": 29,
    "nktCount": 29,
-   "canonCount": 30
+   "canonCount": 30,
+   "status": "repaired"
   },
   {
    "book": 5,
@@ -833,7 +847,8 @@
    "nktFirst": 1,
    "nktLast": 20,
    "nktCount": 20,
-   "canonCount": 19
+   "canonCount": 19,
+   "status": "unresolved"
   },
   {
    "book": 9,
@@ -841,7 +856,8 @@
    "nktFirst": 1,
    "nktLast": 41,
    "nktCount": 41,
-   "canonCount": 42
+   "canonCount": 42,
+   "status": "repaired"
   },
   {
    "book": 9,
@@ -849,7 +865,8 @@
    "nktFirst": 1,
    "nktLast": 28,
    "nktCount": 28,
-   "canonCount": 29
+   "canonCount": 29,
+   "status": "repaired"
   },
   {
    "book": 10,
@@ -857,7 +874,8 @@
    "nktFirst": 1,
    "nktLast": 32,
    "nktCount": 32,
-   "canonCount": 33
+   "canonCount": 33,
+   "status": "repaired"
   },
   {
    "book": 11,
@@ -865,7 +883,8 @@
    "nktFirst": 1,
    "nktLast": 20,
    "nktCount": 20,
-   "canonCount": 34
+   "canonCount": 34,
+   "status": "repaired"
   },
   {
    "book": 12,
@@ -873,7 +892,8 @@
    "nktFirst": 1,
    "nktLast": 20,
    "nktCount": 20,
-   "canonCount": 21
+   "canonCount": 21,
+   "status": "repaired"
   },
   {
    "book": 13,
@@ -881,7 +901,8 @@
    "nktFirst": 1,
    "nktLast": 66,
    "nktCount": 66,
-   "canonCount": 81
+   "canonCount": 81,
+   "status": "no-merged-text"
   },
   {
    "book": 13,
@@ -889,7 +910,8 @@
    "nktFirst": 1,
    "nktLast": 43,
    "nktCount": 43,
-   "canonCount": 42
+   "canonCount": 42,
+   "status": "unresolved"
   },
   {
    "book": 16,
@@ -897,7 +919,8 @@
    "nktFirst": 1,
    "nktLast": 72,
    "nktCount": 72,
-   "canonCount": 73
+   "canonCount": 73,
+   "status": "no-merged-text"
   },
   {
    "book": 16,
@@ -905,7 +928,8 @@
    "nktFirst": 1,
    "nktLast": 37,
    "nktCount": 37,
-   "canonCount": 38
+   "canonCount": 38,
+   "status": "repaired"
   },
   {
    "book": 18,
@@ -913,7 +937,8 @@
    "nktFirst": 1,
    "nktLast": 32,
    "nktCount": 32,
-   "canonCount": 34
+   "canonCount": 34,
+   "status": "no-merged-text"
   },
   {
    "book": 19,
@@ -921,7 +946,8 @@
    "nktFirst": 2,
    "nktLast": 6,
    "nktCount": 5,
-   "canonCount": 6
+   "canonCount": 6,
+   "status": "unresolved"
   },
   {
    "book": 19,
@@ -929,7 +955,8 @@
    "nktFirst": 2,
    "nktLast": 16,
    "nktCount": 15,
-   "canonCount": 13
+   "canonCount": 13,
+   "status": "unresolved"
   },
   {
    "book": 19,
@@ -937,7 +964,8 @@
    "nktFirst": 1,
    "nktLast": 45,
    "nktCount": 45,
-   "canonCount": 44
+   "canonCount": 44,
+   "status": "unresolved"
   },
   {
    "book": 21,
@@ -945,7 +973,8 @@
    "nktFirst": 1,
    "nktLast": 19,
    "nktCount": 19,
-   "canonCount": 20
+   "canonCount": 20,
+   "status": "no-merged-text"
   },
   {
    "book": 22,
@@ -953,7 +982,8 @@
    "nktFirst": 1,
    "nktLast": 12,
    "nktCount": 12,
-   "canonCount": 13
+   "canonCount": 13,
+   "status": "repaired"
   },
   {
    "book": 23,
@@ -961,7 +991,8 @@
    "nktFirst": 1,
    "nktLast": 11,
    "nktCount": 11,
-   "canonCount": 12
+   "canonCount": 12,
+   "status": "no-merged-text"
   },
   {
    "book": 24,
@@ -969,7 +1000,8 @@
    "nktFirst": 1,
    "nktLast": 25,
    "nktCount": 25,
-   "canonCount": 26
+   "canonCount": 26,
+   "status": "no-merged-text"
   },
   {
    "book": 24,
@@ -977,7 +1009,8 @@
    "nktFirst": 1,
    "nktLast": 44,
    "nktCount": 44,
-   "canonCount": 42
+   "canonCount": 42,
+   "status": "unresolved"
   },
   {
    "book": 24,
@@ -985,7 +1018,8 @@
    "nktFirst": 1,
    "nktLast": 26,
    "nktCount": 26,
-   "canonCount": 25
+   "canonCount": 25,
+   "status": "unresolved"
   },
   {
    "book": 26,
@@ -993,7 +1027,8 @@
    "nktFirst": 1,
    "nktLast": 44,
    "nktCount": 44,
-   "canonCount": 49
+   "canonCount": 49,
+   "status": "repaired"
   },
   {
    "book": 26,
@@ -1001,7 +1036,8 @@
    "nktFirst": 1,
    "nktLast": 27,
    "nktCount": 27,
-   "canonCount": 26
+   "canonCount": 26,
+   "status": "unresolved"
   },
   {
    "book": 27,
@@ -1009,7 +1045,8 @@
    "nktFirst": 1,
    "nktLast": 34,
    "nktCount": 34,
-   "canonCount": 37
+   "canonCount": 37,
+   "status": "no-merged-text"
   },
   {
    "book": 27,
@@ -1017,7 +1054,8 @@
    "nktFirst": 1,
    "nktLast": 30,
    "nktCount": 30,
-   "canonCount": 31
+   "canonCount": 31,
+   "status": "repaired"
   },
   {
    "book": 28,
@@ -1025,7 +1063,8 @@
    "nktFirst": 1,
    "nktLast": 9,
    "nktCount": 9,
-   "canonCount": 11
+   "canonCount": 11,
+   "status": "repaired"
   },
   {
    "book": 28,
@@ -1033,7 +1072,8 @@
    "nktFirst": 1,
    "nktLast": 11,
    "nktCount": 11,
-   "canonCount": 12
+   "canonCount": 12,
+   "status": "repaired"
   },
   {
    "book": 28,
@@ -1041,7 +1081,8 @@
    "nktFirst": 1,
    "nktLast": 15,
    "nktCount": 15,
-   "canonCount": 16
+   "canonCount": 16,
+   "status": "repaired"
   },
   {
    "book": 29,
@@ -1049,7 +1090,8 @@
    "nktFirst": 1,
    "nktLast": 27,
    "nktCount": 27,
-   "canonCount": 32
+   "canonCount": 32,
+   "status": "repaired"
   },
   {
    "book": 32,
@@ -1057,7 +1099,8 @@
    "nktFirst": 1,
    "nktLast": 16,
    "nktCount": 16,
-   "canonCount": 17
+   "canonCount": 17,
+   "status": "repaired"
   },
   {
    "book": 33,
@@ -1065,7 +1108,8 @@
    "nktFirst": 1,
    "nktLast": 14,
    "nktCount": 14,
-   "canonCount": 15
+   "canonCount": 15,
+   "status": "no-merged-text"
   },
   {
    "book": 34,
@@ -1073,7 +1117,8 @@
    "nktFirst": 1,
    "nktLast": 14,
    "nktCount": 14,
-   "canonCount": 15
+   "canonCount": 15,
+   "status": "repaired"
   },
   {
    "book": 38,
@@ -1081,7 +1126,8 @@
    "nktFirst": 1,
    "nktLast": 17,
    "nktCount": 17,
-   "canonCount": 21
+   "canonCount": 21,
+   "status": "repaired"
   },
   {
    "book": 44,
@@ -1089,7 +1135,8 @@
    "nktFirst": 1,
    "nktLast": 41,
    "nktCount": 41,
-   "canonCount": 40
+   "canonCount": 40,
+   "status": "unresolved"
   },
   {
    "book": 44,
@@ -1097,7 +1144,8 @@
    "nktFirst": 1,
    "nktLast": 40,
    "nktCount": 40,
-   "canonCount": 41
+   "canonCount": 41,
+   "status": "no-merged-text"
   },
   {
    "book": 45,
@@ -1105,7 +1153,8 @@
    "nktFirst": 1,
    "nktLast": 33,
    "nktCount": 33,
-   "canonCount": 32
+   "canonCount": 32,
+   "status": "unresolved"
   },
   {
    "book": 66,
@@ -1113,7 +1162,8 @@
    "nktFirst": 1,
    "nktLast": 18,
    "nktCount": 18,
-   "canonCount": 17
+   "canonCount": 17,
+   "status": "unresolved"
   }
  ]
 }
