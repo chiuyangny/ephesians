@@ -17,7 +17,24 @@
   "status on each review entry: repaired = canonical chapter now written to KV;",
   "no-merged-text = the pre-fix cache held nothing extra, so the missing verses",
   "  are not recoverable by prefix-splitting and the boundary is still unknown;",
-  "unresolved = not yet examined (the 'long' shape, NKT has MORE verses)."
+  "unresolved = not yet examined (the 'long' shape, NKT has MORE verses).",
+  "",
+  "The 11 'no-merged-text' chapters were analysed further and carry an `analysis`",
+  "block.  Three of them (출애굽기 8, 레위기 6, 욥기 41) DO hold whole extra verses",
+  "in the pre-fix cache — verses the wildcard parser pulled off the same page as",
+  "complete entries rather than as appended text, which the prefix splitter did",
+  "not look for.  They only account for SOME of what each chapter is missing.",
+  "",
+  "The reason is that these boundaries run BACKWARD: canonical 욥기 41:1-8 is",
+  "Hebrew 40:25-32, so the missing verses belong to the END of the previous NKT",
+  "chapter, not the start of the next.  That is the opposite direction from",
+  "요엘/요나, and it is why the adjacent-surplus test failed.",
+  "",
+  "Do not resolve these from counts.  Each needs its span read against 개역개정",
+  "before anything is written.",
+  "",
+  "The pre-fix dump of all 1,189 chapters — the ONLY copy of the merged text, and",
+  "what every repair depends on — is archived at /Users/pauljuhyenkim/krengbible-nkt-archive/nkt_all.json (12 MB)."
  ],
  "shift": [
   {
@@ -776,7 +793,15 @@
    "nktLast": 29,
    "nktCount": 29,
    "canonCount": 32,
-   "status": "no-merged-text"
+   "status": "no-merged-text",
+   "analysis": {
+    "preFixVerses": 29,
+    "postFixVerses": 28,
+    "versesStillNeeded": 4,
+    "wholeExtraVersesInPreFix": [
+     29
+    ]
+   }
   },
   {
    "book": 3,
@@ -785,7 +810,17 @@
    "nktLast": 26,
    "nktCount": 26,
    "canonCount": 30,
-   "status": "no-merged-text"
+   "status": "no-merged-text",
+   "analysis": {
+    "preFixVerses": 26,
+    "postFixVerses": 23,
+    "versesStillNeeded": 7,
+    "wholeExtraVersesInPreFix": [
+     24,
+     25,
+     26
+    ]
+   }
   },
   {
    "book": 4,
@@ -902,7 +937,13 @@
    "nktLast": 66,
    "nktCount": 66,
    "canonCount": 81,
-   "status": "no-merged-text"
+   "status": "no-merged-text",
+   "analysis": {
+    "preFixVerses": 66,
+    "postFixVerses": 66,
+    "versesStillNeeded": 15,
+    "wholeExtraVersesInPreFix": []
+   }
   },
   {
    "book": 13,
@@ -920,7 +961,13 @@
    "nktLast": 72,
    "nktCount": 72,
    "canonCount": 73,
-   "status": "no-merged-text"
+   "status": "no-merged-text",
+   "analysis": {
+    "preFixVerses": 72,
+    "postFixVerses": 72,
+    "versesStillNeeded": 1,
+    "wholeExtraVersesInPreFix": []
+   }
   },
   {
    "book": 16,
@@ -938,7 +985,20 @@
    "nktLast": 32,
    "nktCount": 32,
    "canonCount": 34,
-   "status": "no-merged-text"
+   "status": "no-merged-text",
+   "analysis": {
+    "preFixVerses": 32,
+    "postFixVerses": 26,
+    "versesStillNeeded": 8,
+    "wholeExtraVersesInPreFix": [
+     27,
+     28,
+     29,
+     30,
+     31,
+     32
+    ]
+   }
   },
   {
    "book": 19,
@@ -974,7 +1034,13 @@
    "nktLast": 19,
    "nktCount": 19,
    "canonCount": 20,
-   "status": "no-merged-text"
+   "status": "no-merged-text",
+   "analysis": {
+    "preFixVerses": 19,
+    "postFixVerses": 19,
+    "versesStillNeeded": 1,
+    "wholeExtraVersesInPreFix": []
+   }
   },
   {
    "book": 22,
@@ -992,7 +1058,13 @@
    "nktLast": 11,
    "nktCount": 11,
    "canonCount": 12,
-   "status": "no-merged-text"
+   "status": "no-merged-text",
+   "analysis": {
+    "preFixVerses": 11,
+    "postFixVerses": 11,
+    "versesStillNeeded": 1,
+    "wholeExtraVersesInPreFix": []
+   }
   },
   {
    "book": 24,
@@ -1001,7 +1073,13 @@
    "nktLast": 25,
    "nktCount": 25,
    "canonCount": 26,
-   "status": "no-merged-text"
+   "status": "no-merged-text",
+   "analysis": {
+    "preFixVerses": 25,
+    "postFixVerses": 25,
+    "versesStillNeeded": 1,
+    "wholeExtraVersesInPreFix": []
+   }
   },
   {
    "book": 24,
@@ -1046,7 +1124,13 @@
    "nktLast": 34,
    "nktCount": 34,
    "canonCount": 37,
-   "status": "no-merged-text"
+   "status": "no-merged-text",
+   "analysis": {
+    "preFixVerses": 34,
+    "postFixVerses": 34,
+    "versesStillNeeded": 3,
+    "wholeExtraVersesInPreFix": []
+   }
   },
   {
    "book": 27,
@@ -1109,7 +1193,13 @@
    "nktLast": 14,
    "nktCount": 14,
    "canonCount": 15,
-   "status": "no-merged-text"
+   "status": "no-merged-text",
+   "analysis": {
+    "preFixVerses": 14,
+    "postFixVerses": 14,
+    "versesStillNeeded": 1,
+    "wholeExtraVersesInPreFix": []
+   }
   },
   {
    "book": 34,
@@ -1145,7 +1235,13 @@
    "nktLast": 40,
    "nktCount": 40,
    "canonCount": 41,
-   "status": "no-merged-text"
+   "status": "no-merged-text",
+   "analysis": {
+    "preFixVerses": 40,
+    "postFixVerses": 40,
+    "versesStillNeeded": 1,
+    "wholeExtraVersesInPreFix": []
+   }
   },
   {
    "book": 45,
