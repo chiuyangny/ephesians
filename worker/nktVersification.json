@@ -63,7 +63,17 @@
   "  tradition.",
   "  semantic boundary, which cannot be done mechanically without risking wrong",
   "  text on screen, so they are left as they are.  A reader sees one fewer verse",
-  "  in these four chapters;  nothing is missing."
+  "  in these four chapters;  nothing is missing.",
+  "",
+  "The four combined-verse chapters were resolved by reading the text, not the",
+  "counts.  Each carries two canonical verses in one, and each split was made at",
+  "a boundary visible in both translations:",
+  "  이사야 64:1   split at 불이 잔가지들을 사르듯이   (개역 64:2 불이 섶을 사르며)",
+  "  시편 13:6     split at 나는 여호와께 노래하려네   (개역 13:6 내가 여호와를 찬송하리니)",
+  "  사도행전 19:40 split at 이런 말들을 하고서        (개역 19:41 이에 그 모임을 흩어지게)",
+  "  느헤미야 7:68  split at 낙타는 435마리            (개역 7:69 낙타가 사백삼십오 마리요)",
+  "느헤미야 and 사도행전 confirm themselves on numerals — 736/245 either side of the",
+  "cut, and 435/6,720 after it — which is as strong as this kind of evidence gets."
  ],
  "shift": [
   {
@@ -990,7 +1000,7 @@
    "nktLast": 72,
    "nktCount": 72,
    "canonCount": 73,
-   "status": "combined-verse",
+   "status": "repaired",
    "analysis": {
     "preFixVerses": 72,
     "postFixVerses": 72,
@@ -1036,7 +1046,7 @@
    "nktLast": 6,
    "nktCount": 5,
    "canonCount": 6,
-   "status": "combined-verse"
+   "status": "repaired"
   },
   {
    "book": 19,
@@ -1087,7 +1097,7 @@
    "nktLast": 11,
    "nktCount": 11,
    "canonCount": 12,
-   "status": "combined-verse",
+   "status": "repaired",
    "analysis": {
     "preFixVerses": 11,
     "postFixVerses": 11,
@@ -1264,7 +1274,7 @@
    "nktLast": 40,
    "nktCount": 40,
    "canonCount": 41,
-   "status": "combined-verse",
+   "status": "repaired",
    "analysis": {
     "preFixVerses": 40,
     "postFixVerses": 40,
