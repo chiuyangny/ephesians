@@ -34,7 +34,20 @@
   "before anything is written.",
   "",
   "The pre-fix dump of all 1,189 chapters — the ONLY copy of the merged text, and",
-  "what every repair depends on — is archived at /Users/pauljuhyenkim/krengbible-nkt-archive/nkt_all.json (12 MB)."
+  "what every repair depends on — is archived at /Users/pauljuhyenkim/krengbible-nkt-archive/nkt_all.json (12 MB).",
+  "",
+  "CAUTION on the 'long' chapters (NKT has MORE verses than canonical).",
+  "These are NOT a 새한글 defect and must not be 'fixed'.  로마서 9 was refetched",
+  "with the corrected parser and still returns 33 verses — and the ESV also has",
+  "33.  The app's VERSE_COUNTS says 32.  So for these chapters it is the app's",
+  "table that is short, because 개역개정 merges verses in places and the table",
+  "appears to have been generated from it.",
+  "",
+  "That makes VERSE_COUNTS an unreliable oracle for exactly this group.  The",
+  "repaired chapters are unaffected — each was reconstructed from recovered text",
+  "whose verse count balanced EXACTLY against the target and was spot-checked",
+  "verse-by-verse against 개역개정 — but any future work here should verify the",
+  "canonical count against the ESV, not the table."
  ],
  "shift": [
   {
@@ -793,7 +806,7 @@
    "nktLast": 29,
    "nktCount": 29,
    "canonCount": 32,
-   "status": "no-merged-text",
+   "status": "repaired",
    "analysis": {
     "preFixVerses": 29,
     "postFixVerses": 28,
@@ -810,7 +823,7 @@
    "nktLast": 26,
    "nktCount": 26,
    "canonCount": 30,
-   "status": "no-merged-text",
+   "status": "repaired",
    "analysis": {
     "preFixVerses": 26,
     "postFixVerses": 23,
@@ -847,7 +860,7 @@
    "nktLast": 25,
    "nktCount": 25,
    "canonCount": 24,
-   "status": "unresolved"
+   "status": "likely-not-a-defect"
   },
   {
    "book": 5,
@@ -865,7 +878,7 @@
    "nktLast": 23,
    "nktCount": 23,
    "canonCount": 22,
-   "status": "unresolved"
+   "status": "likely-not-a-defect"
   },
   {
    "book": 5,
@@ -883,7 +896,7 @@
    "nktLast": 20,
    "nktCount": 20,
    "canonCount": 19,
-   "status": "unresolved"
+   "status": "likely-not-a-defect"
   },
   {
    "book": 9,
@@ -937,7 +950,7 @@
    "nktLast": 66,
    "nktCount": 66,
    "canonCount": 81,
-   "status": "no-merged-text",
+   "status": "repaired",
    "analysis": {
     "preFixVerses": 66,
     "postFixVerses": 66,
@@ -952,7 +965,7 @@
    "nktLast": 43,
    "nktCount": 43,
    "canonCount": 42,
-   "status": "unresolved"
+   "status": "likely-not-a-defect"
   },
   {
    "book": 16,
@@ -985,7 +998,7 @@
    "nktLast": 32,
    "nktCount": 32,
    "canonCount": 34,
-   "status": "no-merged-text",
+   "status": "repaired",
    "analysis": {
     "preFixVerses": 32,
     "postFixVerses": 26,
@@ -1016,7 +1029,7 @@
    "nktLast": 16,
    "nktCount": 15,
    "canonCount": 13,
-   "status": "unresolved"
+   "status": "likely-not-a-defect"
   },
   {
    "book": 19,
@@ -1025,7 +1038,7 @@
    "nktLast": 45,
    "nktCount": 45,
    "canonCount": 44,
-   "status": "unresolved"
+   "status": "likely-not-a-defect"
   },
   {
    "book": 21,
@@ -1034,7 +1047,7 @@
    "nktLast": 19,
    "nktCount": 19,
    "canonCount": 20,
-   "status": "no-merged-text",
+   "status": "repaired",
    "analysis": {
     "preFixVerses": 19,
     "postFixVerses": 19,
@@ -1073,7 +1086,7 @@
    "nktLast": 25,
    "nktCount": 25,
    "canonCount": 26,
-   "status": "no-merged-text",
+   "status": "repaired",
    "analysis": {
     "preFixVerses": 25,
     "postFixVerses": 25,
@@ -1088,7 +1101,7 @@
    "nktLast": 44,
    "nktCount": 44,
    "canonCount": 42,
-   "status": "unresolved"
+   "status": "likely-not-a-defect"
   },
   {
    "book": 24,
@@ -1097,7 +1110,7 @@
    "nktLast": 26,
    "nktCount": 26,
    "canonCount": 25,
-   "status": "unresolved"
+   "status": "likely-not-a-defect"
   },
   {
    "book": 26,
@@ -1115,7 +1128,7 @@
    "nktLast": 27,
    "nktCount": 27,
    "canonCount": 26,
-   "status": "unresolved"
+   "status": "likely-not-a-defect"
   },
   {
    "book": 27,
@@ -1124,7 +1137,7 @@
    "nktLast": 34,
    "nktCount": 34,
    "canonCount": 37,
-   "status": "no-merged-text",
+   "status": "repaired",
    "analysis": {
     "preFixVerses": 34,
     "postFixVerses": 34,
@@ -1193,7 +1206,7 @@
    "nktLast": 14,
    "nktCount": 14,
    "canonCount": 15,
-   "status": "no-merged-text",
+   "status": "repaired",
    "analysis": {
     "preFixVerses": 14,
     "postFixVerses": 14,
@@ -1226,7 +1239,7 @@
    "nktLast": 41,
    "nktCount": 41,
    "canonCount": 40,
-   "status": "unresolved"
+   "status": "likely-not-a-defect"
   },
   {
    "book": 44,
@@ -1250,7 +1263,7 @@
    "nktLast": 33,
    "nktCount": 33,
    "canonCount": 32,
-   "status": "unresolved"
+   "status": "likely-not-a-defect"
   },
   {
    "book": 66,
@@ -1259,7 +1272,7 @@
    "nktLast": 18,
    "nktCount": 18,
    "canonCount": 17,
-   "status": "unresolved"
+   "status": "likely-not-a-defect"
   }
  ]
 }
