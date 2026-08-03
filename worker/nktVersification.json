@@ -88,7 +88,25 @@
   "skips verse 7 (a textual variant many critical texts bracket out).  That is a",
   "TWELFTH table error, not an NKT fault.",
   "",
-  "LESSON: verify contiguity, not just first-verse and count."
+  "LESSON: verify contiguity, not just first-verse and count.",
+  "",
+  "Outcome of the non-contiguous eight:",
+  "  6 repaired (출애굽기 22, 신명기 29, 이사야 9, 역대하 14, 느헤미야 4, 역대상 12).",
+  "    Each was a pure RENUMBERING — no text was split.  The high-numbered verse",
+  "    opens the canonical chapter (Hebrew 8:23 is 이사야 9:1, Hebrew 3:33-38 is",
+  "    느헤미야 4:1-6);  first and last verse were checked against 개역개정.",
+  "  1 table error (사도행전 24) — NKT is right, our count was.",
+  "  1 UNRESOLVED: 열왕기상 22.  I renumbered it by closing the gap and it was",
+  "    WRONG — 개역 22:43 combines NKT 44 AND 45, so every verse after it landed",
+  "    one out and the chapter ended on 개역 52 while claiming 53.  Reverted to",
+  "    its prior state.  It needs the merge handled, not a shift.",
+  "",
+  "시편 92 became a pure offset once VERSE_COUNTS was corrected (13 -> 15) and is",
+  "now in NKT_VERSE_SHIFT.",
+  "",
+  "요한계시록 12 stays as it is: 새한글 has 18 verses, ESV 17, and the extra one",
+  "(그 용은 바닷가 모래 위에 자리를 잡고 섰습니다) is a real manuscript variant that",
+  "editions place at either 12:18 or 13:1a.  Not a defect on either side."
  ],
  "shift": [
   {
@@ -1326,7 +1344,7 @@
    "missingVerseNumbers": [
     31
    ],
-   "status": "unresolved"
+   "status": "repaired"
   },
   {
    "book": 5,
@@ -1337,7 +1355,7 @@
    "missingVerseNumbers": [
     29
    ],
-   "status": "unresolved"
+   "status": "repaired"
   },
   {
    "book": 11,
@@ -1348,7 +1366,7 @@
    "missingVerseNumbers": [
     43
    ],
-   "status": "unresolved"
+   "status": "UNRESOLVED — reverted, see doc"
   },
   {
    "book": 13,
@@ -1359,7 +1377,7 @@
    "missingVerseNumbers": [
     4
    ],
-   "status": "unresolved"
+   "status": "repaired"
   },
   {
    "book": 14,
@@ -1370,7 +1388,7 @@
    "missingVerseNumbers": [
     15
    ],
-   "status": "unresolved"
+   "status": "repaired"
   },
   {
    "book": 16,
@@ -1391,7 +1409,7 @@
     22,
     23
    ],
-   "status": "unresolved"
+   "status": "repaired"
   },
   {
    "book": 23,
@@ -1402,7 +1420,7 @@
    "missingVerseNumbers": [
     21
    ],
-   "status": "unresolved"
+   "status": "repaired"
   },
   {
    "book": 44,
@@ -1413,7 +1431,7 @@
    "missingVerseNumbers": [
     7
    ],
-   "status": "unresolved"
+   "status": "table error, fixed app-side (26->27); NKT numbering is correct"
   }
  ]
 }
