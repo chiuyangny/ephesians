@@ -866,6 +866,50 @@ function parseNktHtml(html, book, chapter) {
   return { verses, footnotes: {}, headings: [] };
 }
 
+// ---- 새한글 (NKT) -> canonical verse numbering ----
+//
+// 새한글 follows the Hebrew versification, which numbers a psalm's
+// superscription as verse 1 and, in a number of other places, draws a chapter's
+// first verse further in.  The app, 개역개정 and the ESV all use the canonical
+// numbering, and a note or highlight is stored against a bare verse number — so
+// left alone, a highlight made in 새한글 lands on the wrong line the moment you
+// switch translations.
+//
+// Every entry here has the SAME verse count as the canonical chapter and simply
+// starts N higher, which makes the mapping pure subtraction.  Chapters whose
+// chapter BOUNDARY differs (Joel 2, Malachi 4, Hosea 1 and 43 others) are NOT
+// here: a count cannot say which verses moved, and guessing misattributes
+// scripture.  They are listed under "review" in worker/nktVersification.json.
+//
+// Derived offline from the 1,189 cached nkt_v1_* chapters against the app's
+// VERSE_COUNTS — not by re-scraping.
+const NKT_VERSE_SHIFT = {
+  '1_32':1, '4_17':15, '4_30':1, '5_13':1, '5_23':1, '9_21':1, '9_24':1, '10_19':1,
+  '11_5':14, '12_12':1, '16_10':1, '19_3':1, '19_4':1, '19_5':1, '19_6':1, '19_7':1,
+  '19_8':1, '19_9':1, '19_12':1, '19_18':1, '19_19':1, '19_20':1, '19_21':1, '19_22':1,
+  '19_30':1, '19_31':1, '19_34':1, '19_36':1, '19_38':1, '19_39':1, '19_40':1, '19_41':1,
+  '19_42':1, '19_44':1, '19_45':1, '19_46':1, '19_47':1, '19_48':1, '19_49':1, '19_51':2,
+  '19_52':2, '19_53':1, '19_54':2, '19_55':1, '19_56':1, '19_57':1, '19_58':1, '19_59':1,
+  '19_60':2, '19_61':1, '19_62':1, '19_63':1, '19_64':1, '19_65':1, '19_67':1, '19_68':1,
+  '19_69':1, '19_70':1, '19_75':1, '19_76':1, '19_77':1, '19_80':1, '19_81':1, '19_83':1,
+  '19_84':1, '19_85':1, '19_88':1, '19_89':1, '19_102':1, '19_108':1, '19_140':1, '19_142':1,
+  '22_7':1, '26_21':5, '27_6':1, '28_2':2, '28_12':1, '28_14':1, '32_2':1, '34_2':1,
+  '38_2':4, '39_4':18,
+};
+
+// Rewrites a fetched NKT chapter into canonical numbering.
+//
+// Guarded on the chapter actually starting where the shift says it does, which
+// makes this idempotent: a chapter already stored canonically (Joel 2 was
+// repaired in place) passes through untouched, and re-running it can never
+// double-shift.
+function nktToCanonical(bookNum, chapter, data) {
+  const offset = NKT_VERSE_SHIFT[`${bookNum}_${chapter}`];
+  if (!offset || !data || !Array.isArray(data.verses) || data.verses.length === 0) return data;
+  if (data.verses[0].verse !== offset + 1) return data;
+  return { ...data, verses: data.verses.map((v) => ({ ...v, verse: v.verse - offset })) };
+}
+
 // NKT fetch + cache, mirroring fetchAndCacheSaebeon.  No heading-translation
 // step (NKT headings aren't extracted), so the cache write is unconditional.
 async function fetchAndCacheNkt(bookNum, chapter, env) {
@@ -3585,7 +3629,11 @@ Only output valid JSON, no markdown, no preamble.`;
         if (!result.ok) {
           return new Response(JSON.stringify({error: result.error || 'nkt_fetch_failed'}), {headers:{...cors,"Content-Type":"application/json"}});
         }
-        return new Response(JSON.stringify(result.data), {headers:{...cors,"Content-Type":"application/json","Cache-Control":"public, max-age=2592000, stale-while-revalidate=86400"}});
+        // Normalised on the way OUT, not on the way in: KV keeps the numbering
+        // 새한글 actually publishes, so the mapping stays reviewable and a
+        // correction here needs no re-scrape of anything.
+        const canonical = nktToCanonical(bookNum, chapter, result.data);
+        return new Response(JSON.stringify(canonical), {headers:{...cors,"Content-Type":"application/json","Cache-Control":"public, max-age=2592000, stale-while-revalidate=86400"}});
       } catch (e) {
         return new Response(JSON.stringify({error: e.message}), {status:500, headers:{...cors,"Content-Type":"application/json"}});
       }
