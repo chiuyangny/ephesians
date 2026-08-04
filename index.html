@@ -1043,6 +1043,11 @@ function progMarkRead(b,c,src){
 function progToggleManual(b,c){
   var d=progLoad(),k=progKey(b,c);
   var marked=!d[k];
+  // Remember what we are about to throw away, so the tombstone can carry the
+  // reading day with it — see fbPushProgress.  Un-checking a chapter should
+  // stop it counting as read;  it should not erase the record of WHEN it was
+  // read, which is unrecoverable once the doc is overwritten.
+  if(d[k])progLastKnown[k]=d[k];
   if(d[k])delete d[k];else d[k]={date:new Date().toISOString().slice(0,10),source:'manual'};
   progSave(d);
   if(typeof stampProg==='function'){stampProg(k);fbPushProgress(k);}
@@ -9226,6 +9231,13 @@ function fbPushHighlight(key){
   }
 }
 
+// Last-known {date,source} for keys that have been un-marked this session.
+// The local entry is gone by the time the push runs, and the tombstone would
+// otherwise replace the document with {deleted,_updatedAt} — destroying the
+// reading day for every device, permanently.  The app does the same thing on
+// its side (see progress.ts pushProgressToFirestore).
+var progLastKnown={};
+
 function fbPushProgress(key){
   if(fbIsSuppressed() || !fbActiveUid || !window.fb) return;
   var prog=progLoad(), ts=progTsLoad();
@@ -9234,7 +9246,11 @@ function fbPushProgress(key){
   if(key in prog){
     window.fb.setDoc(window.fb.doc(window.fbDB,'users',fbActiveUid,'progress',key), Object.assign({},prog[key],{_updatedAt:t})).catch(function(){});
   } else {
-    window.fb.setDoc(window.fb.doc(window.fbDB,'users',fbActiveUid,'progress',key), {deleted:true,_updatedAt:t}).catch(function(){});
+    var was=progLastKnown[key];
+    var tomb=was&&was.date
+      ? {deleted:true,date:was.date,source:was.source||'manual',_updatedAt:t}
+      : {deleted:true,_updatedAt:t};
+    window.fb.setDoc(window.fb.doc(window.fbDB,'users',fbActiveUid,'progress',key), tomb).catch(function(){});
   }
 }
 
