@@ -1450,7 +1450,8 @@ var API_BIBLE_IDS={
 var TRANSLATIONS=[
   {abbr:'ESV', name:'English Standard Version',     source:'esv'},
   {abbr:'NLT', name:'New Living Translation',       source:'apibible'},
-  {abbr:'NIV', name:'New International Version',    source:'apibible'}
+  {abbr:'NIV', name:'New International Version',    source:'apibible'},
+  {abbr:'KJV', name:'King James Version',           source:'kjv'}
 ];
 // Korean translations — same set, same labels and same routes as the app's
 // KO_TRANSLATION_INFO / fetchRawKoreanChapter.  KLB is the odd one: it comes
@@ -1490,7 +1491,7 @@ function setKoTranslation(abbr){
 var currentTranslation='ESV';
 try{
   var _ct=localStorage.getItem('krengbible_translation');
-  if(_ct && (API_BIBLE_IDS[_ct] || _ct==='ESV')) currentTranslation=_ct;
+  if(_ct && (API_BIBLE_IDS[_ct] || _ct==='ESV' || _ct==='KJV')) currentTranslation=_ct;
   // MSG was removed.  Anyone holding it falls back to ESV, and the stored value
   // is rewritten so the next load does not repeat the fallback silently — and
   // so the settings push stops advertising a translation that no longer exists.
@@ -1498,7 +1499,7 @@ try{
 }catch(e){}
 function translationMeta(abbr){ for(var i=0;i<TRANSLATIONS.length;i++) if(TRANSLATIONS[i].abbr===abbr) return TRANSLATIONS[i]; return TRANSLATIONS[0]; }
 function setTranslation(abbr){
-  if(abbr!=='ESV' && !API_BIBLE_IDS[abbr]) return;
+  if(abbr!=='ESV' && abbr!=='KJV' && !API_BIBLE_IDS[abbr]) return;
   currentTranslation=abbr;
   try{localStorage.setItem('krengbible_translation', abbr);}catch(e){}
   if(typeof settingsTsSave==='function') settingsTsSave(Date.now());
@@ -1554,10 +1555,18 @@ function fumsReport(fumsToken, bibleId, chapterId){
 async function fetchTranslation(bk, ch){
   var t=translationMeta(currentTranslation);
   if(t.source==='esv') return fetchEsv(bk, ch);
-  // api.bible path
-  var bibleId=API_BIBLE_IDS[t.abbr];
-  if(!bibleId) return fetchEsv(bk, ch);
-  var r=await fetch(WORKER+'/apibible/'+bibleId+'/'+bk.n+'/'+ch, {cache:'no-store'});
+  // KJV is public domain and has its OWN worker route backed by no-TTL KV —
+  // never api.bible, so it costs no quota.  The response shape is identical
+  // ({data.content = "[1]...[2]..."}), so everything below handles it unchanged.
+  var url;
+  if(t.source==='kjv'){
+    url=WORKER+'/kjv/'+bk.n+'/'+ch;
+  } else {
+    var bibleId=API_BIBLE_IDS[t.abbr];
+    if(!bibleId) return fetchEsv(bk, ch);
+    url=WORKER+'/apibible/'+bibleId+'/'+bk.n+'/'+ch;
+  }
+  var r=await fetch(url, {cache:'no-store'});
   if(!r.ok){
     var errBody=await r.text().catch(function(){return '';});
     throw new Error(t.abbr+' fetch error '+r.status+(errBody?(': '+errBody.slice(0,200)):''));
@@ -1565,7 +1574,11 @@ async function fetchTranslation(bk, ch){
   var d=await r.json();
   if(!d.data || !d.data.content) throw new Error('No '+t.abbr+' data');
   // FUMS ping — token only present on fresh fetches, by design.
-  fumsReport(d.fumsToken, bibleId, d.data.id);
+  // FUMS is an api.bible obligation — it reports usage back to Tyndale,
+  // Biblica and NavPress.  KJV is public domain and served from our own KV, so
+  // it has no bibleId and nothing to report;  sending a ping with an undefined
+  // id would be noise at best.
+  if(t.source!=='kjv') fumsReport(d.fumsToken, bibleId, d.data.id);
   // Parse api.bible's content (similar [N] markers to ESV, may also include [N-M] ranges).
   // The Message groups verses often, e.g. "[1-3] In the beginning..." — we store the text
   // under the FIRST verse number, and record every covered verse in `ranges` so the renderer
@@ -8872,13 +8885,20 @@ async function loadMoreResults(){
   try{
     var url,data;
     if(searchState.isKo){
-      url=WORKER+'/search/ko?q='+encodeURIComponent(searchState.q)+'&offset='+searchState.nextOffset;
+      // Follows the chosen Korean translation, like the app's searchKo.  KLB is
+      // NOT in this index — it lives on api.bible — so it falls back to 개역개정
+      // rather than returning nothing.
+      var koV=(currentKoTranslation==='KLB')?'NKRV':currentKoTranslation;
+      url=WORKER+'/search/ko?q='+encodeURIComponent(searchState.q)+'&offset='+searchState.nextOffset+'&v='+koV;
       var r=await fetch(url,{cache:'no-store'});data=await r.json();
     } else {
       // English search — route by current translation.
       // ESV uses the pre-built flat index (/search/en).
+      // KJV has its own flat index (/search/kjv) — public domain, no quota.
       // NLT / NIV use api.bible's per-translation live search.
-      if(currentTranslation==='ESV' || !API_BIBLE_IDS[currentTranslation]){
+      if(currentTranslation==='KJV'){
+        url=WORKER+'/search/kjv?q='+encodeURIComponent(searchState.q)+'&page='+searchState.nextPage;
+      } else if(currentTranslation==='ESV' || !API_BIBLE_IDS[currentTranslation]){
         url=WORKER+'/search/en?q='+encodeURIComponent(searchState.q)+'&page='+searchState.nextPage;
       } else {
         var tId=API_BIBLE_IDS[currentTranslation];
@@ -8887,7 +8907,8 @@ async function loadMoreResults(){
       var r=await fetch(url,{cache:'no-store'});data=await r.json();
       // Fire FUMS for api.bible searches that returned a token.
       if(data && data.fumsToken){
-        fumsReport(data.fumsToken, API_BIBLE_IDS[currentTranslation], null);
+        // Same reason as the chapter fetch: only api.bible translations report.
+        if(API_BIBLE_IDS[currentTranslation]) fumsReport(data.fumsToken, API_BIBLE_IDS[currentTranslation], null);
       }
     }
 
@@ -9249,7 +9270,7 @@ function fbApplyRemoteSettings(data){
   }
   // Translation: only apply if it's a recognized value (ESV or one of the api.bible IDs we whitelisted).
   if(data.translation && data.translation!==currentTranslation){
-    if(data.translation==='ESV' || API_BIBLE_IDS[data.translation]){
+    if(data.translation==='ESV' || data.translation==='KJV' || API_BIBLE_IDS[data.translation]){
       currentTranslation=data.translation;
       try{localStorage.setItem('krengbible_translation', currentTranslation);}catch(e){}
       var ind=document.getElementById('menu-translation-current');
