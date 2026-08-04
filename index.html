@@ -9243,13 +9243,25 @@ function fbPushProgress(key){
   var prog=progLoad(), ts=progTsLoad();
   var t=ts[key]||Date.now();
   ts[key]=t; progTsSave(ts);
+  // STEP 2 of the app repo's PROGRESS_SCHEMA.md — the new shape written
+  // ALONGSIDE the old.  Nothing reads these yet, here or in the app;  they
+  // exist so new documents already carry them by the time the cutover happens.
+  //
+  //   readAt    the instant of reading.  Unambiguous, unlike `date`, which
+  //             this file builds with toISOString() — i.e. UTC — so an evening
+  //             read is stamped a day late for anyone west of it.
+  //   updatedAt sync ordering only.
+  //   readDay   omitted on purpose.  It belongs on a record CLAIMING a day
+  //             other than readAt, and nothing here back-fills: progToggleManual
+  //             always stamps today.  Its absence means "derive from readAt".
+  var nextShape={readAt:t,updatedAt:t};
   if(key in prog){
-    window.fb.setDoc(window.fb.doc(window.fbDB,'users',fbActiveUid,'progress',key), Object.assign({},prog[key],{_updatedAt:t})).catch(function(){});
+    window.fb.setDoc(window.fb.doc(window.fbDB,'users',fbActiveUid,'progress',key), Object.assign({},prog[key],{_updatedAt:t},nextShape)).catch(function(){});
   } else {
     var was=progLastKnown[key];
     var tomb=was&&was.date
-      ? {deleted:true,date:was.date,source:was.source||'manual',_updatedAt:t}
-      : {deleted:true,_updatedAt:t};
+      ? {deleted:true,date:was.date,source:was.source||'manual',_updatedAt:t,updatedAt:t}
+      : {deleted:true,_updatedAt:t,updatedAt:t};
     window.fb.setDoc(window.fb.doc(window.fbDB,'users',fbActiveUid,'progress',key), tomb).catch(function(){});
   }
 }
