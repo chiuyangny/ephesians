@@ -1032,9 +1032,26 @@ var PROGRESS_KEY='krengbible_progress';
 function progLoad(){try{return JSON.parse(localStorage.getItem(PROGRESS_KEY)||'{}');}catch(e){return {};}}
 function progSave(d){try{localStorage.setItem(PROGRESS_KEY,JSON.stringify(d));}catch(e){}}
 function progKey(b,c){return b+'_'+c;}
+// The day a chapter was read, by the same precedence the app uses: an explicit
+// claim first, then the instant rendered in THIS browser's timezone, and only
+// then the legacy string — which was built with toISOString(), so an evening
+// read carries the following day.
+function progDayOf(entry){
+  if(!entry) return '';
+  if(entry.readDay) return entry.readDay;
+  if(typeof entry.readAt==='number'){
+    var d=new Date(entry.readAt);
+    var m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+    return d.getFullYear()+'-'+m+'-'+day;
+  }
+  return entry.date||'';
+}
 function progMarkRead(b,c,src){
   var d=progLoad(),k=progKey(b,c);
-  if(!d[k]){d[k]={date:new Date().toISOString().slice(0,10),source:src};progSave(d);if(typeof stampProg==='function'){stampProg(k);fbPushProgress(k);}}
+  // readAt is the instant, kept alongside the legacy `date` string.  `date` is
+  // built with toISOString() — UTC — so an evening read is stamped a day late;
+  // the instant cannot be, and it is what the app reads.
+  if(!d[k]){d[k]={date:new Date().toISOString().slice(0,10),source:src,readAt:Date.now()};progSave(d);if(typeof stampProg==='function'){stampProg(k);fbPushProgress(k);}}
   // Outside the !d[k] guard on purpose: re-opening a chapter you have already
   // read still means you read TODAY, and that is the signal the evening
   // reminder checks.  The progress doc itself stays write-once.
@@ -1048,7 +1065,7 @@ function progToggleManual(b,c){
   // stop it counting as read;  it should not erase the record of WHEN it was
   // read, which is unrecoverable once the doc is overwritten.
   if(d[k])progLastKnown[k]=d[k];
-  if(d[k])delete d[k];else d[k]={date:new Date().toISOString().slice(0,10),source:'manual'};
+  if(d[k])delete d[k];else d[k]={date:new Date().toISOString().slice(0,10),source:'manual',readAt:Date.now()};
   progSave(d);
   if(typeof stampProg==='function'){stampProg(k);fbPushProgress(k);}
   // A grid check-off counts as reading today (the app treats it the same way),
@@ -1057,7 +1074,7 @@ function progToggleManual(b,c){
   var grid=document.getElementById('prog-ch-'+b);
   if(grid&&grid.style.display!=='none'){
     var bk=BOOKS[b],data=progLoad(),h='';
-    for(var ch=1;ch<=bk.ch;ch++){var ky=progKey(b,ch),entry=data[ky],cls=entry?(entry.source==='auto'?'auto':'manual'):'unread';h+='<div class="prog-ch '+cls+'" onclick="progToggleManual('+b+','+ch+')" title="'+(entry?entry.date:'Tap to mark read')+'">'+ch+'</div>';}
+    for(var ch=1;ch<=bk.ch;ch++){var ky=progKey(b,ch),entry=data[ky],cls=entry?(entry.source==='auto'?'auto':'manual'):'unread';h+='<div class="prog-ch '+cls+'" onclick="progToggleManual('+b+','+ch+')" title="'+(entry?progDayOf(entry):'Tap to mark read')+'">'+ch+'</div>';}
     grid.innerHTML=h;
   }
   var row=document.getElementById('prog-row-'+b);
@@ -1173,7 +1190,7 @@ function toggleProgBook(idx){
   if(isOpen){grid.style.display='none';if(chevron)chevron.classList.remove('open');}
   else{
     var b=BOOKS[idx],data=progLoad(),h='';
-    for(var c=1;c<=b.ch;c++){var k=progKey(idx,c),entry=data[k],cls=entry?(entry.source==='auto'?'auto':'manual'):'unread';h+='<div class="prog-ch '+cls+'" onclick="progToggleManual('+idx+','+c+')" title="'+(entry?entry.date:'Tap to mark read')+'">'+c+'</div>';}
+    for(var c=1;c<=b.ch;c++){var k=progKey(idx,c),entry=data[k],cls=entry?(entry.source==='auto'?'auto':'manual'):'unread';h+='<div class="prog-ch '+cls+'" onclick="progToggleManual('+idx+','+c+')" title="'+(entry?progDayOf(entry):'Tap to mark read')+'">'+c+'</div>';}
     grid.innerHTML=h;grid.style.display='grid';if(chevron)chevron.classList.add('open');
   }
 }
@@ -9028,13 +9045,34 @@ async function fbMergeHighlights(uid){
   }));
 }
 
+// One remote document -> the local entry shape.  Keeping readAt locally is
+// what lets a re-push from this site preserve the true reading instant instead
+// of overwriting it with whenever the site happened to write.
+function progEntryFromRemote(r){
+  var e={date:r.date,source:r.source};
+  if(typeof r.readAt==='number') e.readAt=r.readAt;
+  if(r.readDay) e.readDay=r.readDay;
+  return e;
+}
+
 async function fbMergeProgress(uid){
   var fb=window.fb;
   var snap=await fb.getDocs(fb.collection(window.fbDB,'users',uid,'progress'));
   var remote={};
   snap.forEach(function(d){
     var data=d.data();
-    remote[d.id]={date:data.date,source:data.source||'manual',ts:typeof data._updatedAt==='number'?data._updatedAt:0,deleted:data.deleted===true};
+    // Ordering prefers the explicit `updatedAt`;  the reading instant comes
+    // from readAt, with readDay overriding it when the record deliberately
+    // claims a different day.  Everything falls back to the legacy pair, so
+    // documents written before the new shape still read correctly.
+    remote[d.id]={
+      date:data.date,
+      source:data.source||'manual',
+      ts:typeof data.updatedAt==='number'?data.updatedAt:(typeof data._updatedAt==='number'?data._updatedAt:0),
+      readAt:typeof data.readAt==='number'?data.readAt:null,
+      readDay:typeof data.readDay==='string'?data.readDay:null,
+      deleted:data.deleted===true
+    };
   });
   var localProg=progLoad(), localTs=progTsLoad();
   var allKeys=new Set([...Object.keys(remote),...Object.keys(localProg)]);
@@ -9044,14 +9082,16 @@ async function fbMergeProgress(uid){
     var lTs=localTs[k]||0;
     var lHas=k in localProg;
     if(r && r.ts > lTs){
-      if(!r.deleted && r.date) nextProg[k]={date:r.date,source:r.source};
+      if(!r.deleted && (r.date||r.readAt)) nextProg[k]=progEntryFromRemote(r);
       nextTs[k]=r.ts;
     } else if(lTs > (r?r.ts:0) || !r){
       if(lHas) nextProg[k]=localProg[k];
       nextTs[k]=lTs;
-      pushes.push({key:k, payload: lHas ? Object.assign({},localProg[k],{_updatedAt:lTs}) : {deleted:true,_updatedAt:lTs}});
+      pushes.push({key:k, payload: lHas
+        ? Object.assign({},localProg[k],{_updatedAt:lTs,updatedAt:lTs,readAt:typeof localProg[k].readAt==='number'?localProg[k].readAt:lTs})
+        : {deleted:true,_updatedAt:lTs,updatedAt:lTs}});
     } else {
-      if(r && !r.deleted && r.date) nextProg[k]={date:r.date,source:r.source};
+      if(r && !r.deleted && (r.date||r.readAt)) nextProg[k]=progEntryFromRemote(r);
       else if(lHas) nextProg[k]=localProg[k];
       nextTs[k]=Math.max(lTs,(r?r.ts:0));
     }
@@ -9168,7 +9208,10 @@ function fbListenProgress(uid){
       snap.docChanges().forEach(function(change){
         var id=change.doc.id;
         var data=change.doc.data();
-        var rTs=typeof data._updatedAt==='number'?data._updatedAt:0;
+        // Same preference as fbMergeProgress: explicit clock first, legacy
+        // second.  A live listener that ordered differently from the merge
+        // would let the two disagree about which write is newer.
+        var rTs=typeof data.updatedAt==='number'?data.updatedAt:(typeof data._updatedAt==='number'?data._updatedAt:0);
         var localTs=progTsLoad();
         var lTs=localTs[id]||0;
         if(rTs <= lTs) return;
@@ -9176,8 +9219,13 @@ function fbListenProgress(uid){
         localTs[id]=rTs;
         if(change.type==='removed' || data.deleted===true){
           delete prog[id]; progSave(prog); progTsSave(localTs);
-        } else if(data.date){
-          prog[id]={date:data.date,source:data.source||'manual'};
+        } else if(data.date||typeof data.readAt==='number'){
+          prog[id]=progEntryFromRemote({
+            date:data.date,
+            source:data.source||'manual',
+            readAt:typeof data.readAt==='number'?data.readAt:null,
+            readDay:typeof data.readDay==='string'?data.readDay:null
+          });
           progSave(prog); progTsSave(localTs);
         }
       });
@@ -9254,13 +9302,20 @@ function fbPushProgress(key){
   //   readDay   omitted on purpose.  It belongs on a record CLAIMING a day
   //             other than readAt, and nothing here back-fills: progToggleManual
   //             always stamps today.  Its absence means "derive from readAt".
-  var nextShape={readAt:t,updatedAt:t};
+  // readAt is PRESERVED, not restamped.  Writing `t` here would overwrite the
+  // real reading instant with whenever this site happened to push — so a
+  // chapter read in the app months ago, re-pushed from here, would claim to
+  // have been read today.  Only fall back to `t` when there is no instant at
+  // all, i.e. a record that predates the new shape.
+  var entry=prog[key]||{};
   if(key in prog){
-    window.fb.setDoc(window.fb.doc(window.fbDB,'users',fbActiveUid,'progress',key), Object.assign({},prog[key],{_updatedAt:t},nextShape)).catch(function(){});
+    var payload=Object.assign({},entry,{_updatedAt:t,updatedAt:t,readAt:typeof entry.readAt==='number'?entry.readAt:t});
+    window.fb.setDoc(window.fb.doc(window.fbDB,'users',fbActiveUid,'progress',key), payload).catch(function(){});
   } else {
     var was=progLastKnown[key];
     var tomb=was&&was.date
-      ? {deleted:true,date:was.date,source:was.source||'manual',_updatedAt:t,updatedAt:t}
+      ? Object.assign({deleted:true,date:was.date,source:was.source||'manual',_updatedAt:t,updatedAt:t},
+                      typeof was.readAt==='number'?{readAt:was.readAt}:{})
       : {deleted:true,_updatedAt:t,updatedAt:t};
     window.fb.setDoc(window.fb.doc(window.fbDB,'users',fbActiveUid,'progress',key), tomb).catch(function(){});
   }
