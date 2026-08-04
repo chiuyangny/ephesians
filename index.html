@@ -1439,20 +1439,18 @@ async function fetchKo(bk,ch){
   return{verses:d.verses.map(reorderKoFn),footnotes:d.footnotes||{}};
 }
 // ============================================================
-// English translation routing (ESV + api.bible NLT/NIV/MSG)
+// English translation routing (ESV + api.bible NLT/NIV)
 // ============================================================
 // API_BIBLE_IDS must match the whitelist in worker/index.js exactly.
 var API_BIBLE_IDS={
   'NLT':'d6e14a625393b4da-01',
-  'NIV':'78a9f6124f344018-01',
-  'MSG':'6f11a7de016f942e-01'
+  'NIV':'78a9f6124f344018-01'
 };
 // Order matters: render order in the picker.  ESV first as the default.
 var TRANSLATIONS=[
   {abbr:'ESV', name:'English Standard Version',     source:'esv'},
   {abbr:'NLT', name:'New Living Translation',       source:'apibible'},
-  {abbr:'NIV', name:'New International Version',    source:'apibible'},
-  {abbr:'MSG', name:'The Message',                  source:'apibible'}
+  {abbr:'NIV', name:'New International Version',    source:'apibible'}
 ];
 // Korean translations — same set, same labels and same routes as the app's
 // KO_TRANSLATION_INFO / fetchRawKoreanChapter.  KLB is the odd one: it comes
@@ -1490,7 +1488,14 @@ function setKoTranslation(abbr){
 
 // Persisted in localStorage; synced via Firebase settings.
 var currentTranslation='ESV';
-try{var _ct=localStorage.getItem('krengbible_translation'); if(_ct && API_BIBLE_IDS[_ct] || _ct==='ESV') currentTranslation=_ct;}catch(e){}
+try{
+  var _ct=localStorage.getItem('krengbible_translation');
+  if(_ct && (API_BIBLE_IDS[_ct] || _ct==='ESV')) currentTranslation=_ct;
+  // MSG was removed.  Anyone holding it falls back to ESV, and the stored value
+  // is rewritten so the next load does not repeat the fallback silently — and
+  // so the settings push stops advertising a translation that no longer exists.
+  else if(_ct) localStorage.setItem('krengbible_translation', currentTranslation);
+}catch(e){}
 function translationMeta(abbr){ for(var i=0;i<TRANSLATIONS.length;i++) if(TRANSLATIONS[i].abbr===abbr) return TRANSLATIONS[i]; return TRANSLATIONS[0]; }
 function setTranslation(abbr){
   if(abbr!=='ESV' && !API_BIBLE_IDS[abbr]) return;
@@ -1608,7 +1613,7 @@ async function fetchEsv(bk,ch){
 function render(koData,esvData,bk,ch){
   var kv=koData.verses,kf=koData.footnotes||{};
   var en=esvData.verses,headings=esvData.headings,footnotes=esvData.footnotes;
-  // Verse-range map: present for api.bible translations that group verses (esp. MSG).
+  // Verse-range map: present for api.bible translations that group verses.
   // Empty for ESV.  Used below to show "↑ continued above" instead of a blank cell.
   var enRanges=esvData.ranges||{};
   var h='<div class="col-headers"></div>';
@@ -1639,7 +1644,7 @@ function render(koData,esvData,bk,ch){
     } else {
       var firstN=+n;
       er=en[firstN]||en[n]||'';
-      // If empty and this verse is part of a grouped range (api.bible — esp. MSG),
+      // If empty and this verse is part of a grouped range (api.bible),
       // show a subtle "continued above" hint so the column doesn't look broken.
       if(!er && enRanges[firstN]){
         er='<span class="verse-continued">↑ continued above</span>';
@@ -8872,7 +8877,7 @@ async function loadMoreResults(){
     } else {
       // English search — route by current translation.
       // ESV uses the pre-built flat index (/search/en).
-      // NLT / NIV / MSG use api.bible's per-translation live search.
+      // NLT / NIV use api.bible's per-translation live search.
       if(currentTranslation==='ESV' || !API_BIBLE_IDS[currentTranslation]){
         url=WORKER+'/search/en?q='+encodeURIComponent(searchState.q)+'&page='+searchState.nextPage;
       } else {
