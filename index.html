@@ -366,10 +366,13 @@ body.dark .verse-row.hl-r .vt{background:#991b1b}
 .confirm-modal.hidden{display:none}
 .tx-row{display:flex;align-items:center;gap:10px;padding:12px 22px;cursor:pointer;border:none;background:none;width:100%;text-align:left;font:inherit;color:#1c1c1c;border-bottom:.5px solid #f5f3ef}
 .tx-row:last-child{border-bottom:none}
+/* Section header inside the translation picker (English / Korean). */
+.tx-group{padding:14px 22px 6px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;opacity:.55;color:#1c1c1c}
+body.dark .tx-group{color:#e8e5e0}
 .tx-row:active{background:#f7f5f2}
 body.dark .tx-row{color:#e8e5e0;border-bottom-color:#2a2a2a}
 body.dark .tx-row:active{background:#2a2a2a}
-.tx-row-abbr{flex:0 0 56px;font-size:13px;font-weight:800;letter-spacing:.06em;color:#1b2a4a}
+.tx-row-abbr{flex:0 0 84px;font-size:13px;font-weight:800;letter-spacing:.06em;color:#1b2a4a}
 body.dark .tx-row-abbr{color:#8899bb}
 .tx-row-name{flex:1;font-size:13px;color:#1c1c1c;line-height:1.4}
 body.dark .tx-row-name{color:#d8d5d0}
@@ -943,10 +946,10 @@ function toggleLangOrder(btn){
   var koSide=document.querySelector('.title-row .ko-side');
   var enSide=document.querySelector('.title-row .en-side');
   if(koSide&&enSide){koSide.style.order=langOrder==='ko-en'?1:2;enSide.style.order=langOrder==='ko-en'?2:1;}
-  var tabText=document.getElementById('tab-text');var tabComm=document.getElementById('tab-comm');var tabInsights=document.getElementById('tab-insights');var tabIntro=document.getElementById('tab-intro');
-  if(tabText)tabText.textContent=langOrder==='ko-en'?'본문':'Passage';
-  if(tabComm)tabComm.textContent=langOrder==='ko-en'?'해설':'Commentary';
-  if(tabInsights)tabInsights.textContent=langOrder==='ko-en'?'통찰':'Insights';
+  // Same three labels as the tab bar in render() and as the app's TAB_DEFS.
+  var tabText=document.getElementById('tab-text');var tabComm=document.getElementById('tab-comm');var tabIntro=document.getElementById('tab-intro');
+  if(tabText)tabText.textContent=langOrder==='ko-en'?'본문':'Text';
+  if(tabComm)tabComm.textContent=langOrder==='ko-en'?'요약':'Summary';
   if(tabIntro)tabIntro.textContent=langOrder==='ko-en'?'책 소개':'Book Intro';
   var koBtn=document.querySelector('.votd-btn-ko');
   var enBtn=document.querySelector('.votd-btn-en');
@@ -1422,7 +1425,13 @@ function reorderKoFn(v){
     .replace(/(\s)\(KN:(\d+)\)(\S+)/g, '$1$3(KN:$2)')});
 }
 async function fetchKo(bk,ch){
-  var r=await fetch(WORKER+'/nkrv/'+bk.n+'/'+ch);
+  // Route per translation, matching the app's fetchRawKoreanChapter.  KLB goes
+  // through api.bible;  the rest have their own worker routes.
+  var m=koTranslationMeta(currentKoTranslation);
+  var url=m.route==='apibible'
+    ? WORKER+'/apibible/'+m.bibleId+'/'+bk.n+'/'+ch
+    : WORKER+'/'+m.route+'/'+bk.n+'/'+ch;
+  var r=await fetch(url);
   if(!r.ok)throw new Error('Worker error '+r.status);
   var d=await r.json();if(d.error)throw new Error(d.error);
   if(Array.isArray(d))return{verses:d.map(reorderKoFn),footnotes:{}};
@@ -1445,6 +1454,40 @@ var TRANSLATIONS=[
   {abbr:'NIV', name:'New International Version',    source:'apibible'},
   {abbr:'MSG', name:'The Message',                  source:'apibible'}
 ];
+// Korean translations — same set, same labels and same routes as the app's
+// KO_TRANSLATION_INFO / fetchRawKoreanChapter.  KLB is the odd one: it comes
+// from api.bible rather than a dedicated worker route.
+var KO_TRANSLATIONS=[
+  {abbr:'NKRV',    name:'개역개정판',              route:'nkrv'},
+  {abbr:'SAEBEON', name:'표준새번역 개정판',       route:'saebeon'},
+  {abbr:'NKT',     name:'새한글성경 (2024)',       route:'nkt'},
+  {abbr:'KLB',     name:'현대인의 성경 (1985)',    route:'apibible', bibleId:'e959e47176271f18-01'}
+];
+var KO_LABELS={NKRV:'개역개정',SAEBEON:'새번역',NKT:'새한글',KLB:'현대인의 성경'};
+// The menu chip shows both sides now, in the reader's preferred order.
+function translationChipLabel(){
+  var ko=KO_LABELS[currentKoTranslation]||currentKoTranslation;
+  return langOrder==='ko-en' ? (ko+' · '+currentTranslation) : (currentTranslation+' · '+ko);
+}
+function koTranslationMeta(abbr){
+  for(var i=0;i<KO_TRANSLATIONS.length;i++) if(KO_TRANSLATIONS[i].abbr===abbr) return KO_TRANSLATIONS[i];
+  return KO_TRANSLATIONS[0];
+}
+var currentKoTranslation='NKRV';
+try{
+  var _kt=localStorage.getItem('krengbible_ko_translation');
+  if(_kt && koTranslationMeta(_kt).abbr===_kt) currentKoTranslation=_kt;
+}catch(e){}
+function setKoTranslation(abbr){
+  if(koTranslationMeta(abbr).abbr!==abbr) return;
+  if(abbr===currentKoTranslation) return;
+  currentKoTranslation=abbr;
+  try{localStorage.setItem('krengbible_ko_translation', abbr);}catch(e){}
+  if(typeof settingsTsSave==='function') settingsTsSave(Date.now());
+  if(typeof fbPushSettings==='function') fbPushSettings();
+  if(loaded) load();
+}
+
 // Persisted in localStorage; synced via Firebase settings.
 var currentTranslation='ESV';
 try{var _ct=localStorage.getItem('krengbible_translation'); if(_ct && API_BIBLE_IDS[_ct] || _ct==='ESV') currentTranslation=_ct;}catch(e){}
@@ -1569,8 +1612,12 @@ function render(koData,esvData,bk,ch){
   // Empty for ESV.  Used below to show "↑ continued above" instead of a blank cell.
   var enRanges=esvData.ranges||{};
   var h='<div class="col-headers"></div>';
-  var tl1=langOrder==='ko-en'?'본문':'Passage', tl2=langOrder==='ko-en'?'해설':'Commentary', tlInsights=langOrder==='ko-en'?'통찰':'Insights', tl3=langOrder==='ko-en'?'책 소개':'Book Intro';
-  h+='<div class="ch-tabs"><button class="ch-tab active" id="tab-text" onclick="switchTab(\'text\')">'+tl1+'</button><button class="ch-tab" id="tab-comm" onclick="switchTab(\'comm\')">'+tl2+'</button><button class="ch-tab" id="tab-insights" onclick="switchTab(\'insights\')">'+tlInsights+'</button><button class="ch-tab" id="tab-intro" onclick="switchTab(\'intro\')">'+tl3+'</button></div>';
+  // Three tabs, matching the app's ReaderTabStrip exactly (본문 / 요약 / 책 소개).
+  // Insights no longer has a tab of its own: the cards belong under the chapter
+  // summary, which is where the app puts them, and they are switched off on
+  // both surfaces anyway while the Korean is reworked.
+  var tl1=langOrder==='ko-en'?'본문':'Text', tl2=langOrder==='ko-en'?'요약':'Summary', tl3=langOrder==='ko-en'?'책 소개':'Book Intro';
+  h+='<div class="ch-tabs"><button class="ch-tab active" id="tab-text" onclick="switchTab(\'text\')">'+tl1+'</button><button class="ch-tab" id="tab-comm" onclick="switchTab(\'comm\')">'+tl2+'</button><button class="ch-tab" id="tab-intro" onclick="switchTab(\'intro\')">'+tl3+'</button></div>';
   h+='<div id="tab-text-content" style="padding-top:8px">';
   kv.forEach(function(v){
     var n=v.verse;
@@ -1608,8 +1655,10 @@ function render(koData,esvData,bk,ch){
   Object.keys(footnotes).forEach(function(k){fnHidden+='<div id="fn-'+k+'"><span></span><span>'+esc(footnotes[k])+'</span></div>';});
   fnHidden+='</div>';h+=fnHidden;
   h+='</div>';
-  h+='<div id="tab-comm-content" style="display:none"><div class="ldg"><div class="spinner"></div><div class="ldg-txt">Loading…</div></div></div>';
-  h+='<div id="tab-insights-content" style="display:none"><div class="ldg"><div class="spinner"></div><div class="ldg-txt">Loading…</div></div></div>';
+  // The insights container sits INSIDE the summary tab now — summary first,
+  // cards beneath it, one scroll.  Kept as its own element so loadInsights and
+  // renderInsights need no changes.
+  h+='<div id="tab-comm-content" style="display:none"><div id="tab-comm-body"><div class="ldg"><div class="spinner"></div><div class="ldg-txt">Loading…</div></div></div><div id="tab-insights-content"></div></div>';
   h+='<div id="tab-intro-content" style="display:none"><div class="ldg"><div class="spinner"></div><div class="ldg-txt">Loading…</div></div></div>';
   document.getElementById('content').innerHTML=h;
   applyLangOrder();
@@ -2953,17 +3002,22 @@ function renderBookIntro(d,bk,container){
 function switchTab(tab){
   var tText=document.getElementById('tab-text-content');
   var tComm=document.getElementById('tab-comm-content');
-  var tInsights=document.getElementById('tab-insights-content');
   var tIntro=document.getElementById('tab-intro-content');
   var btnText=document.getElementById('tab-text');
   var btnComm=document.getElementById('tab-comm');
-  var btnInsights=document.getElementById('tab-insights');
   var btnIntro=document.getElementById('tab-intro');
-  if(tText)tText.style.display='none';if(tComm)tComm.style.display='none';if(tInsights)tInsights.style.display='none';if(tIntro)tIntro.style.display='none';
-  if(btnText)btnText.classList.remove('active');if(btnComm)btnComm.classList.remove('active');if(btnInsights)btnInsights.classList.remove('active');if(btnIntro)btnIntro.classList.remove('active');
+  if(tText)tText.style.display='none';if(tComm)tComm.style.display='none';if(tIntro)tIntro.style.display='none';
+  if(btnText)btnText.classList.remove('active');if(btnComm)btnComm.classList.remove('active');if(btnIntro)btnIntro.classList.remove('active');
   if(tab==='text'){if(tText)tText.style.display='';if(btnText)btnText.classList.add('active');}
-  else if(tab==='comm'){if(tComm)tComm.style.display='';if(btnComm)btnComm.classList.add('active');if(tComm&&tComm.querySelector('.ldg'))loadCommentary();}
-  else if(tab==='insights'){if(tInsights)tInsights.style.display='';if(btnInsights)btnInsights.classList.add('active');if(tInsights&&tInsights.querySelector('.ldg'))loadInsights();}
+  // 'comm' is the Summary tab.  It loads the chapter summary and then the
+  // insight cards into the container beneath it — one tab, one scroll.
+  // 'insights' is still accepted so any old link or saved state lands
+  // somewhere sensible instead of on a blank screen.
+  else if(tab==='comm'||tab==='insights'){
+    if(tComm)tComm.style.display='';
+    if(btnComm)btnComm.classList.add('active');
+    if(tComm&&tComm.querySelector('.ldg')){loadCommentary();loadInsights();}
+  }
   else if(tab==='intro'){if(tIntro)tIntro.style.display='';if(btnIntro)btnIntro.classList.add('active');if(tIntro&&tIntro.querySelector('.ldg'))loadTabIntro();}
 }
 /* #1 & #4: renderCommentary — plain text, no blocks, single bilingual label */
@@ -3002,7 +3056,9 @@ async function loadTabIntro(){
 }
 async function loadCommentary(){
   var bk=BOOKS[bi];
-  var tComm=document.getElementById('tab-comm-content');
+  // The BODY, not the whole tab — the tab also contains the insights
+  // container, which must not be wiped by a commentary re-render.
+  var tComm=document.getElementById('tab-comm-body')||document.getElementById('tab-comm-content');
   if(!tComm) return;
   tComm.innerHTML='<div class="ldg"><div class="spinner"></div><div class="ldg-txt">'+(langOrder==='ko-en'?'해설 불러오는 중… / Loading commentary…':'Loading commentary… / 해설 불러오는 중…')+'</div></div>';
   try{
@@ -8532,7 +8588,7 @@ function toggleMoreMenu(){
   // Refresh the translation indicator on the menu item every time the menu opens.
   if(!m.classList.contains('hidden')){
     var ind=document.getElementById('menu-translation-current');
-    if(ind) ind.textContent=currentTranslation;
+    if(ind) ind.textContent=translationChipLabel();
   }
 }
 document.addEventListener('click',function(e){
@@ -8550,17 +8606,34 @@ function openTranslationPicker(){
   if(title)title.textContent=isKo?'번역본 / Translation':'Translation / 번역본';
   var list=document.getElementById('tx-picker-list');
   if(list){
-    var html='';
-    for(var i=0;i<TRANSLATIONS.length;i++){
-      var t=TRANSLATIONS[i];
-      var active=(t.abbr===currentTranslation);
-      html+='<button class="tx-row'+(active?' active':'')+'" onclick="pickTranslation(\''+t.abbr+'\')">'
-        +'<span class="tx-row-abbr">'+esc(t.abbr)+'</span>'
-        +'<span class="tx-row-name">'+esc(t.name)+'</span>'
-        +'<svg class="tx-row-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
-        +'</button>';
+    // Two sections, ordered by the reader's language preference so the one they
+    // read first is on top.  The app offers both;  this side only ever offered
+    // English, which is why Korean was stuck on 개역개정 here.
+    function rowsEn(){
+      var h='<div class="tx-group">'+(isKo?'영어 / English':'English / 영어')+'</div>';
+      for(var i=0;i<TRANSLATIONS.length;i++){
+        var t=TRANSLATIONS[i], active=(t.abbr===currentTranslation);
+        h+='<button class="tx-row'+(active?' active':'')+'" onclick="pickTranslation(\''+t.abbr+'\')">'
+          +'<span class="tx-row-abbr">'+esc(t.abbr)+'</span>'
+          +'<span class="tx-row-name">'+esc(t.name)+'</span>'
+          +'<svg class="tx-row-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+          +'</button>';
+      }
+      return h;
     }
-    list.innerHTML=html;
+    function rowsKo(){
+      var h='<div class="tx-group">'+(isKo?'한국어 / Korean':'Korean / 한국어')+'</div>';
+      for(var i=0;i<KO_TRANSLATIONS.length;i++){
+        var t=KO_TRANSLATIONS[i], active=(t.abbr===currentKoTranslation);
+        h+='<button class="tx-row'+(active?' active':'')+'" onclick="pickKoTranslation(\''+t.abbr+'\')">'
+          +'<span class="tx-row-abbr">'+esc(KO_LABELS[t.abbr]||t.abbr)+'</span>'
+          +'<span class="tx-row-name">'+esc(t.name)+'</span>'
+          +'<svg class="tx-row-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+          +'</button>';
+      }
+      return h;
+    }
+    list.innerHTML = isKo ? (rowsKo()+rowsEn()) : (rowsEn()+rowsKo());
   }
   document.getElementById('tx-picker').classList.remove('hidden');
 }
@@ -8572,7 +8645,14 @@ function pickTranslation(abbr){
   setTranslation(abbr);
   // Update the indicator on the menu chip and close the picker.
   var ind=document.getElementById('menu-translation-current');
-  if(ind) ind.textContent=currentTranslation;
+  if(ind) ind.textContent=translationChipLabel();
+  closeTranslationPicker();
+}
+function pickKoTranslation(abbr){
+  if(abbr===currentKoTranslation){ closeTranslationPicker(); return; }
+  setKoTranslation(abbr);
+  var ind=document.getElementById('menu-translation-current');
+  if(ind) ind.textContent=translationChipLabel();
   closeTranslationPicker();
 }
 
@@ -9116,7 +9196,8 @@ async function fbMergeSettings(uid){
     }
   }
   fb.setDoc(fb.doc(window.fbDB,'users',uid,'meta','settings'), {
-    theme: darkMode?'dark':'light', fontSize: fs, langOrder: langOrder, _updatedAt: lTs
+    theme: darkMode?'dark':'light', fontSize: fs, langOrder: langOrder,
+    translation: currentTranslation, koTranslation: currentKoTranslation, _updatedAt: lTs
   }).catch(function(){});
 }
 
@@ -9167,7 +9248,19 @@ function fbApplyRemoteSettings(data){
       currentTranslation=data.translation;
       try{localStorage.setItem('krengbible_translation', currentTranslation);}catch(e){}
       var ind=document.getElementById('menu-translation-current');
-      if(ind) ind.textContent=currentTranslation;
+      if(ind) ind.textContent=translationChipLabel();
+      if(loaded) load();
+    }
+  }
+  // Korean side, same shape.  The app has always synced this field;  the site
+  // ignored it, so switching Korean translation on one surface never reached
+  // the other.
+  if(data.koTranslation && data.koTranslation!==currentKoTranslation){
+    if(koTranslationMeta(data.koTranslation).abbr===data.koTranslation){
+      currentKoTranslation=data.koTranslation;
+      try{localStorage.setItem('krengbible_ko_translation', currentKoTranslation);}catch(e){}
+      var koInd=document.getElementById('menu-translation-current');
+      if(koInd) koInd.textContent=translationChipLabel();
       if(loaded) load();
     }
   }
@@ -9476,7 +9569,7 @@ function fbPushSettings(){
   _fbSettingsTimer=setTimeout(function(){
     var t=stampSettings();
     window.fb.setDoc(window.fb.doc(window.fbDB,'users',fbActiveUid,'meta','settings'), {
-      theme: darkMode?'dark':'light', fontSize: fs, langOrder: langOrder, translation: currentTranslation, _updatedAt: t
+      theme: darkMode?'dark':'light', fontSize: fs, langOrder: langOrder, translation: currentTranslation, koTranslation: currentKoTranslation, _updatedAt: t
     }).catch(function(){});
   }, 500);
 }
