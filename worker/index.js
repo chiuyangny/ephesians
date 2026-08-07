@@ -2446,10 +2446,49 @@ const VOTD_MANMADE_KEYWORDS = [
 const votdIsManmade = (pd) =>
   VOTD_MANMADE_KEYWORDS.some(k => new RegExp(`\\b${k}\\b`).test(votdMetaText(pd)));
 
+// Unsplash+ — the paid tier, and unusable here.  `photos/random` mixes these
+// in with the free library, and the file served for one is a PREVIEW with
+// "Unsplash+" tiled across the whole frame.  Nothing in the keyword or
+// brightness filters looks at licensing, so one went live on 2026-08-06 with
+// the watermark sitting over the verse.
+//
+// Tested on the URL rather than on any `plus` / `premium` flag, because the
+// URL is what decides the actual bytes: plus.unsplash.com serves the
+// watermarked preview, images.unsplash.com does not.  The flags are checked
+// too, but only as a second line — they are undocumented on this endpoint and
+// may simply be absent.
+const votdIsPlusUrl = (url) => {
+  const s = String(url || '');
+  return /(^|\/\/)plus\.unsplash\.com/.test(s) || /premium_photo-/.test(s);
+};
+
+/** Raw Unsplash payload, as it arrives from the API. */
+const votdIsPlus = (pd) =>
+  votdIsPlusUrl(pd && pd.urls && pd.urls.regular) ||
+  votdIsPlusUrl(pd && pd.urls && pd.urls.raw) ||
+  (pd && (pd.plus === true || pd.premium === true)) ||
+  ((pd && pd.user && pd.user.username) || '') === 'plus';
+
+/** A stored record — a queue entry, a used-log entry, a recycle candidate.
+ *  These keep only the normalized fields, so the credit is checked as well:
+ *  every Unsplash+ photo is attributed to the "Unsplash+ Community" account. */
+const votdRecordIsPlus = (rec) =>
+  votdIsPlusUrl(rec && rec.url) ||
+  /unsplash\+/i.test((rec && rec.credit) || '') ||
+  /\/@plus\b/.test((rec && rec.creditLink) || '');
+
 // A photo's stable identity across the queue, the used log, and the reject
 // list.  The Unsplash image slug is present in every stored `url`, including
 // for photos rolled at random where the short id was never captured.
 const votdSlug = (url) => (String(url || '').match(/photo-[\w-]+/) || [null])[0];
+
+/** The queue, with any Unsplash+ entry queued before the filter existed
+ *  dropped.  Shared by the board and by staging so the two cannot disagree
+ *  about what is actually servable. */
+async function votdReadQueue(env) {
+  const raw = await votdReadJson(env, 'votd_queue', []);
+  return Array.isArray(raw) ? raw.filter((q) => q && !votdRecordIsPlus(q)) : [];
+}
 
 /** Read a JSON KV key, defaulting rather than throwing on absent/corrupt. */
 async function votdReadJson(env, key, fallback) {
@@ -2551,17 +2590,18 @@ async function votdRollPhoto(first, seen, env) {
   // the good-topic pool starts repeating itself.
   const isRepeat = (pd) => !!(seen && seen.has(votdSlug(pd?.urls?.regular)));
   const unusable = (pd) =>
-    votdHasPeople(pd) || votdIsGloomy(pd) || votdTooDark(pd) || votdIsManmade(pd) || isRepeat(pd);
+    votdIsPlus(pd) || votdHasPeople(pd) || votdIsGloomy(pd) || votdTooDark(pd) ||
+    votdIsManmade(pd) || isRepeat(pd);
   let pd = first ?? await votdFetchOnePhoto(env);
   let attempts = 1;
   while (pd && unusable(pd) && attempts < 8) {
     pd = await votdFetchOnePhoto(env);
     attempts++;
   }
-  // People, darkness, construction and repeats are never acceptable; a
-  // gloomy-TAGGED but bright frame that survived the retries is still kept,
-  // as before.
-  if (pd && (votdHasPeople(pd) || votdTooDark(pd) || votdIsManmade(pd) || isRepeat(pd))) pd = null;
+  // Unsplash+, people, darkness, construction and repeats are never
+  // acceptable; a gloomy-TAGGED but bright frame that survived the retries is
+  // still kept, as before.
+  if (pd && (votdIsPlus(pd) || votdHasPeople(pd) || votdTooDark(pd) || votdIsManmade(pd) || isRepeat(pd))) pd = null;
   if (!pd) return null;
   return votdNormalize(pd);
 }
@@ -2661,7 +2701,7 @@ async function votdRollCandidates(n, seen, env) {
     for (const pd of photos) {
       if (picks.length >= n) break;
       if (!pd || !pd.urls) continue;
-      if (votdHasPeople(pd) || votdIsGloomy(pd) || votdTooDark(pd) || votdIsManmade(pd)) continue;
+      if (votdIsPlus(pd) || votdHasPeople(pd) || votdIsGloomy(pd) || votdTooDark(pd) || votdIsManmade(pd)) continue;
       const slug = votdSlug(pd.urls.regular);
       if (!slug || taken.has(slug)) continue;
       taken.add(slug);
@@ -2685,14 +2725,17 @@ async function votdRollCandidates(n, seen, env) {
 async function votdBoard(env, n = 10) {
   const used = await votdReadJson(env, 'votd_used', {});
   const rejected = await votdReadJson(env, 'votd_rejected', {});
-  const queue = await votdReadJson(env, 'votd_queue', []);
+  const queue = await votdReadQueue(env);
   const seen = new Set([
     ...Object.keys(used || {}), ...Object.keys(rejected || {}),
     ...(queue || []).map((q) => q.slug),
   ]);
 
+  // `votd_candidates` is persisted, so it can still hold Unsplash+ photos
+  // parked before this filter existed — screen them here too, or the board
+  // goes on offering a watermarked photo it can no longer stage.
   let cands = (await votdReadJson(env, 'votd_candidates', []) || [])
-    .filter((c) => c && c.slug && !seen.has(c.slug));
+    .filter((c) => c && c.slug && !seen.has(c.slug) && !votdRecordIsPlus(c));
 
   const have = new Set(cands.map((c) => c.slug));
   // Batched backfill.  The old loop made up to n*8 = 80 single-photo calls to
@@ -2706,7 +2749,7 @@ async function votdBoard(env, n = 10) {
     for (const pd of photos) {
       if (cands.length >= n) break;
       if (!pd || !pd.urls) continue;
-      if (votdHasPeople(pd) || votdIsGloomy(pd) || votdTooDark(pd) || votdIsManmade(pd)) continue;
+      if (votdIsPlus(pd) || votdHasPeople(pd) || votdIsGloomy(pd) || votdTooDark(pd) || votdIsManmade(pd)) continue;
       const slug = votdSlug(pd.urls.regular);
       if (!slug || seen.has(slug) || have.has(slug)) continue;
       have.add(slug);
@@ -2749,7 +2792,7 @@ async function votdSendChooserEmail(dateET, staged, env) {
 
   const usedMap = await votdReadJson(env, 'votd_used', {});
   const rejectedMap = await votdReadJson(env, 'votd_rejected', {});
-  const queue = await votdReadJson(env, 'votd_queue', []);
+  const queue = await votdReadQueue(env);
   const seen = new Set([...Object.keys(usedMap || {}), ...Object.keys(rejectedMap || {}), ...(queue || []).map(q => q.slug)]);
   const cands = await votdRollCandidates(10, seen, env);
 
@@ -2820,7 +2863,9 @@ async function votdWarnLowQueue(dateET, staged, env, forceCount) {
   // function without touching the queue — an earlier version blanked
   // votd_queue and restored it afterwards, which would have destroyed the
   // real queue had the worker been killed mid-request.
-  const queue = await votdReadJson(env, 'votd_queue', []);
+  // Filtered, so "the queue is nearly dry" counts only what can actually be
+  // staged — an unservable Unsplash+ entry must not mask a real shortage.
+  const queue = await votdReadQueue(env);
   const n = typeof forceCount === 'number' ? forceCount : (queue || []).length;
   if (n >= VOTD_LOW_QUEUE) return;
 
@@ -2930,11 +2975,15 @@ async function votdMarkUsed(env, photo, dateET, note) {
   await votdWriteJson(env, 'votd_used', used);
 }
 
-/** The least-recently-run past photo, for when nothing fresh is available. */
+/** The least-recently-run past photo, for when nothing fresh is available.
+ *
+ *  Unsplash+ entries are excluded rather than merely un-queued: the log is
+ *  permanent, so a watermarked photo that ran once before the filter existed
+ *  would otherwise come back here every time the queue ran dry. */
 function votdOldestUsed(usedMap, rejectedMap) {
   const last = (e) => (Array.isArray(e.dates) && e.dates.length ? e.dates[e.dates.length - 1] : (e.date || ''));
   return Object.entries(usedMap || {})
-    .filter(([slug, e]) => e && e.url && !(rejectedMap || {})[slug])
+    .filter(([slug, e]) => e && e.url && !(rejectedMap || {})[slug] && !votdRecordIsPlus(e))
     .sort((a, b) => (last(a[1]) < last(b[1]) ? -1 : last(a[1]) > last(b[1]) ? 1 : 0))
     .map(([slug, e]) => ({ ...e, slug }))[0] || null;
 }
@@ -2952,8 +3001,8 @@ async function votdStagePhoto(dateET, env) {
   // An approved photo waiting in the queue always wins over a fresh roll —
   // that is the whole point of queueing.  Taken from the head and removed, so
   // the same photo can never be staged twice even if staging runs again.
-  const queue = await votdReadJson(env, 'votd_queue', []);
-  if (Array.isArray(queue) && queue.length) {
+  const queue = await votdReadQueue(env);
+  if (queue.length) {
     const next = queue.shift();
     if (env.COMMENTARY_KV) {
       await write(next);
@@ -3311,6 +3360,13 @@ Only output valid JSON, no markdown, no preamble.`;
           `<p>${desc(rec)}${by(rec)} will not be suggested again.</p>` +
           `<p style="font-size:13px;color:#666">Only this photo is blocked — other photos ` +
           `${rec.credit ? 'by ' + esc(rec.credit) + ' ' : ''}can still appear.</p>`);
+      }
+      // An older email can still carry a slug minted before this filter
+      // existed.  Its token is valid, so nothing else here would stop it.
+      if (votdRecordIsPlus(rec)) {
+        return page('Not available',
+          `<p>${desc(rec)}${by(rec)} is an Unsplash+ photo, so the file served for it ` +
+          `carries a tiled "Unsplash+" watermark. It cannot be used.</p>`);
       }
       const queue = await votdReadJson(env, 'votd_queue', []);
       if (queue.some((q) => q.slug === slug)) {
