@@ -1703,6 +1703,34 @@ async function handleKjvSearch(env, url, cors) {
 //   - Key: apibible_raw_{translationId}_{usfmCode}.{chapter}
 //   - Cached entries omit the FUMS token (each fresh API call gets its own token; cached reads
 //     fire FUMS without a token, per the FUMS spec for previously-fetched content).
+/**
+ * Strip regex fragments out of api.bible verse text.
+ *
+ * KLB 2 Samuel 24:13 arrives from api.bible ending `주십시오.” (?=.*?것)` — a
+ * lookahead that has no business in scripture and rendered verbatim in the
+ * reader.  It is upstream, not ours: `apibible_raw_*` stores their payload
+ * untouched, and nothing else in this worker writes those keys.
+ *
+ * Applied on the way OUT rather than at fetch time, deliberately.  The bad
+ * text is already sitting in 1,189 cached chapters with a 30-day TTL, and
+ * sanitising the response repairs every one of them on the next read — no KV
+ * rewrite, no deletes, and no api.bible calls against a metered quota.
+ *
+ * Deliberately narrow: only a `(?...)` group whose body is regex syntax.  A
+ * plain parenthetical is ordinary punctuation and must survive, so the `?`
+ * plus a lookahead/non-capturing sigil is what qualifies.  A survey of all
+ * 1,189 cached KLB chapters found exactly one match, so this is a scalpel and
+ * not a filter — if it ever starts removing more, something changed upstream
+ * and is worth looking at rather than silently cleaning.
+ */
+const API_BIBLE_REGEX_ARTIFACT = /\s*\(\?[=!:<][^)]{0,60}\)/g;
+
+function sanitizeApiBibleContent(data) {
+  if (!data || typeof data.content !== 'string') return data;
+  const cleaned = data.content.replace(API_BIBLE_REGEX_ARTIFACT, '');
+  return cleaned === data.content ? data : { ...data, content: cleaned };
+}
+
 async function handleApiBibleChapter(env, url, cors, translationId, bookNum, chapter) {
   // Validate authorization
   const translation = API_BIBLE_TRANSLATIONS[translationId];
@@ -1747,7 +1775,7 @@ async function handleApiBibleChapter(env, url, cors, translationId, bookNum, cha
     const cached = await env.COMMENTARY_KV.get(cacheKey, 'json');
     if (cached) {
       return new Response(JSON.stringify({
-        data: cached.data,
+        data: sanitizeApiBibleContent(cached.data),
         meta: cached.meta || {},
         fumsToken: null, // never reuse a stored FUMS token; cached reads fire FUMS without one
         cached: true,
@@ -1795,7 +1823,7 @@ async function handleApiBibleChapter(env, url, cors, translationId, bookNum, cha
   const fumsToken = apiData.meta?.fums || apiData.meta?.fumsId || null;
 
   return new Response(JSON.stringify({
-    data: apiData.data,
+    data: sanitizeApiBibleContent(apiData.data),
     meta: apiData.meta || {},
     fumsToken,
     cached: false,
@@ -1922,6 +1950,11 @@ async function handleApiBibleSearch(env, url, cors, translationId) {
 // the front-end "↑ continued above" approach for display consistency).
 function parseApiBibleChapterContent(content) {
   if (!content) return [];
+  // Same upstream artifact the chapter route strips — see
+  // sanitizeApiBibleContent.  Applied here too so a search-index rebuild does
+  // not bake a regex fragment into the indexed text (and, through it, into
+  // search results and their snippets).
+  content = content.replace(API_BIBLE_REGEX_ARTIFACT, '');
   const out = [];
   const segments = content.split(/(?=\[\d+(?:-\d+)?\])/);
   for (const seg of segments) {
