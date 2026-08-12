@@ -2425,7 +2425,15 @@ async function handleKoreanSearch(env, url, cors) {
 // roughly nine-tenths fields.  Weighted now toward sky, sun and hills, with
 // fields and water kept as the minority they should be:
 //
-//     sky 4 · sun 3 · hills 4 · flock 3 · plains 2 · flowers 3 · grain 1 · water 2
+//     sun 3 · hills 4 · pasture 4 · flock 3 · plains 2 · flowers 3 · grain 1
+//
+// NAME A SCENE, NOT A TEXTURE.  Every topic's head noun is a place with depth
+// and a foreground — landscape, valley, countryside, hillside, vista, pasture,
+// meadow, plains.  Light belongs in the modifiers.  An earlier version led
+// with the sky itself ('cloudscape bright blue sky daytime') and Unsplash
+// answered it literally: photographs OF sky, which are a texture and make a
+// poor backdrop for a verse.  If you add a topic, check it names somewhere a
+// person could stand.
 //
 // Note the list IS the distribution — a topic is drawn at random per fetch —
 // so changing the mix here is how you change what the picker shows.
@@ -2434,40 +2442,33 @@ async function handleKoreanSearch(env, url, cors) {
 // 'twilight', 'dramatic sky', 'grey'...) will have the returned photo rejected
 // by its own tags, so a 'dusk over the hills' topic quietly yields nothing.
 const VOTD_TOPICS = [
-  // sky
-  'blue sky white clouds sunlight',
-  'clear blue sky horizon sunny',
-  'cloudscape bright blue sky daytime',
-  'sunbeams through clouds bright sky',
   // sun
-  'sunrise golden light clear sky',
-  'golden hour sunlight warm glow',
-  'bright sun rays blue sky',
+  'scenic landscape golden hour sunlight',
+  'sunrise over green valley landscape',
+  'sunbeams over rolling countryside',
   // hills
-  'rolling green hills sunny',
-  'mountain range clear blue sky',
-  'green hillside sunlight horizon',
-  'sunlit mountain peaks blue sky',
-  // A shepherd or farmer in frame is a people keyword and gets rejected,
-  // which is what we want.  Be aware the manmade list also rejects fences and
-  // barns, and pastoral sheep photos very often have one or the other — so
-  // this group's usable yield runs lower than its share of the list suggests.
+  'rolling green hills scenic landscape',
+  'mountain valley landscape clear day',
+  'green hillside overlooking valley',
+  'scenic highland vista sunlight',
+  // pasture
+  'green pasture rolling countryside scenic',
+  'lush pasture valley sunlight landscape',
+  'open pastureland scenic horizon',
+  'spring pasture green fields landscape',
   // flock
-  'flock of sheep green pasture sunny',
-  'lambs grazing green meadow sunlight',
-  'sheep grazing rolling hills blue sky',
+  'sheep grazing green pasture landscape',
+  'flock of sheep rolling hills scenic',
+  'lambs in green meadow spring landscape',
   // plains
-  'wide open plains horizon sunny',
-  'vast grassy plains blue sky',
+  'vast open plains scenic horizon',
+  'wide grassland plain landscape sunny',
   // flowers
-  'wildflower field blue sky',
-  'flower field in bloom sunlight',
-  'poppy field blue sky sunny',
+  'wildflower meadow scenic landscape',
+  'flower field rolling hills sunlight',
+  'poppy meadow landscape spring',
   // grain
-  'wheat field golden sunrise clear sky',
-  // water
-  'ocean horizon blue water sunny',
-  'calm lake reflection sky'
+  'golden wheat field landscape sunrise'
 ];
 
 /** `k` DISTINCT topics.  A refill that draws every photo from one topic comes
