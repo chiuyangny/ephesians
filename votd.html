@@ -128,8 +128,7 @@ function render(b){
   document.getElementById('boot').hidden = true;
   document.getElementById('wrap').hidden = false;
   document.getElementById('stats').textContent =
-    b.candidates.length + ' shown · ' + (b.bench || b.candidates.length) + ' on the bench · ' +
-    b.queue.length + ' queued · ' +
+    b.candidates.length + ' shown · ' + b.queue.length + ' queued · ' +
     b.usedCount + ' used · ' + b.rejectedCount + ' blocked';
 
   // Say WHY when the board comes back short, instead of quietly showing less.
