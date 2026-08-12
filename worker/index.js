@@ -2425,7 +2425,7 @@ async function handleKoreanSearch(env, url, cors) {
 // roughly nine-tenths fields.  Weighted now toward sky, sun and hills, with
 // fields and water kept as the minority they should be:
 //
-//     sky 4 · sun 3 · hills 4 · field 2 · water 2
+//     sky 4 · sun 3 · hills 4 · flock 3 · plains 2 · flowers 3 · grain 1 · water 2
 //
 // Note the list IS the distribution — a topic is drawn at random per fetch —
 // so changing the mix here is how you change what the picker shows.
@@ -2448,9 +2448,23 @@ const VOTD_TOPICS = [
   'mountain range clear blue sky',
   'green hillside sunlight horizon',
   'sunlit mountain peaks blue sky',
-  // field
-  'wheat field golden sunrise clear sky',
+  // A shepherd or farmer in frame is a people keyword and gets rejected,
+  // which is what we want.  Be aware the manmade list also rejects fences and
+  // barns, and pastoral sheep photos very often have one or the other — so
+  // this group's usable yield runs lower than its share of the list suggests.
+  // flock
+  'flock of sheep green pasture sunny',
+  'lambs grazing green meadow sunlight',
+  'sheep grazing rolling hills blue sky',
+  // plains
+  'wide open plains horizon sunny',
+  'vast grassy plains blue sky',
+  // flowers
   'wildflower field blue sky',
+  'flower field in bloom sunlight',
+  'poppy field blue sky sunny',
+  // grain
+  'wheat field golden sunrise clear sky',
   // water
   'ocean horizon blue water sunny',
   'calm lake reflection sky'
