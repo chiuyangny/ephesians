@@ -62,6 +62,12 @@
         pointer-events:none}
   .q button{padding:1px 5px;font-size:11px;color:var(--dim);line-height:1.2}
   .hint{font-size:11px;color:var(--dim);margin:0 0 8px}
+  /* Why the board is short.  The worker has always returned `short`
+     and `error` for exactly this, but the page used to drop them, so a
+     spent Unsplash quota was indistinguishable from a thin harvest —
+     the board just showed fewer photos with each pick and said nothing. */
+  .warn{font-size:12px;line-height:1.45;color:#8a5a00;background:#fff6e0;
+        border:1px solid #f0d9a0;border-radius:8px;padding:8px 10px;margin:8px 0 0}
 
   #lb{position:fixed;inset:0;background:rgba(0,0,0,.86);display:none;z-index:50;
       align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
@@ -78,6 +84,7 @@
 <header>
   <h1>VOTD picker</h1>
   <span class="stats" id="stats"></span>
+  <div class="warn" id="warn" hidden></div>
 </header>
 <div id="boot" class="msg">Loading…</div>
 <div id="lb"><img alt=""><div class="cap"></div></div>
@@ -121,8 +128,29 @@ function render(b){
   document.getElementById('boot').hidden = true;
   document.getElementById('wrap').hidden = false;
   document.getElementById('stats').textContent =
-    b.candidates.length + ' shown · ' + b.queue.length + ' queued · ' +
+    b.candidates.length + ' shown · ' + (b.bench || b.candidates.length) + ' on the bench · ' +
+    b.queue.length + ' queued · ' +
     b.usedCount + ' used · ' + b.rejectedCount + ' blocked';
+
+  // Say WHY when the board comes back short, instead of quietly showing less.
+  const warn = document.getElementById('warn');
+  const why = {
+    'rate-limit': 'Unsplash hourly request limit reached. The bench refills by itself once the hour rolls over — picking still works from whatever is on it.',
+    'no-key':     'VOTD_UNSPLASH_KEY is not set on the worker, so no new photos can be fetched at all.',
+    'forbidden':  'Unsplash rejected the API key. Check VOTD_UNSPLASH_KEY.',
+    'network':    'Could not reach Unsplash. Usually transient — try again shortly.',
+    'bad-json':   'Unsplash returned something unreadable. Usually transient.',
+  };
+  if(b.error){
+    warn.hidden = false;
+    warn.textContent = why[b.error] || ('Unsplash fetch failed (' + b.error + ').');
+  } else if(b.short){
+    warn.hidden = false;
+    warn.textContent = 'Fewer than ten matched the filters this round (no people, nothing gloomy, dark, man-made, Unsplash+, or already seen). Nothing is broken — reload for another draw.';
+  } else {
+    warn.hidden = true;
+    warn.textContent = '';
+  }
 
   const grid = document.getElementById('grid');
   grid.innerHTML = '';

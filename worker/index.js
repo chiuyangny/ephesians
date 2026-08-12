@@ -2743,7 +2743,22 @@ async function votdRollCandidates(n, seen, env) {
   }
   // Parked so the emailed links can resolve a slug back to a full record —
   // the email itself carries only slugs, never whole photo objects in a URL.
-  await votdWriteJson(env, 'votd_candidates', picks);
+  //
+  // MERGED, not overwritten.  This used to replace the key outright, which
+  // threw away the picker's bench (see VOTD_BENCH) every time the daily email
+  // ran — the board would be deep one minute and back to ten the next, for no
+  // reason the user could see.  Keeping both means the emailed slugs still
+  // resolve and the bench survives.
+  const parked = await votdReadJson(env, 'votd_candidates', []);
+  const merged = [...picks];
+  const known = new Set(picks.map((p) => p.slug));
+  for (const c of Array.isArray(parked) ? parked : []) {
+    if (merged.length >= VOTD_BENCH) break;
+    if (!c || !c.slug || known.has(c.slug)) continue;
+    known.add(c.slug);
+    merged.push(c);
+  }
+  await votdWriteJson(env, 'votd_candidates', merged);
   return picks;
 }
 
@@ -2755,6 +2770,26 @@ async function votdRollCandidates(n, seen, env) {
  * Anything that has since been queued, used, or blocked is dropped and
  * backfilled, which is what keeps ten in view after an X.
  */
+/**
+ * The bench behind the board, and when to top it up.
+ *
+ * The board used to hold exactly the ten it displayed, so EVERY pick dropped
+ * it to nine and the next render went straight back to Unsplash.  The demo key
+ * allows 50 requests an hour and a render costs up to three, so a real picking
+ * session — which is a dozen taps in a couple of minutes — exhausted the quota
+ * within about sixteen actions.  After that every fetch 403s, the backfill
+ * breaks out, and the board simply shrinks with each pick: "as I choose photos
+ * it's not getting replaced, showing less and less."
+ *
+ * Keeping a deeper bench than we display fixes it at the cause.  Top up to
+ * BENCH, then serve picks off the bench until it falls past REFILL_AT — about
+ * eighteen picks with no Unsplash call at all, instead of one call per pick.
+ * The refill itself is no more expensive than before: still at most three
+ * requests, just far less often.
+ */
+const VOTD_BENCH = 30;
+const VOTD_REFILL_AT = 12;
+
 async function votdBoard(env, n = 10) {
   const used = await votdReadJson(env, 'votd_used', {});
   const rejected = await votdReadJson(env, 'votd_rejected', {});
@@ -2776,22 +2811,29 @@ async function votdBoard(env, n = 10) {
   // exhaust the entire quota — after which every fetch 403'd and the board
   // silently came back short.  Three rounds of 30 is at most three calls.
   let fetchError = null;
-  for (let round = 0; round < 3 && cands.length < n; round++) {
-    const { photos, error } = await votdFetchPhotos(30, env);
-    if (error) { fetchError = error; break; }
-    for (const pd of photos) {
-      if (cands.length >= n) break;
-      if (!pd || !pd.urls) continue;
-      if (votdIsPlus(pd) || votdHasPeople(pd) || votdIsGloomy(pd) || votdTooDark(pd) || votdIsManmade(pd)) continue;
-      const slug = votdSlug(pd.urls.regular);
-      if (!slug || seen.has(slug) || have.has(slug)) continue;
-      have.add(slug);
-      cands.push(votdNormalize(pd));
+  // Top up only when the BENCH runs low, not every time the board is one
+  // short — see VOTD_REFILL_AT.  Refilling per pick is what burned the quota.
+  if (cands.length < VOTD_REFILL_AT) {
+    for (let round = 0; round < 3 && cands.length < VOTD_BENCH; round++) {
+      const { photos, error } = await votdFetchPhotos(30, env);
+      if (error) { fetchError = error; break; }
+      for (const pd of photos) {
+        if (cands.length >= VOTD_BENCH) break;
+        if (!pd || !pd.urls) continue;
+        if (votdIsPlus(pd) || votdHasPeople(pd) || votdIsGloomy(pd) || votdTooDark(pd) || votdIsManmade(pd)) continue;
+        const slug = votdSlug(pd.urls.regular);
+        if (!slug || seen.has(slug) || have.has(slug)) continue;
+        have.add(slug);
+        cands.push(votdNormalize(pd));
+      }
     }
   }
   await votdWriteJson(env, 'votd_candidates', cands);
   return {
-    candidates: cands,
+    // Show n, keep the rest on the bench for the next pick to draw from.
+    candidates: cands.slice(0, n),
+    /** Bench depth, so the picker can say when a refill is due or failing. */
+    bench: cands.length,
     queue: queue || [],
     usedCount: Object.keys(used || {}).length,
     rejectedCount: Object.keys(rejected || {}).length,
