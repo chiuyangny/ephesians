@@ -2413,28 +2413,61 @@ async function handleKoreanSearch(env, url, cors) {
 //
 // Topics lean toward bright, clear-sky scenes (sunrise / golden hour / blue
 // sky / sunny) — the first line of defense against a gloomy overcast shot,
-// backed up by the isGloomy re-roll below.
-// Search terms are the ones that actually produced photos worth keeping —
-// field, pasture, sky, ocean, harvest, flower field — plus close neighbours.
-// The SUBJECT being agricultural (a field, a harvest) is fine and wanted; what
-// is not wanted is human construction in frame, which VOTD_MANMADE below
-// rejects.  That split matters: 'wheat field' as a topic with 'barn' as a
-// reject gives open grain under sky, where rejecting 'field' outright would
-// throw away the whole category.
+// backed up by the isGloomy re-roll below.  The SUBJECT being agricultural is
+// fine and wanted; what is not wanted is human construction in frame, which
+// VOTD_MANMADE below rejects.  That split matters: 'wheat field' as a topic
+// with 'barn' as a reject gives open grain under sky, where rejecting 'field'
+// outright would throw away the whole category.
+//
+// BALANCE.  This list used to be six field queries out of twelve, plus a
+// seventh ('pasture rolling hills') that returns fields anyway, against ONE
+// sky topic and none at all about the sun — which is why the board came back
+// roughly nine-tenths fields.  Weighted now toward sky, sun and hills, with
+// fields and water kept as the minority they should be:
+//
+//     sky 4 · sun 3 · hills 4 · field 2 · water 2
+//
+// Note the list IS the distribution — a topic is drawn at random per fetch —
+// so changing the mix here is how you change what the picker shows.
+//
+// Two words to avoid when editing: anything in VOTD_GLOOMY_KEYWORDS ('dusk',
+// 'twilight', 'dramatic sky', 'grey'...) will have the returned photo rejected
+// by its own tags, so a 'dusk over the hills' topic quietly yields nothing.
 const VOTD_TOPICS = [
-  'open field tall grass blue sky',
-  'pasture rolling hills blue sky',
+  // sky
   'blue sky white clouds sunlight',
-  'ocean horizon blue water sunny',
-  'harvest golden field sunlight',
-  'wildflower field blue sky',
+  'clear blue sky horizon sunny',
+  'cloudscape bright blue sky daytime',
+  'sunbeams through clouds bright sky',
+  // sun
+  'sunrise golden light clear sky',
+  'golden hour sunlight warm glow',
+  'bright sun rays blue sky',
+  // hills
+  'rolling green hills sunny',
+  'mountain range clear blue sky',
+  'green hillside sunlight horizon',
+  'sunlit mountain peaks blue sky',
+  // field
   'wheat field golden sunrise clear sky',
-  'grassland horizon sunny',
-  'sea waves coastline clear sky',
-  'meadow wildflowers sunshine',
-  'calm lake reflection sky',
-  'coastal ocean cliffs sunny'
+  'wildflower field blue sky',
+  // water
+  'ocean horizon blue water sunny',
+  'calm lake reflection sky'
 ];
+
+/** `k` DISTINCT topics.  A refill that draws every photo from one topic comes
+ *  back as thirty variations of the same scene, which is what a single random
+ *  pick per call produced.  Fewer photos from more topics costs exactly the
+ *  same number of requests. */
+function votdPickTopics(k) {
+  const pool = [...VOTD_TOPICS];
+  const out = [];
+  while (out.length < k && pool.length) {
+    out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+  }
+  return out;
+}
 
 // Anything in the photo's description/tags that hints at a person being in
 // frame.  Unsplash has no native no-people filter, so we re-roll if any of
@@ -2567,12 +2600,15 @@ const votdTooDark = (pd) => votdHexLuminance(pd.color) < VOTD_DARK_THRESHOLD;
  * Returns the reason on failure so callers can say WHY rather than showing an
  * unexplained short list.
  */
-const votdFetchPhotos = async (count, env) => {
+const votdFetchPhotos = async (count, env, topic) => {
   const key = env && env.VOTD_UNSPLASH_KEY;
   // Was hardcoded here — in a public repo, so anyone could spend the quota.
   // Set with: wrangler secret put VOTD_UNSPLASH_KEY
   if (!key) return { photos: [], error: 'no-key' };
-  const t = VOTD_TOPICS[Math.floor(Math.random() * VOTD_TOPICS.length)];
+  // Callers filling several rounds pass a DIFFERENT topic each time, so one
+  // draw cannot make the whole bench a single scene.  Unnamed = random, which
+  // is right for the one-off re-roll in votdRollPhoto.
+  const t = topic || VOTD_TOPICS[Math.floor(Math.random() * VOTD_TOPICS.length)];
   const n = Math.max(1, Math.min(30, count | 0));
   let r;
   try {
@@ -2728,8 +2764,9 @@ async function votdRollCandidates(n, seen, env) {
   // Batched: 30 per call rather than one, so filling this costs a couple of
   // requests instead of dozens.  Bounded rounds so a quota failure returns
   // promptly rather than retrying into a wall.
-  for (let round = 0; round < 3 && picks.length < n; round++) {
-    const { photos, error } = await votdFetchPhotos(30, env);
+  const topics = votdPickTopics(3);
+  for (let round = 0; round < topics.length && picks.length < n; round++) {
+    const { photos, error } = await votdFetchPhotos(15, env, topics[round]);
     if (error) break;
     for (const pd of photos) {
       if (picks.length >= n) break;
@@ -2814,8 +2851,12 @@ async function votdBoard(env, n = 10) {
   // Top up only when the BENCH runs low, not every time the board is one
   // short — see VOTD_REFILL_AT.  Refilling per pick is what burned the quota.
   if (cands.length < VOTD_REFILL_AT) {
-    for (let round = 0; round < 3 && cands.length < VOTD_BENCH; round++) {
-      const { photos, error } = await votdFetchPhotos(30, env);
+    // Three rounds of 15 across three DIFFERENT topics rather than one round
+    // of 30 from one.  Same request count, but the bench ends up mixed instead
+    // of thirty near-identical frames from whichever topic happened to win.
+    const topics = votdPickTopics(3);
+    for (let round = 0; round < topics.length && cands.length < VOTD_BENCH; round++) {
+      const { photos, error } = await votdFetchPhotos(15, env, topics[round]);
       if (error) { fetchError = error; break; }
       for (const pd of photos) {
         if (cands.length >= VOTD_BENCH) break;
