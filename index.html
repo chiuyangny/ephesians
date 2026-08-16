@@ -627,6 +627,33 @@ body.dark .auth-card-status{color:#e8e5e0}
 .auth-row-btn.danger{border-color:#dc2626;color:#dc2626}
 body.dark .auth-row-btn{border-color:#444;color:#e8e5e0}
 body.dark .auth-row-btn.danger{border-color:#f87171;color:#f87171}
+
+/* ---- Chapter arrows -------------------------------------------------- */
+/* The markup, the step() wiring and the boundary-disabling all already
+   existed; they were invisible because `.edge-nav{display:none!important}`
+   further down applies at EVERY width, overriding the desktop rule up at
+   @media(min-width:641px).  That hide travelled with a block of mobile rules
+   that ended up unscoped, so it took the arrows out everywhere. */
+
+/* Restored only where they make sense: a pointer that can hover, and enough
+   width that a fixed element at the viewport edge is not sitting on the text.
+   On touch there is no hover state to reveal them with, and no room to spare. */
+@media (min-width:900px) and (hover:hover) and (pointer:fine){
+  .edge-nav{display:block!important}
+}
+
+/* Translucent at rest so they stay out of the way of reading, solid on
+   approach.  Opacity is animated rather than visibility so they fade in
+   instead of appearing; the hover target is the WRAPPER, not the button, so
+   the arrow has already solidified by the time the pointer reaches it. */
+.edge-btn{opacity:.2;transition:opacity .18s ease,background .15s,color .15s}
+.edge-nav:hover .edge-btn{opacity:1}
+.edge-btn:focus-visible{opacity:1;outline:2px solid #8a6a3a;outline-offset:2px}
+
+/* At the ends of the canon there is nowhere to go — Genesis 1 has no previous
+   chapter, Revelation 22 no next.  Gone entirely rather than dimmed: a dead
+   control you can still see is a question the reader has to answer. */
+.edge-btn:disabled{opacity:0!important;pointer-events:none}
 </style>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
