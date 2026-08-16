@@ -1389,6 +1389,40 @@ function toggleBookRow(idx){
     var b=BOOKS[idx],h='';
     for(var c=1;c<=b.ch;c++)h+='<div class="mob-ch-item'+(loaded&&idx===bi&&c===ci&&!inIntroMode?' active':'')+'" onclick="sheetSelectCh2('+idx+','+c+')">'+c+'</div>';
     grid.innerHTML=h;grid.style.display='grid';if(chevron)chevron.classList.add('open');
+    // Bring the chapters into view.  The grid opens BELOW its book row, so for
+    // anything low in the list — Revelation worst of all, being last — it
+    // expanded off-screen and you had to scroll down to find it.  The initial
+    // render already scrolls the active book into place; this carries the same
+    // behaviour into the toggle.
+    //
+    // Only when it is actually needed: a book near the top opens fully visible,
+    // and scrolling then would yank the list for no reason.  Measured after a
+    // frame so the grid's new height is in the layout.
+    var row=document.getElementById('book-row-'+idx);
+    var scroller=document.getElementById('mob-sheet-body');
+    if(row&&scroller&&row.scrollIntoView){
+      var offscreen=function(){
+        var g=grid.getBoundingClientRect(),s=scroller.getBoundingClientRect();
+        return g.bottom>s.bottom||g.top<s.top;
+      };
+      var settle=function(){
+        if(!offscreen())return;
+        row.scrollIntoView({block:'start',behavior:'smooth'});
+        // Guarantee arrival.  A smooth scroll is a request, not a promise —
+        // it is dropped under prefers-reduced-motion and in some embedded
+        // browsers, and when that happens nothing moves at all rather than
+        // jumping.  Landing on the chapters matters more than the animation,
+        // so if we are still off-screen shortly after, go there outright.
+        setTimeout(function(){if(offscreen())row.scrollIntoView({block:'start'});},400);
+      };
+      // Checked twice, and each check is a no-op once the grid is in view.
+      // The first covers the normal case of an already-open sheet; the second
+      // covers opening a book while the sheet itself is still animating up,
+      // where the first measurement is taken against a panel that has not
+      // reached its final height and wrongly reads as "already visible".
+      requestAnimationFrame(settle);
+      setTimeout(settle,350);
+    }
   }
 }
 function sheetSelectCh2(bookIdx,ch){
