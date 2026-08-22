@@ -1,6 +1,6 @@
 # krengbible Cloudflare Worker
 
-Source for the Worker at `krengbible.pauljkim22.workers.dev`.  This repo is the source of truth — paste `index.js` into the Cloudflare dashboard editor when deploying.
+Source for the Worker at `krengbible.pauljkim22.workers.dev`.  This repo is the source of truth, and `wrangler.toml` is configured with the account id, worker name, KV binding and crons — deploying is one command from this directory.
 
 ## What changed in the Korean search rewrite
 
@@ -12,22 +12,49 @@ If the index hasn't been built yet, `/search/ko` returns HTTP 503 with `{"error"
 
 ## Required env vars / bindings
 
-Already present in this Worker:
-
-- `COMMENTARY_KV` — KV namespace binding
+- `COMMENTARY_KV` — KV namespace binding, declared in `wrangler.toml`
 - `ESV_TOKEN` — ESV API token
 - `ANTHROPIC_KEY` — Anthropic API key
+- `API_BIBLE_KEY` — api.bible key, for the KLB and other api.bible translations
+- `ADMIN_SECRET` — any random string; gates every `/admin/*` endpoint below
 
-**Add:**
+The VOTD preview email adds `RESEND_KEY`, `VOTD_EMAIL_FROM` and `VOTD_EMAIL_TO`,
+same mechanism.  If any is unset the cron still stages the photo and skips the
+mail — staging must not depend on mail working.  `VOTD_PUBLIC_ORIGIN` is
+optional, and only needed if the Worker moves to a custom domain, since a cron
+has no request to read its own host from.
 
-- `ADMIN_SECRET` — any random string.  Required to call the `/admin/*` endpoints below.  Set it as a Worker secret (Settings → Variables and Secrets → Add → "Secret").
+Everything except `COMMENTARY_KV` is a secret: `wrangler secret put NAME`.
 
-## Deploying the new Worker
+## Deploying
 
-1. Open the Cloudflare dashboard → Workers & Pages → krengbible → Edit code.
-2. Replace the entire file with the contents of `worker/index.js`.
-3. Confirm `COMMENTARY_KV`, `ESV_TOKEN`, `ANTHROPIC_KEY`, `ADMIN_SECRET` are all bound under Settings.
-4. Deploy.
+From this directory:
+
+```bash
+npx wrangler deploy
+```
+
+That is the whole thing — `wrangler.toml` carries the account id, worker name, KV
+binding and cron triggers, so there is nothing to pass on the command line.  The
+old dashboard copy-paste workflow is gone; do not reintroduce it.
+
+Authentication is either an interactive `wrangler login` (works on a laptop) or a
+`CLOUDFLARE_API_TOKEN` environment variable (the only option in a headless or
+cloud session).  Mint a scoped token with **Workers Scripts: Edit** and **Workers
+KV Storage: Edit** — not the Global API Key.  This repo is public, so the token
+lives in your shell or your cloud environment's variables, never in a file here.
+
+Deploying from a Claude Code cloud or phone session additionally needs
+`api.cloudflare.com` on the environment's network allowlist; the default Trusted
+level does not include it.  See the root `CLAUDE.md` for the exact setup.
+
+Secrets are set separately and persist across deploys:
+
+```bash
+wrangler secret put ESV_TOKEN
+wrangler secret put ANTHROPIC_KEY
+wrangler secret put ADMIN_SECRET
+```
 
 ## Building the English (ESV) search index
 
@@ -37,16 +64,16 @@ Chunk size 250 chapters at a time, same as Korean.  Each chunk fetches the chapt
 
 ```bash
 # Chunk 1: chapters 0-249
-curl.exe "https://krengbible.pauljkim22.workers.dev/admin/build-en-index?secret=YOUR_SECRET&from=0&size=250"
+curl "https://krengbible.pauljkim22.workers.dev/admin/build-en-index?secret=YOUR_SECRET&from=0&size=250"
 
 # Chunks 2-5
-curl.exe "https://krengbible.pauljkim22.workers.dev/admin/build-en-index?secret=YOUR_SECRET&from=250&size=250"
-curl.exe "https://krengbible.pauljkim22.workers.dev/admin/build-en-index?secret=YOUR_SECRET&from=500&size=250"
-curl.exe "https://krengbible.pauljkim22.workers.dev/admin/build-en-index?secret=YOUR_SECRET&from=750&size=250"
-curl.exe "https://krengbible.pauljkim22.workers.dev/admin/build-en-index?secret=YOUR_SECRET&from=1000&size=250"
+curl "https://krengbible.pauljkim22.workers.dev/admin/build-en-index?secret=YOUR_SECRET&from=250&size=250"
+curl "https://krengbible.pauljkim22.workers.dev/admin/build-en-index?secret=YOUR_SECRET&from=500&size=250"
+curl "https://krengbible.pauljkim22.workers.dev/admin/build-en-index?secret=YOUR_SECRET&from=750&size=250"
+curl "https://krengbible.pauljkim22.workers.dev/admin/build-en-index?secret=YOUR_SECRET&from=1000&size=250"
 
 # Merge once all chunks are done
-curl.exe "https://krengbible.pauljkim22.workers.dev/admin/merge-en-index?secret=YOUR_SECRET"
+curl "https://krengbible.pauljkim22.workers.dev/admin/merge-en-index?secret=YOUR_SECRET"
 ```
 
 Each chunk takes 60–120s the first time (it's calling ESV ~250 times in parallel batches).  Subsequent chunks reuse the per-chapter cache (`esv_{book}_{chapter}` keys) unless you pass `&refetch=1`.
@@ -102,13 +129,42 @@ If you ever change verse text (you almost certainly won't), re-run the chunked b
 
 | Route | Purpose | Notes |
 |---|---|---|
-| `/esv/?q=...` | ESV passage lookup | Passthrough |
+| `/esv/?q=...` | ESV passage lookup | Passthrough to the ESV API |
+| `/nkrv/{book}/{ch}` | Korean (개역개정) chapter | KV-cached forever |
+| `/apibible/{translation}/{book}/{ch}` | api.bible chapter (KLB and others) | KV-cached forever |
 | `/intro/{n}` | AI book intro | KV-cached forever |
 | `/commentary/{book}/{ch}` | AI chapter commentary | KV-cached forever |
-| `/search/ko?q=&offset=` | Korean search | Uses pre-built index — fast |
-| `/search/en?q=&page=` | English search | ESV API |
+| `/qt-reflection/...` | Daily QT reflection | Warmed by the 08:00 UTC cron |
+| `/search/ko?q=&offset=` | Korean search | Pre-built index — fast |
+| `/search/en?q=&page=` | English (ESV) search | Pre-built index — fast |
+| `/search/kjv?q=` | KJV search | Pre-built index — fast |
+| `/search/apibible/{translation}` | api.bible translation search | Pre-built index — fast |
 | `/votd` | Verse of the day | KV-cached until midnight ET |
-| `/nkrv/{book}/{ch}` | Korean Bible chapter | KV-cached forever |
-| `/admin/build-index` | Build search index chunk | Requires `secret` |
-| `/admin/merge-index` | Merge chunks into final index | Requires `secret` |
-| `/admin/index-status` | Inspect index state | Requires `secret` |
+| `/votd/next`, `/votd/reroll`, `/votd/reject`, `/votd/queue-add` | VOTD queue control | Backs `votd.html` |
+
+All four search routes share one architecture: a flat `[bookIdx, chapter, verse,
+text]` index in KV, loaded once per isolate into a module-level cache, then
+scanned in memory.  None of them calls an upstream search API per query.
+
+### Admin routes
+
+Every one requires `?secret=YOUR_ADMIN_SECRET`.
+
+| Route | Purpose |
+|---|---|
+| `/admin/build-index`, `/admin/merge-index` | Korean search index |
+| `/admin/build-en-index`, `/admin/merge-en-index` | ESV search index |
+| `/admin/build-apibible-index`, `/admin/merge-apibible-index` | api.bible search index |
+| `/admin/index-status` | Inspect index size, chunk count, isolate cache state |
+| `/admin/wipe-apibible-cache` | Drop cached api.bible chapters |
+| `/admin/warm-esv`, `/admin/warm-nkt`, `/admin/warm-saebeon` | Pre-warm chapter caches |
+| `/admin/votd-board`, `/admin/votd-chooser`, `/admin/votd-next`, `/admin/votd-act`, `/admin/votd-lowcheck` | VOTD staging and review |
+
+## Crons
+
+Declared in `wrangler.toml`, dispatched from `scheduled()` on `event.cron`:
+
+| Schedule | What it does |
+|---|---|
+| `0 8 * * *` | Warms the daily QT cache.  08:00 UTC gives every timezone, as far out as UTC+14, at least a two-hour head start before their local midnight |
+| `0 16 * * *` | Stages tomorrow's VOTD photo so it can be previewed and re-rolled before going live.  Noon EDT / 11am EST — crons are UTC-only, so the DST hour is accepted, not corrected |
