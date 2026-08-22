@@ -1,0 +1,42 @@
+name: Deploy Worker
+
+# Two ways to fire this:
+#   - Manually, from the Actions tab (works from the GitHub mobile app).
+#   - Automatically, when a push to main touches the Worker source.
+# Deliberately NOT run on pull_request: this repo is public, and a fork PR
+# must never get a run that can read CLOUDFLARE_API_TOKEN.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'worker/**'
+      - '.github/workflows/deploy-worker.yml'
+
+permissions:
+  contents: read
+
+# A newer deploy supersedes one already in flight; never let two overlap.
+concurrency:
+  group: deploy-worker
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # account_id, worker name, KV binding and crons all come from
+      # worker/wrangler.toml, so the token is the only secret needed here.
+      # ESV_TOKEN, ANTHROPIC_KEY, ADMIN_SECRET and the VOTD secrets are set
+      # with `wrangler secret put` and persist across deploys.
+      - name: Deploy
+        working-directory: worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npx wrangler deploy
