@@ -33,8 +33,23 @@ jobs:
       # worker/wrangler.toml, so the token is the only secret needed here.
       # ESV_TOKEN, ANTHROPIC_KEY, ADMIN_SECRET and the VOTD secrets are set
       # with `wrangler secret put` and persist across deploys.
+      # Printed before deploying so the run's log always carries the version
+      # to roll back to, without needing a terminal to go find it.
+      - name: Record current version
+        working-directory: worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npx wrangler deployments list || echo "(could not list deployments; continuing)"
+
       - name: Deploy
         working-directory: worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: npx wrangler deploy
+
+      # A deploy that succeeds can still serve a broken route, so the run is
+      # not green until the reader-facing endpoints answer.  A red run here
+      # means production needs `wrangler rollback` — see the step's output.
+      - name: Smoke test
+        working-directory: worker
+        run: ./smoke.sh

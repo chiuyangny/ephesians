@@ -51,6 +51,28 @@ permissions.  Everything else comes from `wrangler.toml`.
 The workflow deliberately does not run on `pull_request`: this repo is public,
 and a fork PR must never get a run that can read that token.
 
+After deploying it runs `worker/smoke.sh`, which requires HTTP 200 and a
+plausible response size from the six reader-facing routes.  A deploy can
+succeed and still serve a broken route, so the run is not green until those
+answer.  Run the same check by hand any time:
+
+```bash
+cd worker && ./smoke.sh
+```
+
+If it fails, the bad version is already live — roll back:
+
+```bash
+cd worker && npx wrangler rollback
+```
+
+The run's "Record current version" step logs the deployment list from just
+before the deploy, so the version to return to is in the log.
+
+One smoke failure is not a bad deploy: `/search/ko` returning 503 means the
+KV search index is missing, which is the deliberate fail-loud behavior
+described above.  Rebuild the index rather than rolling back.
+
 Secrets set with `wrangler secret put` (`ESV_TOKEN`, `ANTHROPIC_KEY`,
 `ADMIN_SECRET`, `API_BIBLE_KEY`, and the VOTD trio) persist across deploys and
 never need re-entering.
