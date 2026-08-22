@@ -38,11 +38,11 @@ silently overwritten by the next deploy.
 ### Deploying without a terminal
 
 `.github/workflows/deploy-worker.yml` runs that same command on GitHub's
-runners.  It fires two ways:
+runners: Actions tab → Deploy Worker → Run workflow.  That path needs no
+machine at all, so a deploy can be triggered from a phone.
 
-- **On demand** — Actions tab → Deploy Worker → Run workflow.  This works
-  from the GitHub mobile app, so a deploy needs no machine at all.
-- **On push to `main`** — any commit touching `worker/**` deploys itself.
+It is manual only, by design — a push to `main` ships nothing on its own, so
+deploying stays as deliberate as typing `wrangler deploy`.
 
 It needs one repository secret, `CLOUDFLARE_API_TOKEN` (Settings → Secrets
 and variables → Actions), holding a token with the **Edit Cloudflare Workers**

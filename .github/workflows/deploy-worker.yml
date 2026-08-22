@@ -1,17 +1,15 @@
 name: Deploy Worker
 
-# Two ways to fire this:
-#   - Manually, from the Actions tab (works from the GitHub mobile app).
-#   - Automatically, when a push to main touches the Worker source.
-# Deliberately NOT run on pull_request: this repo is public, and a fork PR
+# Manual only: Actions tab -> Deploy Worker -> Run workflow.  Deploying stays
+# a deliberate act, the same as running `wrangler deploy` by hand — a push to
+# main does not ship anything on its own.  To change that, add a `push:` block
+# scoped to `worker/**`; think first about whether every Worker commit should
+# reach production unreviewed.
+#
+# Deliberately no `pull_request:` trigger.  This repo is public, and a fork PR
 # must never get a run that can read CLOUDFLARE_API_TOKEN.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'worker/**'
-      - '.github/workflows/deploy-worker.yml'
 
 permissions:
   contents: read
