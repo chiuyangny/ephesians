@@ -264,8 +264,10 @@ body.dark .intro-map-legend-desc{color:#e8e5e0}
 .ch-tab.active{color:#1b2a4a;border-bottom:2px solid #1b2a4a}
 body.dark .ch-tab.active{color:#e8e5e0;border-bottom-color:#e8e5e0}
 /* #1: Commentary — plain text, no selectable blocks */
-.comm-wrap{padding:16px 20px 40px 22px}
+#tab-comm-content{padding-bottom:40px}
+.comm-wrap{padding:16px 20px 0 22px}
 .comm-section{margin-bottom:24px}
+.comm-section:last-child{margin-bottom:0}
 .comm-label{font-size:13px;font-weight:700;letter-spacing:.04em;color:#1b2a4a;margin-bottom:8px}
 body.dark .comm-label{color:#8899bb}
 .comm-ko{font-family:'Noto Sans KR',sans-serif;font-size:15px;line-height:1.85;color:#1c1c1c;margin-bottom:6px;word-break:keep-all;letter-spacing:-.02em}
@@ -273,7 +275,7 @@ body.dark .comm-label{color:#8899bb}
 body.dark .comm-ko{color:#e8e5e0}
 body.dark .comm-en{color:#e8e5e0}
 /* Chapter Insights — typography matches commentary/intro tabs */
-.insights-wrap{padding:16px 20px 60px 22px;display:flex;flex-direction:column;gap:28px}
+.insights-wrap{padding:28px 20px 20px 22px;display:flex;flex-direction:column;gap:28px}
 .insight-card{}
 .insight-kicker{font-size:13px;font-weight:700;letter-spacing:.04em;color:#1b2a4a;margin-bottom:6px}
 body.dark .insight-kicker{color:#8899bb}
@@ -3102,8 +3104,8 @@ function switchTab(tab){
 /* #1 & #4: renderCommentary — plain text, no blocks, single bilingual label */
 function renderCommentary(d,tComm){
   var isEn=langOrder==='en-ko';
-  /* #4: single label with / , preferred language first */
-  var sl=isEn?'Synopsis / 요약':'요약 / Synopsis';
+  /* Preferred language only, matching the app's single-language label. */
+  var sl=isEn?'Synopsis':'요약';
   var h='<div class="comm-wrap">';
   h+='<div class="comm-section"><div class="comm-label">'+sl+'</div>';
   if(isEn){h+='<div class="comm-en">'+esc(d.summary_en)+'</div><div class="comm-ko">'+esc(d.summary_ko)+'</div>';}
