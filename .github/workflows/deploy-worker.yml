@@ -1,0 +1,69 @@
+name: Deploy Worker
+
+# Manual only: Actions tab -> Deploy Worker -> Run workflow.  Deploying stays
+# a deliberate act, the same as running `wrangler deploy` by hand — a push to
+# main does not ship anything on its own.  To change that, add a `push:` block
+# scoped to `worker/**`; think first about whether every Worker commit should
+# reach production unreviewed.
+#
+# Deliberately no `pull_request:` trigger.  This repo is public, and a fork PR
+# must never get a run that can read CLOUDFLARE_API_TOKEN.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A newer deploy supersedes one already in flight; never let two overlap.
+concurrency:
+  group: deploy-worker
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Checked first so a missing secret fails in two seconds with a usable
+      # message, instead of surfacing as an opaque wrangler auth error.
+      - name: Check credentials
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "${CLOUDFLARE_API_TOKEN}" ]; then
+            echo "::error::Repository secret CLOUDFLARE_API_TOKEN is not set."
+            echo "Add it under Settings -> Secrets and variables -> Actions."
+            echo "Use a token from the 'Edit Cloudflare Workers' template."
+            exit 1
+          fi
+          echo "Token present."
+
+      # Logged before deploying so the run's own output carries the version to
+      # roll back to, without needing a terminal to go find it.
+      - name: Record current version
+        working-directory: worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npx --yes wrangler deployments list || echo "(could not list deployments; continuing)"
+
+      # account_id, worker name, KV binding and crons all come from
+      # worker/wrangler.toml, so the token is the only secret needed here.
+      # ESV_TOKEN, ANTHROPIC_KEY, ADMIN_SECRET and the VOTD secrets are set
+      # with `wrangler secret put` and persist across deploys.
+      - name: Deploy
+        working-directory: worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npx --yes wrangler deploy
+
+      # A deploy that succeeds can still serve a broken route, so the run is
+      # not green until the reader-facing endpoints answer.  A red run here
+      # means production needs `wrangler rollback` — see the step's output.
+      - name: Smoke test
+        working-directory: worker
+        run: ./smoke.sh

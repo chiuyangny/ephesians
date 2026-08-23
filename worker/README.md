@@ -1,6 +1,6 @@
 # krengbible Cloudflare Worker
 
-Source for the Worker at `krengbible.pauljkim22.workers.dev`.  This repo is the source of truth — paste `index.js` into the Cloudflare dashboard editor when deploying.
+Source for the Worker at `krengbible.pauljkim22.workers.dev`.  This repo is the source of truth — deploy with `wrangler`, or from the Actions tab (see below).
 
 ## What changed in the Korean search rewrite
 
@@ -22,12 +22,60 @@ Already present in this Worker:
 
 - `ADMIN_SECRET` — any random string.  Required to call the `/admin/*` endpoints below.  Set it as a Worker secret (Settings → Variables and Secrets → Add → "Secret").
 
-## Deploying the new Worker
+## Deploying
 
-1. Open the Cloudflare dashboard → Workers & Pages → krengbible → Edit code.
-2. Replace the entire file with the contents of `worker/index.js`.
-3. Confirm `COMMENTARY_KV`, `ESV_TOKEN`, `ANTHROPIC_KEY`, `ADMIN_SECRET` are all bound under Settings.
-4. Deploy.
+`wrangler.toml` carries the account id, worker name, KV binding and cron
+triggers, so a deploy is one command from the `worker/` directory:
+
+```bash
+cd worker && npx wrangler deploy
+```
+
+The dashboard copy-paste workflow is retired.  Don't edit the Worker in the
+dashboard editor — this repo is the source of truth, and a dashboard edit is
+silently overwritten by the next deploy.
+
+### Deploying without a terminal
+
+`.github/workflows/deploy-worker.yml` runs that same command on GitHub's
+runners: Actions tab → Deploy Worker → Run workflow.  That path needs no
+machine at all, so a deploy can be triggered from a phone.
+
+It is manual only, by design — a push to `main` ships nothing on its own, so
+deploying stays as deliberate as typing `wrangler deploy`.
+
+It needs one repository secret, `CLOUDFLARE_API_TOKEN` (Settings → Secrets
+and variables → Actions), holding a token with the **Edit Cloudflare Workers**
+permissions.  Everything else comes from `wrangler.toml`.
+
+The workflow deliberately does not run on `pull_request`: this repo is public,
+and a fork PR must never get a run that can read that token.
+
+After deploying it runs `worker/smoke.sh`, which requires HTTP 200 and a
+plausible response size from the six reader-facing routes.  A deploy can
+succeed and still serve a broken route, so the run is not green until those
+answer.  Run the same check by hand any time:
+
+```bash
+cd worker && ./smoke.sh
+```
+
+If it fails, the bad version is already live — roll back:
+
+```bash
+cd worker && npx wrangler rollback
+```
+
+The run's "Record current version" step logs the deployment list from just
+before the deploy, so the version to return to is in the log.
+
+One smoke failure is not a bad deploy: `/search/ko` returning 503 means the
+KV search index is missing, which is the deliberate fail-loud behavior
+described above.  Rebuild the index rather than rolling back.
+
+Secrets set with `wrangler secret put` (`ESV_TOKEN`, `ANTHROPIC_KEY`,
+`ADMIN_SECRET`, `API_BIBLE_KEY`, and the VOTD trio) persist across deploys and
+never need re-entering.
 
 ## Building the English (ESV) search index
 
