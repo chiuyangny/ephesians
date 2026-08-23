@@ -3104,16 +3104,15 @@ function renderCommentary(d,tComm){
   var isEn=langOrder==='en-ko';
   /* #4: single label with / , preferred language first */
   var sl=isEn?'Synopsis / 요약':'요약 / Synopsis';
-  var rl=isEn?'Reflection / 묵상':'묵상 / Reflection';
   var h='<div class="comm-wrap">';
   h+='<div class="comm-section"><div class="comm-label">'+sl+'</div>';
   if(isEn){h+='<div class="comm-en">'+esc(d.summary_en)+'</div><div class="comm-ko">'+esc(d.summary_ko)+'</div>';}
   else{h+='<div class="comm-ko">'+esc(d.summary_ko)+'</div><div class="comm-en">'+esc(d.summary_en)+'</div>';}
-  h+='</div>';
-  h+='<div class="comm-section"><div class="comm-label">'+rl+'</div>';
-  if(isEn){h+='<div class="comm-en">'+esc(d.reflection_en)+'</div><div class="comm-ko">'+esc(d.reflection_ko)+'</div>';}
-  else{h+='<div class="comm-ko">'+esc(d.reflection_ko)+'</div><div class="comm-en">'+esc(d.reflection_en)+'</div>';}
   h+='</div></div>';
+  // Reflection is deliberately not rendered.  The tab is Synopsis then the
+  // insight cards, matching the app, where the summary leads and the Q&A
+  // cards follow with nothing between them.  The worker still returns
+  // reflection_en/reflection_ko; this side simply does not show them.
   tComm.innerHTML=h;
 }
 async function loadTabIntro(){
