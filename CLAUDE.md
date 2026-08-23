@@ -14,6 +14,30 @@ wrangler kv key delete --binding=COMMENTARY_KV "nkrv_1_1" --remote
 
 See `worker/README.md` for routes, env vars (`COMMENTARY_KV`, `ESV_TOKEN`, `ANTHROPIC_KEY`, `ADMIN_SECRET`, `API_BIBLE_KEY`), and the search-index build runbook.
 
+### Deploying from a cloud or phone session
+
+`npx wrangler deploy` works from a normal machine.  It does **not** work from a
+Claude Code cloud session by default: those run behind an egress proxy, and
+unless the environment's network policy allows `registry.npmjs.org`, npm cannot
+fetch `wrangler` at all.  The failure is `403 Forbidden - GET
+https://registry.npmjs.org/wrangler`, which looks like a broken install rather
+than a blocked host.  `api.cloudflare.com` itself is reachable — npm is the only
+thing in the way.
+
+Two ways through:
+
+- **Deploy from the Actions tab** — Actions → Deploy Worker → Run workflow.
+  This needs no terminal at all, runs the same `wrangler deploy` on GitHub's
+  runners, and smoke-tests the six reader-facing routes before reporting
+  success.  Details in `worker/README.md`.
+- **Allow `registry.npmjs.org`** in the session environment's network policy,
+  then the one-line command above works as written.
+
+A deploy is only worth doing when `worker/` has actually changed.  The live
+Worker's deployment timestamp can be compared against the newest `worker/`
+commit; if the deploy is the later of the two, there is nothing to ship, and
+re-deploying only re-bundles the same source with a newer wrangler.
+
 ### Korean search architecture
 
 Korean full-text search uses a **pre-built flat index** stored in KV at key `nkrv_search_index` — a JSON array of `[bookIdx, chapter, verse, cleanText]` tuples for all 31k verses (~2.2 MB).  The Worker loads it once per isolate into a module-level cache (`SEARCH_INDEX`), then every `/search/ko` query is in-memory `includes()` + `slice()`.  All pages return in ~200ms.

@@ -37,8 +37,15 @@ silently overwritten by the next deploy.
 
 ### Deploying without a terminal
 
+`npx wrangler deploy` needs a machine with npm access, which a Claude Code
+cloud session does not necessarily have: those run behind an egress proxy, and
+unless the environment's network policy allows `registry.npmjs.org`, npm cannot
+fetch `wrangler` at all (`403 Forbidden - GET
+https://registry.npmjs.org/wrangler`).  Cloudflare's own API is reachable; npm
+is the only thing in the way.
+
 `.github/workflows/deploy-worker.yml` runs that same command on GitHub's
-runners: Actions tab → Deploy Worker → Run workflow.  That path needs no
+runners instead: Actions tab → Deploy Worker → Run workflow.  That path needs no
 machine at all, so a deploy can be triggered from a phone.
 
 It is manual only, by design — a push to `main` ships nothing on its own, so
