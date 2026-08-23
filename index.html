@@ -275,7 +275,7 @@ body.dark .comm-label{color:#8899bb}
 body.dark .comm-ko{color:#e8e5e0}
 body.dark .comm-en{color:#e8e5e0}
 /* Chapter Insights — typography matches commentary/intro tabs */
-.insights-wrap{padding:28px 20px 20px 22px;display:flex;flex-direction:column;gap:28px}
+.insights-wrap{padding:16px 20px 20px 22px;display:flex;flex-direction:column;gap:28px}
 .insight-card{}
 .insight-kicker{font-size:13px;font-weight:700;letter-spacing:.04em;color:#1b2a4a;margin-bottom:6px}
 body.dark .insight-kicker{color:#8899bb}
@@ -2985,60 +2985,46 @@ function loadBookIntroView(bookIdx){
 /* #2 & #3: renderBookIntro — consistent fonts with commentary, correct language flip */
 function renderBookIntro(d,bk,container){
   var isEn=langOrder==='en-ko';
-  var ol=isEn?'Overview / 개요':'개요 / Overview';
-  var bl=isEn?'Historical Background / 역사적 배경':'역사적 배경 / Historical Background';
-  var tl=isEn?'Key Themes / 핵심 주제':'핵심 주제 / Key Themes';
-  var gl=isEn?'Geographic Context / 지리적 배경':'지리적 배경 / Geographic Context';
+  /* One language throughout, same labels as the app's BookIntroPanel. */
+  var ol=isEn?'Overview':'개요';
+  var bl=isEn?'Historical Background':'역사적 배경';
+  var tl=isEn?'Key Themes':'핵심 주제';
+  var gl=isEn?'Geographic Context':'지리적 배경';
   var h='';
   if(!container) h+='<div class="col-headers"></div>';
   h+='<div class="intro-wrap">';
   h+='<div class="intro-section"><div class="intro-label">'+ol+'</div>';
   /* #3: language order correct */
-  if(isEn){h+='<div class="comm-en">'+esc(d.overview_en)+'</div><div class="comm-ko">'+esc(d.overview_ko)+'</div>';}
-  else{h+='<div class="comm-ko">'+esc(d.overview_ko)+'</div><div class="comm-en">'+esc(d.overview_en)+'</div>';}
+  h+=isEn?('<div class="comm-en">'+esc(d.overview_en)+'</div>')
+         :('<div class="comm-ko">'+esc(d.overview_ko)+'</div>');
   h+='</div>';
   h+='<div class="intro-section"><div class="intro-label">'+bl+'</div>';
-  if(isEn){h+='<div class="comm-en">'+esc(d.background_en)+'</div><div class="comm-ko">'+esc(d.background_ko)+'</div>';}
-  else{h+='<div class="comm-ko">'+esc(d.background_ko)+'</div><div class="comm-en">'+esc(d.background_en)+'</div>';}
+  h+=isEn?('<div class="comm-en">'+esc(d.background_en)+'</div>')
+         :('<div class="comm-ko">'+esc(d.background_ko)+'</div>');
   h+='</div>';
   h+='<div class="intro-section"><div class="intro-label">'+tl+'</div><div class="intro-themes">';
   var themes=isEn?d.themes_en:d.themes_ko;
-  var themes2=isEn?d.themes_ko:d.themes_en;
-  if(themes&&themes.length){themes.forEach(function(t,i){
-    var t2=themes2&&themes2[i];
+  if(themes&&themes.length){themes.forEach(function(t){
     h+='<div class="intro-theme">';
     h+='<div class="intro-theme-title">'+esc(t.title)+'</div>';
-    if(t2) h+='<div class="intro-theme-title" style="font-size:11px;color:#aaa;font-weight:500;margin-bottom:6px">'+esc(t2.title)+'</div>';
-    if(isEn){
-      h+='<div class="intro-theme-en">'+esc(t.desc)+'</div>';
-      if(t2) h+='<div class="intro-theme-ko" style="margin-top:8px;padding-top:8px;border-top:1px solid #f0ede8">'+esc(t2.desc)+'</div>';
-    } else {
-      h+='<div class="intro-theme-ko">'+esc(t.desc)+'</div>';
-      if(t2) h+='<div class="intro-theme-en" style="margin-top:8px;padding-top:8px;border-top:1px solid #f0ede8">'+esc(t2.desc)+'</div>';
-    }
+    h+=isEn?('<div class="intro-theme-en">'+esc(t.desc)+'</div>')
+           :('<div class="intro-theme-ko">'+esc(t.desc)+'</div>');
     h+='</div>';
   });}
   h+='</div></div>';
   h+='<div class="intro-section"><div class="intro-label">'+gl+'</div>';
-  if(isEn){h+='<div class="comm-en">'+esc(d.geo_en)+'</div><div class="comm-ko">'+esc(d.geo_ko)+'</div>';}
-  else{h+='<div class="comm-ko">'+esc(d.geo_ko)+'</div><div class="comm-en">'+esc(d.geo_en)+'</div>';}
+  h+=isEn?('<div class="comm-en">'+esc(d.geo_en)+'</div>')
+         :('<div class="comm-ko">'+esc(d.geo_ko)+'</div>');
   if(d.map_locations&&d.map_locations.length){
     h+='<div class="intro-map" id="intro-map"></div>';
     h+='<div class="intro-map-legend">';
     d.map_locations.forEach(function(loc,i){
-      var name=esc(loc.name);
-      var nameKo=esc(loc.name_ko||loc.name);
-      var descPrimary=esc(isEn?loc.desc:(loc.desc_ko||loc.desc));
-      var descSecondary=esc(isEn?(loc.desc_ko||loc.desc):loc.desc);
-      var displayNamePrimary=isEn?name:nameKo;
-      var displayNameSecondary=isEn?nameKo:name;
+      var displayName=isEn?esc(loc.name):esc(loc.name_ko||loc.name);
+      var desc=esc(isEn?loc.desc:(loc.desc_ko||loc.desc));
       h+='<div class="intro-map-legend-item"><span class="intro-map-legend-num">'+(i+1)+'</span>'
         +'<div class="intro-map-legend-text">'
-        +'<div class="intro-map-legend-name">'+displayNamePrimary
-        +(displayNameSecondary&&displayNameSecondary!==displayNamePrimary?' <span style="font-size:11px;font-weight:400;color:#aaa">('+displayNameSecondary+')</span>':'')
-        +'</div>'
-        +'<div class="intro-map-legend-desc">'+descPrimary+'</div>'
-        +'<div class="intro-map-legend-desc" style="font-style:italic;margin-top:4px">'+descSecondary+'</div>'
+        +'<div class="intro-map-legend-name">'+displayName+'</div>'
+        +'<div class="intro-map-legend-desc">'+desc+'</div>'
         +'</div></div>';
     });
     h+='</div>';
@@ -3104,12 +3090,12 @@ function switchTab(tab){
 /* #1 & #4: renderCommentary — plain text, no blocks, single bilingual label */
 function renderCommentary(d,tComm){
   var isEn=langOrder==='en-ko';
-  /* Preferred language only, matching the app's single-language label. */
-  var sl=isEn?'Synopsis':'요약';
+  /* Label and body both in the reader's language only, matching the app. */
+  var sl=isEn?'Chapter Summary':'장 요약';
   var h='<div class="comm-wrap">';
   h+='<div class="comm-section"><div class="comm-label">'+sl+'</div>';
-  if(isEn){h+='<div class="comm-en">'+esc(d.summary_en)+'</div><div class="comm-ko">'+esc(d.summary_ko)+'</div>';}
-  else{h+='<div class="comm-ko">'+esc(d.summary_ko)+'</div><div class="comm-en">'+esc(d.summary_en)+'</div>';}
+  h+=isEn?('<div class="comm-en">'+esc(d.summary_en)+'</div>')
+         :('<div class="comm-ko">'+esc(d.summary_ko)+'</div>');
   h+='</div></div>';
   // Reflection is deliberately not rendered.  The tab is Synopsis then the
   // insight cards, matching the app, where the summary leads and the Q&A
@@ -8661,11 +8647,16 @@ function renderInsights(data, tEl){
   var isKo=langOrder==='ko-en';
   var bodyClass = isKo ? 'insight-body insight-body-ko' : 'insight-body insight-body-en';
   var html='<div class="insights-wrap">';
-  data.cards.forEach(function(card){
+  // The label names the run of questions, so it goes on the first card only —
+  // repeating it above each card would read as a per-card title.  Same rule
+  // and same wording as the app.
+  var sectionLabel=isKo?'인사이트':'Chapter Insights';
+  data.cards.forEach(function(card,idx){
     var kicker=isKo?(card.kicker_ko||card.kicker_en||card.kicker):(card.kicker_en||card.kicker_ko||card.kicker);
     var title=isKo?(card.title_ko||card.title_en||card.title):(card.title_en||card.title_ko||card.title);
     var body=isKo?(card.body_ko||card.body_en||card.body):(card.body_en||card.body_ko||card.body);
     html+='<div class="insight-card">';
+    if(idx===0) html+='<div class="comm-label">'+esc(sectionLabel)+'</div>';
     if(kicker) html+='<div class="insight-kicker">'+esc(kicker)+'</div>';
     html+='<h3 class="insight-title">'+esc(title||'')+'</h3>';
     html+='<div class="'+bodyClass+'">';
