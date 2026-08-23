@@ -29,23 +29,37 @@ jobs:
         with:
           node-version: '22'
 
-      # account_id, worker name, KV binding and crons all come from
-      # worker/wrangler.toml, so the token is the only secret needed here.
-      # ESV_TOKEN, ANTHROPIC_KEY, ADMIN_SECRET and the VOTD secrets are set
-      # with `wrangler secret put` and persist across deploys.
-      # Printed before deploying so the run's log always carries the version
-      # to roll back to, without needing a terminal to go find it.
+      # Checked first so a missing secret fails in two seconds with a usable
+      # message, instead of surfacing as an opaque wrangler auth error.
+      - name: Check credentials
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "${CLOUDFLARE_API_TOKEN}" ]; then
+            echo "::error::Repository secret CLOUDFLARE_API_TOKEN is not set."
+            echo "Add it under Settings -> Secrets and variables -> Actions."
+            echo "Use a token from the 'Edit Cloudflare Workers' template."
+            exit 1
+          fi
+          echo "Token present."
+
+      # Logged before deploying so the run's own output carries the version to
+      # roll back to, without needing a terminal to go find it.
       - name: Record current version
         working-directory: worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: npx wrangler deployments list || echo "(could not list deployments; continuing)"
+        run: npx --yes wrangler deployments list || echo "(could not list deployments; continuing)"
 
+      # account_id, worker name, KV binding and crons all come from
+      # worker/wrangler.toml, so the token is the only secret needed here.
+      # ESV_TOKEN, ANTHROPIC_KEY, ADMIN_SECRET and the VOTD secrets are set
+      # with `wrangler secret put` and persist across deploys.
       - name: Deploy
         working-directory: worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: npx wrangler deploy
+        run: npx --yes wrangler deploy
 
       # A deploy that succeeds can still serve a broken route, so the run is
       # not green until the reader-facing endpoints answer.  A red run here
