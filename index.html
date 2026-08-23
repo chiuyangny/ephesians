@@ -8621,12 +8621,11 @@ const INSIGHTS_SAMPLE = {
   },};
 
 // Mirrors the app's gate in src/components/InsightsPanel.tsx, same name and
-// same effect: the cards are down on BOTH sides while the Korean is reworked,
-// so the tab falls back to its "not available yet" state.  The site had no such
-// switch, which meant the app hid the cards and krengbible.com went on serving
-// the very Korean that was pulled — the two surfaces have to move together.
-// INSIGHTS_SAMPLE is left intact so flipping this back restores what shipped.
-var INSIGHT_CARDS_ENABLED = false;
+// same effect.  Both sides went dark while the Korean was reworked; both are
+// back on now, and the chapter allowlist below is what keeps the withdrawn
+// Korean off the site — the flag alone would serve all of INSIGHTS_SAMPLE.
+// The two surfaces have to move together, so this tracks the app's flag.
+var INSIGHT_CARDS_ENABLED = true;
 
 // Mirrors ENABLED_CHAPTERS in the app's InsightsPanel.tsx, key for key.  The
 // boolean above is not enough on its own: INSIGHTS_SAMPLE still holds every
@@ -8647,11 +8646,11 @@ function loadInsights(){
   var key=bk.n+'_'+ci;
   var data=(INSIGHT_CARDS_ENABLED && INSIGHT_ENABLED_CHAPTERS[key]) ? INSIGHTS_SAMPLE[key] : null;
   if(!data || !data.cards || data.cards.length===0){
-    var isKo=langOrder==='ko-en';
-    tEl.innerHTML='<div class="insights-empty">'
-      +(isKo?'이 장에 대한 통찰은 아직 준비 중입니다.':'Insights for this chapter are not available yet.')
-      +'</div>'
-      +'</div>';
+    // No "not available yet" line here.  Unlike the app — which shows this
+    // pane on its own and needs to say something — the container sits inside
+    // the Summary tab, beneath the AI commentary, so a chapter without cards
+    // simply ends after the commentary instead of announcing an absence.
+    tEl.innerHTML='';
     return;
   }
   renderInsights(data, tEl);
