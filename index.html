@@ -20,7 +20,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <style>
-:root{--fs:15px;--bg:#f7f5f2;--ko-order:1;--en-order:2;--div:#e8e5e0;color-scheme:light}
+:root{--fs:15px;--bg:#f7f5f2;--ko-order:1;--en-order:2;--div:#e8e5e0;--card:#fff;--card-br:#e8e5e0;color-scheme:light}
 html.dark,html[data-scheme="dark"]{color-scheme:dark}
 *{box-sizing:border-box;margin:0;padding:0;max-width:100%}
 html,body{height:100%;overflow-x:hidden}html{overscroll-behavior-y:none}body{overscroll-behavior-y:none}
@@ -97,6 +97,10 @@ footer{border-top:1px solid #e8e5e0;color:#bbb;background:var(--bg);font-size:10
 }
 .mob-passage-pill{display:flex;align-items:center;gap:6px;background:none;border:none;font-size:13px;font-weight:600;color:#222;padding:6px 10px;font-family:inherit;cursor:pointer;flex:0 1 auto;letter-spacing:-.01em}
 .mob-passage-pill span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#mob-passage-label{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;min-width:0;line-height:1.2;overflow:visible}
+.mob-passage-primary{font-size:15px;font-weight:700;max-width:100%}
+.mob-passage-secondary{font-size:11px;font-weight:500;color:#8a8a8a;max-width:100%}
+body.dark .mob-passage-secondary{color:#9a9488}
 .mob-passage-pill svg{flex-shrink:0;color:#aaa}
 body.dark .mob-passage-pill{color:#e8e5e0}
 .desk-icon-btn{background:none;border:none;cursor:pointer;color:#666;display:flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0}
@@ -157,7 +161,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 #passage-input:focus{border-color:#555;background:#fff}
 #passage-input::placeholder{color:#bbb}
 .ko-side{order:var(--ko-order)}.en-side{order:var(--en-order)}
-body.dark{--bg:#1a1a1a;--div:#333;color:#e8e5e0}
+body.dark{--bg:#1a1a1a;--div:#333;--card:#242424;--card-br:#333;color:#e8e5e0}
 body.dark header,body.dark nav,body.dark main,body.dark footer{background:var(--bg)}
 body.dark header,body.dark nav{border-bottom-color:#333}
 body.dark .ko-side{border-right-color:#333}
@@ -230,8 +234,8 @@ body.dark .section-label{color:#8899bb}
 body.dark .text-ko{color:#e8e5e0}
 body.dark .text-en{color:#e8e5e0}
 /* Keep these for backward compat */
-.intro-wrap{padding:16px 20px 40px 22px;max-width:680px}
-.intro-section{margin-bottom:24px}
+.intro-wrap{padding:16px 12px 40px;max-width:680px}
+.intro-section{margin-bottom:12px;background:var(--card);border:1px solid var(--card-br);border-radius:22px;padding:16px}
 .intro-label{font-size:13px;font-weight:700;letter-spacing:.04em;color:#1b2a4a;margin-bottom:8px}
 body.dark .intro-label{color:#8899bb}
 .intro-ko{font-family:'Noto Sans KR',sans-serif;font-size:15px;line-height:1.85;color:#1c1c1c;margin-bottom:6px;word-break:keep-all;letter-spacing:-.02em}
@@ -239,8 +243,7 @@ body.dark .intro-label{color:#8899bb}
 body.dark .intro-ko{color:#e8e5e0}
 body.dark .intro-en{color:#e8e5e0}
 .intro-themes{display:flex;flex-direction:column;gap:12px;margin-top:4px}
-.intro-theme{background:#fff;border-radius:10px;padding:12px 14px;border:1px solid #e8e5e0}
-body.dark .intro-theme{background:#242424;border-color:#333}
+.intro-theme{background:var(--bg);border-radius:10px;padding:12px 14px;border:1px solid var(--card-br)}
 .intro-theme-title{font-size:13px;font-weight:600;color:#1b2a4a;margin-bottom:4px}
 body.dark .intro-theme-title{color:#a8b8d8}
 .intro-theme-ko{font-family:'Noto Sans KR',sans-serif;font-size:13px;line-height:1.7;color:#222;word-break:keep-all}
@@ -265,8 +268,8 @@ body.dark .intro-map-legend-desc{color:#e8e5e0}
 body.dark .ch-tab.active{color:#e8e5e0;border-bottom-color:#e8e5e0}
 /* #1: Commentary — plain text, no selectable blocks */
 #tab-comm-content{padding-bottom:40px}
-.comm-wrap{padding:16px 20px 0 22px}
-.comm-section{margin-bottom:24px}
+.comm-wrap{padding:16px 12px 0}
+.comm-section{margin-bottom:12px;background:var(--card);border:1px solid var(--card-br);border-radius:22px;padding:16px}
 .comm-section:last-child{margin-bottom:0}
 .comm-label{font-size:13px;font-weight:700;letter-spacing:.04em;color:#1b2a4a;margin-bottom:8px}
 body.dark .comm-label{color:#8899bb}
@@ -275,8 +278,8 @@ body.dark .comm-label{color:#8899bb}
 body.dark .comm-ko{color:#e8e5e0}
 body.dark .comm-en{color:#e8e5e0}
 /* Chapter Insights — typography matches commentary/intro tabs */
-.insights-wrap{padding:16px 20px 20px 22px;display:flex;flex-direction:column;gap:28px}
-.insight-card{}
+.insights-wrap{padding:12px 12px 20px;display:flex;flex-direction:column;gap:12px}
+.insight-card{background:var(--card);border:1px solid var(--card-br);border-radius:22px;padding:16px}
 .insight-kicker{font-size:13px;font-weight:700;letter-spacing:.04em;color:#1b2a4a;margin-bottom:6px}
 body.dark .insight-kicker{color:#8899bb}
 .insight-title{font-family:'Noto Sans KR',sans-serif;font-size:17px;font-weight:600;color:#1c1c1c;margin:0 0 10px;line-height:1.45;word-break:keep-all;letter-spacing:-.01em}
@@ -904,13 +907,31 @@ function applyFs(){
   document.querySelectorAll('.vt,.comm-ko,.comm-en,.intro-ko,.intro-en,.intro-theme-ko,.intro-theme-en,.insight-body,.insight-title').forEach(function(el){el.style.fontSize=fs+'px';});
 }
 function updateLabel(){
-  var lbl;
+  /* Two stacked lines like the app's reader header: the reader's language
+     on top, the other beneath it smaller and muted, rather than both joined
+     by a slash on one line. */
+  var isEn=langOrder==='en-ko', primary, secondary='';
   if(inIntroMode){
-    lbl=langOrder==='en-ko'?BOOKS[bi].en+' — Book Intro':BOOKS[bi].ko+' — 책 소개';
+    primary=isEn?BOOKS[bi].en:BOOKS[bi].ko;
+    secondary=isEn?'Book Intro':'책 소개';
+  } else if(!loaded){
+    primary=isEn?'Select Book':'책 선택';
   } else {
-    lbl=loaded?(langOrder==='en-ko'?BOOKS[bi].en+' '+ci+' / '+BOOKS[bi].ko+' '+ci+'장':BOOKS[bi].ko+' '+ci+'장 / '+BOOKS[bi].en+' '+ci):(langOrder==='en-ko'?'Select Book / 책 선택':'책 선택 / Select Book');
+    primary=isEn?(BOOKS[bi].en+' '+ci):(BOOKS[bi].ko+' '+ci+'장');
+    secondary=isEn?(BOOKS[bi].ko+' '+ci+'장'):(BOOKS[bi].en+' '+ci);
   }
-  document.getElementById('mob-passage-label').textContent=lbl;
+  var el=document.getElementById('mob-passage-label');
+  el.textContent='';
+  var p=document.createElement('span');
+  p.className='mob-passage-primary';
+  p.textContent=primary;
+  el.appendChild(p);
+  if(secondary){
+    var q=document.createElement('span');
+    q.className='mob-passage-secondary';
+    q.textContent=secondary;
+    el.appendChild(q);
+  }
 }
 function step(d){
   var wasIntro=inIntroMode;
