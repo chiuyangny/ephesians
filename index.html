@@ -262,10 +262,18 @@ body.dark .intro-map-legend-name span{color:#e8e5e0!important}
 .intro-map-legend-desc{font-size:12px;color:#333;line-height:1.5}
 body.dark .intro-map-legend-desc{color:#e8e5e0}
 /* #6: Tab bar — remove full-width border, keep only active underline */
-.ch-tabs{display:flex;gap:0;padding:0 0 0 20px;flex-shrink:0;border-bottom:none}
-.ch-tab{background:none;border:none;font-size:11px;font-weight:600;font-family:'DM Sans',-apple-system,sans-serif;color:#999;padding:8px 12px;cursor:pointer;border-bottom:2px solid transparent;touch-action:manipulation;letter-spacing:.01em}
-.ch-tab.active{color:#1b2a4a;border-bottom:2px solid #1b2a4a}
-body.dark .ch-tab.active{color:#e8e5e0;border-bottom-color:#e8e5e0}
+/* Geometry from the app's ReaderTabStrip: each tab takes an equal share of
+   the row, 13px label, and a 60%-wide underline centred beneath it rather
+   than a full-width border.  The active label takes the text colour and the
+   underline the accent, which is how the app distinguishes them — weight and
+   colour on the word, accent on the rule. */
+.ch-tabs{display:flex;padding:0;flex-shrink:0;border-bottom:1px solid var(--div)}
+.ch-tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;background:none;border:none;font-size:13px;font-weight:500;font-family:'DM Sans',-apple-system,sans-serif;color:#999;padding:10px 4px 4px;cursor:pointer;touch-action:manipulation;letter-spacing:-.1px}
+.ch-tab::after{content:'';display:block;width:60%;height:2px;border-radius:1px;background:transparent}
+.ch-tab.active{color:#1c1c1c;font-weight:700}
+.ch-tab.active::after{background:#1b2a4a}
+body.dark .ch-tab.active{color:#e8e5e0}
+body.dark .ch-tab.active::after{background:#8899bb}
 /* #1: Commentary — plain text, no selectable blocks */
 #tab-comm-content{padding-bottom:40px}
 .comm-wrap{padding:16px 12px 0}
