@@ -7,9 +7,16 @@
           "MTVYWJQL2Z.com.krengbible.app.dev"
         ],
         "components": [
-          { "/": "/invite/*", "comment": "Group invite deep links open the app" }
+          { "/": "/invite/*", "comment": "Group invite deep links open the app" },
+          { "/": "/auth/action*", "comment": "Firebase auth action links (password reset, email verification) open the app" }
         ]
       }
+    ]
+  },
+  "webcredentials": {
+    "apps": [
+      "MTVYWJQL2Z.com.krengbible.app",
+      "MTVYWJQL2Z.com.krengbible.app.dev"
     ]
   }
 }

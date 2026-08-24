@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Account — krengbible</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    max-width: 420px;
+    margin: 0 auto;
+    padding: 48px 20px 80px;
+    line-height: 1.6;
+    color: #1a1a1a;
+    background: #f4f1eb;
+  }
+  h1 { font-size: 24px; margin: 0 0 6px; }
+  p { font-size: 15px; margin: 0 0 14px; }
+  .sub { color: #888; font-size: 14px; margin-bottom: 28px; }
+  label { display: block; font-size: 13px; color: #666; margin: 14px 0 5px; }
+  input {
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 17px;
+    font-family: inherit;
+    padding: 12px 13px;
+    border: 1px solid #d9d4cb;
+    border-radius: 12px;
+    background: #fff;
+    color: #1a1a1a;
+  }
+  input:disabled { color: #888; background: #efece6; }
+  button {
+    width: 100%;
+    font-size: 17px;
+    font-family: inherit;
+    font-weight: 600;
+    margin-top: 22px;
+    padding: 14px;
+    border: 0;
+    border-radius: 12px;
+    background: #1a1a1a;
+    color: #fff;
+  }
+  button:disabled { opacity: .45; }
+  .err { color: #b3261e; font-size: 14px; margin-top: 14px; }
+  .ok { font-size: 15px; }
+  .applink { display: inline-block; margin-top: 8px; font-weight: 600; }
+  a { color: #0a66c2; }
+  .hide { display: none; }
+  @media (prefers-color-scheme: dark) {
+    body { color: #eee; background: #1a1a1a; }
+    input { background: #262626; border-color: #3a3a3a; color: #eee; }
+    input:disabled { background: #222; color: #888; }
+    button { background: #eee; color: #1a1a1a; }
+    .err { color: #f2b8b5; }
+    a, .applink { color: #7ab8ff; }
+  }
+</style>
+</head>
+<body>
+
+<div id="root">
+  <h1 id="title"></h1>
+  <p class="sub" id="sub"></p>
+
+  <form id="form" class="hide" autocomplete="on">
+    <label for="email" id="lblEmail"></label>
+    <input type="email" id="email" name="username" autocomplete="username" readonly>
+
+    <label for="pw" id="lblPw"></label>
+    <input type="password" id="pw" name="new-password" autocomplete="new-password"
+           autocapitalize="none" autocorrect="off" spellcheck="false" minlength="6">
+
+    <label for="pw2" id="lblPw2"></label>
+    <input type="password" id="pw2" name="confirm-password" autocomplete="new-password"
+           autocapitalize="none" autocorrect="off" spellcheck="false" minlength="6">
+
+    <button type="submit" id="submit"></button>
+    <p class="err hide" id="err"></p>
+  </form>
+
+  <div id="done" class="hide">
+    <p class="ok" id="doneMsg"></p>
+    <a class="applink" id="openApp" href="krengbible://"></a>
+  </div>
+</div>
+
+<script>
+(function () {
+  // Firebase's action handler is shared by every auth email the app sends —
+  // password reset, email verification, and email-change recovery all land
+  // here with a different `mode`.  Handling only resetPassword would silently
+  // break the other two.
+  var API_KEY = 'AIzaSyCrIbFW4Yt_AVid0Zw3JEDgJYI_G2w6JOM';
+  var BASE = 'https://identitytoolkit.googleapis.com/v1/accounts:';
+
+  var qs = new URLSearchParams(location.search);
+  var mode = qs.get('mode') || '';
+  var oobCode = qs.get('oobCode') || '';
+  var lang = (qs.get('lang') || navigator.language || 'en').toLowerCase();
+  var isKo = lang.indexOf('ko') === 0;
+  function t(en, ko) { return isKo ? ko : en; }
+
+  document.documentElement.lang = isKo ? 'ko' : 'en';
+
+  var el = function (id) { return document.getElementById(id); };
+  var title = el('title'), sub = el('sub'), form = el('form'), err = el('err');
+  var done = el('done'), doneMsg = el('doneMsg'), openApp = el('openApp');
+
+  el('lblEmail').textContent = t('Account', '계정');
+  el('lblPw').textContent = t('New password', '새 비밀번호');
+  el('lblPw2').textContent = t('Confirm new password', '새 비밀번호 확인');
+  el('submit').textContent = t('Change password', '비밀번호 변경');
+  openApp.textContent = t('Open krengbible', 'krengbible 열기');
+
+  function post(path, body) {
+    return fetch(BASE + path + '?key=' + API_KEY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }).then(function (r) {
+      return r.json().then(function (j) {
+        if (!r.ok) {
+          var code = (j && j.error && j.error.message) || 'UNKNOWN';
+          var e = new Error(code);
+          e.code = code;
+          throw e;
+        }
+        return j;
+      });
+    });
+  }
+
+  function friendly(code) {
+    if (code.indexOf('EXPIRED_OOB_CODE') === 0) {
+      return t(
+        'This link has expired.  Request a new one from the app.',
+        '이 링크는 만료되었습니다.  앱에서 새로 요청해 주세요.');
+    }
+    if (code.indexOf('INVALID_OOB_CODE') === 0) {
+      return t(
+        'This link is no longer valid — it may already have been used.  Request a new one from the app.',
+        '이 링크는 더 이상 사용할 수 없습니다.  이미 사용되었을 수 있습니다.  앱에서 새로 요청해 주세요.');
+    }
+    if (code.indexOf('WEAK_PASSWORD') === 0) {
+      return t('Password must be at least 6 characters.', '비밀번호는 6자 이상이어야 합니다.');
+    }
+    if (code.indexOf('USER_DISABLED') === 0) {
+      return t('This account has been disabled.', '이 계정은 비활성화되었습니다.');
+    }
+    if (code.indexOf('USER_NOT_FOUND') === 0) {
+      return t('This account no longer exists.', '이 계정은 더 이상 존재하지 않습니다.');
+    }
+    return t('Something went wrong.  Please try again.', '문제가 발생했습니다.  다시 시도해 주세요.');
+  }
+
+  function fail(message) {
+    title.textContent = t('Link problem', '링크 오류');
+    sub.textContent = message;
+    form.classList.add('hide');
+    done.classList.remove('hide');
+    doneMsg.textContent = '';
+  }
+
+  function succeed(heading, message) {
+    title.textContent = heading;
+    sub.textContent = '';
+    form.classList.add('hide');
+    doneMsg.textContent = message;
+    done.classList.remove('hide');
+  }
+
+  if (!oobCode) {
+    fail(t('This link is incomplete.  Open the link from your email directly.',
+           '링크가 완전하지 않습니다.  이메일의 링크를 직접 열어 주세요.'));
+    return;
+  }
+
+  if (mode === 'resetPassword') {
+    title.textContent = t('Set a new password', '새 비밀번호 설정');
+    sub.textContent = t('Checking your link…', '링크 확인 중…');
+
+    // Calling resetPassword with no newPassword only validates the code and
+    // returns the account it belongs to.
+    post('resetPassword', { oobCode: oobCode })
+      .then(function (j) {
+        el('email').value = j.email || '';
+        sub.textContent = t(
+          'Choose a new password for your krengbible account.',
+          'krengbible 계정의 새 비밀번호를 입력하세요.');
+        form.classList.remove('hide');
+        el('pw').focus();
+      })
+      .catch(function (e) { fail(friendly(e.code || '')); });
+
+    form.addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      err.classList.add('hide');
+      var pw = el('pw').value, pw2 = el('pw2').value;
+      if (pw.length < 6) {
+        err.textContent = t('Password must be at least 6 characters.', '비밀번호는 6자 이상이어야 합니다.');
+        err.classList.remove('hide');
+        return;
+      }
+      if (pw !== pw2) {
+        err.textContent = t('The two passwords do not match.', '두 비밀번호가 일치하지 않습니다.');
+        err.classList.remove('hide');
+        return;
+      }
+      el('submit').disabled = true;
+      el('submit').textContent = t('Changing…', '변경 중…');
+      post('resetPassword', { oobCode: oobCode, newPassword: pw })
+        .then(function () {
+          // Leave the form in the document long enough for Safari to offer to
+          // save the credential, then show the confirmation.
+          succeed(
+            t('Password changed', '비밀번호가 변경되었습니다'),
+            t('Sign in with your new password.', '새 비밀번호로 로그인하세요.'));
+        })
+        .catch(function (e) {
+          el('submit').disabled = false;
+          el('submit').textContent = t('Change password', '비밀번호 변경');
+          err.textContent = friendly(e.code || '');
+          err.classList.remove('hide');
+        });
+    });
+    return;
+  }
+
+  if (mode === 'verifyEmail') {
+    title.textContent = t('Verifying your email', '이메일 확인 중');
+    sub.textContent = t('One moment…', '잠시만 기다려 주세요…');
+    post('update', { oobCode: oobCode })
+      .then(function (j) {
+        succeed(
+          t('Email verified', '이메일이 확인되었습니다'),
+          t('You can go back to the app.', '앱으로 돌아가셔도 됩니다.') +
+            (j.email ? '  ' + j.email : ''));
+      })
+      .catch(function (e) { fail(friendly(e.code || '')); });
+    return;
+  }
+
+  if (mode === 'recoverEmail') {
+    title.textContent = t('Restoring your email', '이메일 복구 중');
+    sub.textContent = t('One moment…', '잠시만 기다려 주세요…');
+    post('update', { oobCode: oobCode })
+      .then(function (j) {
+        succeed(
+          t('Email restored', '이메일이 복구되었습니다'),
+          t('Your sign-in address has been changed back' +
+              (j.email ? ' to ' + j.email : '') +
+              '.  If you did not request the original change, set a new password from the app.',
+            '로그인 이메일이' + (j.email ? ' ' + j.email + '(으)로' : '') +
+              ' 되돌려졌습니다.  변경을 요청하신 적이 없다면 앱에서 비밀번호를 새로 설정하세요.'));
+      })
+      .catch(function (e) { fail(friendly(e.code || '')); });
+    return;
+  }
+
+  fail(t('This link is not one krengbible recognizes.',
+         'krengbible에서 인식할 수 없는 링크입니다.'));
+})();
+</script>
+
+</body>
+</html>
