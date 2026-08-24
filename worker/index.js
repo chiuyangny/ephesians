@@ -3789,17 +3789,17 @@ Only output valid JSON, no markdown, no preamble.`;
       // would write today's verse under tomorrow's write-once key and pin the
       // wrong verse for everyone, permanently.  Past dates cannot do that.
       const requested = url.searchParams.get('date');
-      const dated = !!requested && /^\d{4}-\d{2}-\d{2}$/.test(requested)
+      let dated = !!requested && /^\d{4}-\d{2}-\d{2}$/.test(requested)
         && requested <= currentET && requested >= votdDateET(-2);
-      const today = dated ? requested : currentET;
+      let today = dated ? requested : currentET;
       // Verse and photo are cached under SEPARATE keys so refreshing the
       // photo (or redeploying photo logic) never re-rolls the verse.  The
       // verse is written once per day and then left alone — labs.bible.org's
       // votd rotates through the day, so first-fetch-of-the-day wins and
       // stays fixed via its own write-once key.  (Old combined `votd4_` key
       // is now unused; it just expires.)
-      const verseKey = `votdverse_${today}`;
-      const photoKey = `votdphoto2_${today}`;
+      let verseKey = `votdverse_${today}`;
+      let photoKey = `votdphoto2_${today}`;
 
       const tomorrowDateET = new Date(now.getTime() + 86400000).toLocaleDateString('en-CA', {timeZone:'America/New_York'});
       const midnightET = new Date(`${tomorrowDateET}T00:00:00`);
@@ -3807,23 +3807,49 @@ Only output valid JSON, no markdown, no preamble.`;
       const offsetMs = now - nowET;
       const midnightUTC = new Date(midnightET.getTime() + offsetMs);
       const secondsUntilMidnight = Math.max(60, Math.floor((midnightUTC - now) / 1000));
-      // A dated response is immutable — the verse key is write-once and the date
-      // is in the past — so it may be cached regardless of when ET next rolls.
-      const votdHeaders = { ...cors, "Content-Type": "application/json",
-        "Cache-Control": `public, max-age=${dated ? 3600 : secondsUntilMidnight}` };
-
       let votdData = null;
       // photoRaw: null = not cached yet; any JSON string (including "null",
       // the color-card sentinel) = already resolved for today.
       let photoRaw = null;
-      if (env.COMMENTARY_KV) {
+      const readKeys = async (vk, pk) => {
+        if (!env.COMMENTARY_KV) return;
         const [vRaw, pRaw] = await Promise.all([
-          env.COMMENTARY_KV.get(verseKey),
-          env.COMMENTARY_KV.get(photoKey),
+          env.COMMENTARY_KV.get(vk),
+          env.COMMENTARY_KV.get(pk),
         ]);
+        votdData = null;
         if (vRaw) { try { votdData = JSON.parse(vRaw); } catch { votdData = null; } }
         photoRaw = pRaw;
+      };
+      await readKeys(verseKey, photoKey);
+
+      // A DATED request must never populate from upstream.  labs.bible.org
+      // serves only its own current verse, so filling a missing past key from
+      // it would store today's verse under that date — and the key is
+      // write-once, so the wrong verse would then be pinned for everyone
+      // reading that date.  The clamp above stops a FUTURE date from doing
+      // this;  a past date whose key has expired or was never written is the
+      // same hazard from the other side.
+      //
+      // So when the requested date has no verse, fall back to the current ET
+      // date and let the normal write-once path own it.  The reader gets a
+      // real verse instead of a fabricated one;  the only cost is that they
+      // see today's rather than the day they asked for.
+      if (dated && !votdData) {
+        dated = false;
+        today = currentET;
+        verseKey = `votdverse_${today}`;
+        photoKey = `votdphoto2_${today}`;
+        await readKeys(verseKey, photoKey);
       }
+
+      // Built after the fallback above, so `dated` is final.  A request that fell
+      // back is serving the CURRENT ET verse and must expire when that rolls;
+      // a genuinely dated response is immutable (write-once key, past date) and
+      // can be cached regardless of when ET next rolls.
+      const votdHeaders = { ...cors, "Content-Type": "application/json",
+        "Cache-Control": `public, max-age=${dated ? 3600 : secondsUntilMidnight}` };
+
       const needVerse = !votdData;
       const needPhoto = photoRaw === null;
 
