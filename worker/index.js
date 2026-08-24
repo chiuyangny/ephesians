@@ -8,7 +8,10 @@
 //                                          -> AI-generated QT reflection scoped to a verse range (cached)
 //   /search/ko?q=...&offset=...           -> Korean full-text search (FAST: uses pre-built index)
 //   /search/en?q=...&page=...             -> English full-text search (FAST: uses pre-built index)
-//   /votd                                 -> Verse of the day + photo
+//   /votd[?date=YYYY-MM-DD]              -> Verse of the day + photo.  `date` picks a
+//                                          specific ET date, clamped to the last 3 days;
+//                                          readers ask for local-date-minus-one so every
+//                                          timezone rolls at its OWN midnight.
 //   /votd/next                            -> Tomorrow's STAGED photo (public, read-only, never rolls)
 //   /admin/votd-next?date=YYYY-MM-DD      -> (X-Admin-Secret) re-roll the staged photo for a date
 //   /votd/reroll?date=...&t=<hmac>        -> One-tap re-roll from the preview email.  HMAC of the date,
@@ -2790,6 +2793,20 @@ function votdSecondsUntilEndOf(dateET) {
 }
 
 /**
+ * How long a `votdverse_`/`votdphoto2_` key for an ET date must live.
+ *
+ * These used to expire at ET midnight, which was right when every reader was
+ * served the CURRENT ET date.  Readers now ask for the ET date one day behind
+ * their own local date, so a single date is in use from UTC+14's local midnight
+ * (6h after that ET date began) until UTC-12 finishes its local day — a spread
+ * of roughly 50 hours.  Two days past the end of the ET date covers it with
+ * room to spare, and a few extra small JSON values in KV costs nothing.
+ */
+function votdKeyTtl(dateET) {
+  return votdSecondsUntilEndOf(dateET) + 2 * 86400;
+}
+
+/**
  * Public origin used in emailed links.  A cron has no inbound request to read
  * the host from, so it cannot be derived — set VOTD_PUBLIC_ORIGIN if the
  * worker ever moves behind a custom domain.
@@ -3188,7 +3205,7 @@ async function votdStagePhoto(dateET, env) {
     await env.COMMENTARY_KV.put(
       `votdphoto2_${dateET}`,
       JSON.stringify({ url: photo.url, color: photo.color, credit: photo.credit, creditLink: photo.creditLink }),
-      { expirationTtl: votdSecondsUntilEndOf(dateET) }
+      { expirationTtl: votdKeyTtl(dateET) }
     );
   };
 
@@ -3759,7 +3776,22 @@ Only output valid JSON, no markdown, no preamble.`;
     // ---- /votd ----
     if (path.startsWith('/votd')) {
       const now = new Date();
-      const today = now.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+      const currentET = now.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+      // `date` lets a caller ask for a specific ET date rather than the current
+      // one.  Readers use it to run exactly one day behind: at their local
+      // midnight they request the previous ET date, which has existed for at
+      // least six hours even in UTC+14, so the whole world rolls over at its
+      // OWN midnight while still seeing the same verse on the same local date.
+      //
+      // Clamped to the last three ET days, and that clamp is the safety
+      // property, not a nicety.  A cold key is populated from labs.bible.org,
+      // which serves only its own current verse — so honouring a FUTURE date
+      // would write today's verse under tomorrow's write-once key and pin the
+      // wrong verse for everyone, permanently.  Past dates cannot do that.
+      const requested = url.searchParams.get('date');
+      const dated = !!requested && /^\d{4}-\d{2}-\d{2}$/.test(requested)
+        && requested <= currentET && requested >= votdDateET(-2);
+      const today = dated ? requested : currentET;
       // Verse and photo are cached under SEPARATE keys so refreshing the
       // photo (or redeploying photo logic) never re-rolls the verse.  The
       // verse is written once per day and then left alone — labs.bible.org's
@@ -3775,7 +3807,10 @@ Only output valid JSON, no markdown, no preamble.`;
       const offsetMs = now - nowET;
       const midnightUTC = new Date(midnightET.getTime() + offsetMs);
       const secondsUntilMidnight = Math.max(60, Math.floor((midnightUTC - now) / 1000));
-      const votdHeaders = { ...cors, "Content-Type": "application/json", "Cache-Control": `public, max-age=${secondsUntilMidnight}` };
+      // A dated response is immutable — the verse key is write-once and the date
+      // is in the past — so it may be cached regardless of when ET next rolls.
+      const votdHeaders = { ...cors, "Content-Type": "application/json",
+        "Cache-Control": `public, max-age=${dated ? 3600 : secondsUntilMidnight}` };
 
       let votdData = null;
       // photoRaw: null = not cached yet; any JSON string (including "null",
@@ -3822,7 +3857,7 @@ Only output valid JSON, no markdown, no preamble.`;
           ? await verseResp.value.json()
           : [];
         if (env.COMMENTARY_KV && Array.isArray(votdData) && votdData.length) {
-          await env.COMMENTARY_KV.put(verseKey, JSON.stringify(votdData), { expirationTtl: secondsUntilMidnight });
+          await env.COMMENTARY_KV.put(verseKey, JSON.stringify(votdData), { expirationTtl: votdKeyTtl(today) });
         }
       }
 
@@ -3840,7 +3875,7 @@ Only output valid JSON, no markdown, no preamble.`;
         // re-roll on every request.  Deleting THIS key alone refreshes the
         // photo while leaving the verse fixed.
         if (env.COMMENTARY_KV) {
-          await env.COMMENTARY_KV.put(photoKey, JSON.stringify(photo), { expirationTtl: secondsUntilMidnight });
+          await env.COMMENTARY_KV.put(photoKey, JSON.stringify(photo), { expirationTtl: votdKeyTtl(today) });
         }
       } else {
         try { photo = JSON.parse(photoRaw); } catch { photo = null; }

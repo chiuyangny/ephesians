@@ -1274,9 +1274,14 @@ async function loadVotd(){
   var wrap=document.getElementById('content');
   wrap.innerHTML='<div class="ldg"><div class="spinner"></div><div class="ldg-txt">Loading…</div></div>';
   try{
-    // Use ET date as cache buster so a new day always fetches fresh
-    var etDate=new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'});
-    var r=await fetch(WORKER+'/votd?d='+etDate,{cache:'no-store'}),d=await r.json();
+    // Ask for the day BEFORE the reader's local date, which is the same rule the
+    // app uses, so the site and the app show the same verse on the same day.
+    // The worker cannot answer for the current local date everywhere — its verse
+    // source only ever serves its own current verse, and that key is write-once —
+    // but the previous day is always already published, in every timezone.
+    var t=new Date(),p=new Date(t.getFullYear(),t.getMonth(),t.getDate()-1);
+    var want=p.getFullYear()+'-'+String(p.getMonth()+1).padStart(2,'0')+'-'+String(p.getDate()).padStart(2,'0');
+    var r=await fetch(WORKER+'/votd?date='+want,{cache:'no-store'}),d=await r.json();
     // Handle both old format (array) and new format ({verses, photo})
     var verses=Array.isArray(d)?d:(d.verses||d);
     var photo=d.photo||null;

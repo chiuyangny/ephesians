@@ -162,7 +162,7 @@ If you ever change verse text (you almost certainly won't), re-run the chunked b
 | `/commentary/{book}/{ch}` | AI chapter commentary | KV-cached forever |
 | `/search/ko?q=&offset=` | Korean search | Uses pre-built index — fast |
 | `/search/en?q=&page=` | English search | ESV API |
-| `/votd` | Verse of the day | KV-cached until midnight ET |
+| `/votd[?date=YYYY-MM-DD]` | Verse of the day | KV-cached ~72h.  `date` selects an ET date, clamped to the last 3 days — readers request local-date-minus-one so each timezone rolls at its own midnight, and a future date is refused because the verse source only serves its own current verse and the key is write-once |
 | `/nkrv/{book}/{ch}` | Korean Bible chapter | KV-cached forever |
 | `/admin/build-index` | Build search index chunk | Requires `secret` |
 | `/admin/merge-index` | Merge chunks into final index | Requires `secret` |
