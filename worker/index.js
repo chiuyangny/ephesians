@@ -3864,12 +3864,23 @@ Only output valid JSON, no markdown, no preamble.`;
         await readKeys(verseKey, photoKey);
       }
 
-      // Built after the fallback above, so `dated` is final.  A request that fell
-      // back is serving the CURRENT ET verse and must expire when that rolls;
-      // a genuinely dated response is immutable (write-once key, past date) and
-      // can be cached regardless of when ET next rolls.
+      // Built after the fallback above, so `dated` is final.
+      //
+      //   - fell back to the current ET date: expires when that date rolls.
+      //   - dated, and old enough that its photo can no longer be re-rolled:
+      //     genuinely immutable, cache for an hour.
+      //   - dated, but still inside the re-roll window: NOT immutable any more.
+      //     This used to be lumped in with the immutable case on the reasoning
+      //     that a past date's key is write-once — true of the VERSE, and true
+      //     of the photo too until /admin/votd-next started accepting dates
+      //     back to votdDateET(-2).  A re-rolled photo then sat behind an hour
+      //     of edge and browser cache, so the picker that had just changed it
+      //     re-read the old one and readers launching in that window still got
+      //     it.  A minute keeps bursts of launches coalescing while making a
+      //     re-roll visible almost at once.
+      const rerollable = dated && today >= votdDateET(-2);
       const votdHeaders = { ...cors, "Content-Type": "application/json",
-        "Cache-Control": `public, max-age=${dated ? 3600 : secondsUntilMidnight}` };
+        "Cache-Control": `public, max-age=${dated ? (rerollable ? 60 : 3600) : secondsUntilMidnight}` };
 
       const needVerse = !votdData;
       const needPhoto = photoRaw === null;

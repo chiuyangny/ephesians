@@ -296,13 +296,29 @@ function readerDate(){
   return localDayIso(new Date(y, m - 1, d - 1));   // prevDayIso, verbatim
 }
 
-/** /votd is public, so this needs no secret — only the re-roll does. */
+/**
+ * /votd is public, so this needs no secret — only the re-roll does.
+ *
+ * It does need to defeat caching, though, and belt-and-braces because this is
+ * the one read that must never be stale: it runs immediately after a re-roll,
+ * to show what the re-roll produced.  /votd sends a public max-age (short for
+ * a re-rollable date, but not zero), so without this the panel re-read the
+ * photo it had just replaced and looked like the button had done nothing.
+ *
+ * cache:'no-store' is the correct instruction;  the `_` param is the one that
+ * works everywhere, since a URL nothing has seen cannot be answered from a
+ * cache at all.  Unknown query params are ignored by the route, which reads
+ * only `date`.
+ */
 async function renderLive(){
   const date = readerDate();
   const el = document.getElementById('live');
   let photo = null;
   try{
-    const r = await fetch(WORKER + '/votd?date=' + encodeURIComponent(date));
+    const r = await fetch(
+      WORKER + '/votd?date=' + encodeURIComponent(date) + '&_=' + Date.now(),
+      { cache: 'no-store' }
+    );
     if(r.ok) photo = (await r.json()).photo;
   }catch(e){ /* falls through to the no-photo caption below */ }
 
