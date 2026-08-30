@@ -13,12 +13,12 @@
 //                                          readers ask for local-date-minus-one so every
 //                                          timezone rolls at its OWN midnight.
 //   /votd/next                            -> Tomorrow's STAGED photo (public, read-only, never rolls)
-//   /admin/votd-next?date=YYYY-MM-DD      -> (X-Admin-Secret) re-roll the photo for a date.  Allowed from
-//                                            ET-YESTERDAY forward — that is the date readers are currently
-//                                            served, so the photo on screen right now is replaceable.
+//   /admin/votd-next?date=YYYY-MM-DD      -> (X-Admin-Secret) re-roll the photo for a date.  Allowed over
+//                                            the same window /votd serves — ET-today-minus-2 forward — so
+//                                            any photo a reader can still be shown can still be changed.
 //   /votd/reroll?date=...&t=<hmac>        -> One-tap re-roll from the preview email.  HMAC of the date,
 //                                            keyed by ADMIN_SECRET — scoped to one day, secret never in URL.
-//                                            Same ET-yesterday-forward window as /admin/votd-next.
+//                                            Same window as /admin/votd-next.
 //   /nkrv/{book}/{chapter}                -> Korean Bible (NKRV), cached per chapter
 //   /admin/warm-esv?from=N&size=M&concurrency=N (X-Admin-Secret header, not ?secret= — keeps it out of URL logs)
 //                                                   -> Pre-fetch every ESV chapter into KV (live /esv/
@@ -3514,18 +3514,23 @@ Only output valid JSON, no markdown, no preamble.`;
       if (!env.ADMIN_SECRET || !votdSafeEqual(token, expected)) {
         return page('Link not valid', '<p>This re-roll link is not valid for that date.</p>', 403);
       }
-      // ET-YESTERDAY, not ET-today.  Readers ask for the ET date one day behind
-      // their own local date (see votdOnce.ts / votdKeyTtl), so the photo a
-      // reader is looking at right now is the one for votdDateET(-1) — and a
-      // guard at votdDateET(0) locked exactly the photo anyone would actually
-      // want to change on seeing it.  Only dates older than that, which no
-      // timezone is still being served, are past changing.
+      // The floor is votdDateET(-2), matching the clamp /votd itself serves to
+      // — that is not a coincidence, it is the same fact from both ends: any
+      // date /votd will still hand a reader is a date whose photo can still be
+      // seen, and therefore one worth being able to change.
+      //
+      // Not votdDateET(0), and not -1 either.  Readers ask for their OWN local
+      // date minus one (votdOnce.ts), so which ET date a reader is being
+      // served depends on where they are: a reader in UTC-12 late in their day
+      // is on ET_today - 2, while one in UTC+14 at their midnight is on
+      // ET_today.  A guard at -1 refuses the westmost readers' photo, which is
+      // the one they are looking at.
       //
       // Re-staging a date already in use does mean a reader who loaded the
       // card earlier keeps the old photo until their next launch, while a
       // later load gets the new one.  That is the accepted cost of being able
       // to replace a photo you have actually seen.
-      if (date < votdDateET(-1)) {
+      if (date < votdDateET(-2)) {
         return page('Too late', `<p>${date} has finished rolling out to every timezone, so its photo can no longer be changed.</p>`, 400);
       }
 
@@ -3774,9 +3779,9 @@ Only output valid JSON, no markdown, no preamble.`;
           status: 400, headers: { ...cors, 'Content-Type': 'application/json' }
         });
       }
-      // votdDateET(-1) — the date readers are actually being served.  See the
-      // matching guard in /votd/reroll for why this is not votdDateET(0).
-      if (date < votdDateET(-1)) {
+      // votdDateET(-2) — the oldest date /votd will still serve.  See the
+      // matching guard in /votd/reroll for why this is neither 0 nor -1.
+      if (date < votdDateET(-2)) {
         return new Response(JSON.stringify({ error: 'date already past' }), {
           status: 400, headers: { ...cors, 'Content-Type': 'application/json' }
         });

@@ -269,22 +269,36 @@ async function act(el, action, slug){
 }
 
 /**
- * The ET date READERS are being served, which is not today's.
+ * The date key behind the photo on THIS device's screen.
  *
- * Every reader asks for the ET date one day behind their own local date, so
- * that one date covers every timezone's local day (see votdOnce.ts in the app
- * and votdKeyTtl in the worker).  The photo on screen right now is therefore
- * etDate(-1), and re-rolling etDate(0) would change tomorrow's — which is what
- * this page could do before and precisely not what you want when you are
- * looking at a photo you dislike.
+ * Deliberately the app's own expression, not an ET one:
+ *
+ *   votdOnce.ts:  api.votd(prevDayIso(localDayIso()))
+ *
+ * — the viewer's own LOCAL calendar date, minus one day.  A first cut computed
+ * ET-minus-one instead, which is the same answer only in Eastern;  open the
+ * picker anywhere else and the button re-rolled a date nobody on this phone
+ * was looking at.  Since the picker is opened on the same device as the app,
+ * running the app's own arithmetic in the browser is right by construction.
+ *
+ * Why the app is a day behind at all: the verse is mirrored from
+ * labs.bible.org, which only ever serves its own current verse, so every
+ * reader asks one day back and the whole world sees the same verse on the same
+ * local date.  See votdOnce.ts's own comment.
  */
-const etDate = (offsetDays = 0) =>
-  new Date(Date.now() + offsetDays * 86400000)
-    .toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+const localDayIso = (d = new Date()) =>
+  d.getFullYear() + '-' +
+  String(d.getMonth() + 1).padStart(2, '0') + '-' +
+  String(d.getDate()).padStart(2, '0');
+
+function readerDate(){
+  const [y, m, d] = localDayIso().split('-').map(Number);
+  return localDayIso(new Date(y, m - 1, d - 1));   // prevDayIso, verbatim
+}
 
 /** /votd is public, so this needs no secret — only the re-roll does. */
 async function renderLive(){
-  const date = etDate(-1);
+  const date = readerDate();
   const el = document.getElementById('live');
   let photo = null;
   try{
@@ -303,7 +317,7 @@ async function renderLive(){
   const cap = document.createElement('p');
   cap.className = 'cap';
   cap.textContent = photo
-    ? (photo.credit || 'Unknown') + ' · ' + date
+    ? (photo.credit || 'Unknown') + ' · this device is being served ' + date
     : 'No photo stored for ' + date + ' — readers see a tinted card.';
   el.appendChild(cap);
 
