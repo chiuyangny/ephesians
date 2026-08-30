@@ -66,6 +66,11 @@
         pointer-events:none}
   .q button{padding:1px 5px;font-size:11px;color:var(--dim);line-height:1.2}
   .hint{font-size:11px;color:var(--dim);margin:0 0 8px}
+  .live img{width:100%;aspect-ratio:3/2;object-fit:cover;border-radius:8px;display:block;
+            background:var(--line);cursor:zoom-in}
+  .live .cap{font-size:12px;color:var(--dim);margin:8px 0 10px;line-height:1.4}
+  .live button{width:100%}
+  aside h2 + h2, .live + h2{margin-top:18px}
   /* Why the board is short.  The worker has always returned `short`
      and `error` for exactly this, but the page used to drop them, so a
      spent Unsplash quota was indistinguishable from a thin harvest —
@@ -95,6 +100,12 @@
 <div class="wrap" id="wrap" hidden>
   <main><div class="grid" id="grid"></div></main>
   <aside>
+    <!-- The photo readers are looking at RIGHT NOW, and the button to replace
+         it.  The queue below decides FUTURE days;  until this existed there
+         was no way to change the one already on screen, which is the only one
+         you ever see and therefore the only one you ever want to change. -->
+    <h2>On screen now</h2>
+    <div id="live" class="live"><div class="empty">Loading…</div></div>
     <h2>Queue — <span id="qn">0</span></h2>
     <div id="queue"></div>
   </aside>
@@ -257,8 +268,82 @@ async function act(el, action, slug){
   catch(e){ el.classList.remove('busy'); alert(e.message); }
 }
 
+/**
+ * The ET date READERS are being served, which is not today's.
+ *
+ * Every reader asks for the ET date one day behind their own local date, so
+ * that one date covers every timezone's local day (see votdOnce.ts in the app
+ * and votdKeyTtl in the worker).  The photo on screen right now is therefore
+ * etDate(-1), and re-rolling etDate(0) would change tomorrow's — which is what
+ * this page could do before and precisely not what you want when you are
+ * looking at a photo you dislike.
+ */
+const etDate = (offsetDays = 0) =>
+  new Date(Date.now() + offsetDays * 86400000)
+    .toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+
+/** /votd is public, so this needs no secret — only the re-roll does. */
+async function renderLive(){
+  const date = etDate(-1);
+  const el = document.getElementById('live');
+  let photo = null;
+  try{
+    const r = await fetch(WORKER + '/votd?date=' + encodeURIComponent(date));
+    if(r.ok) photo = (await r.json()).photo;
+  }catch(e){ /* falls through to the no-photo caption below */ }
+
+  el.textContent = '';
+  if(photo && photo.url){
+    const img = document.createElement('img');
+    img.src = big(photo.url, 640);
+    img.alt = '';
+    img.onclick = () => lightbox(photo);
+    el.appendChild(img);
+  }
+  const cap = document.createElement('p');
+  cap.className = 'cap';
+  cap.textContent = photo
+    ? (photo.credit || 'Unknown') + ' · ' + date
+    : 'No photo stored for ' + date + ' — readers see a tinted card.';
+  el.appendChild(cap);
+
+  const btn = document.createElement('button');
+  btn.className = 'add';
+  btn.textContent = photo ? 'Change this photo' : 'Roll a photo';
+  btn.onclick = () => reroll(btn, date);
+  el.appendChild(btn);
+}
+
+/**
+ * Re-roll the live date.  Takes the head of the queue when one is waiting,
+ * otherwise rolls fresh — same path the nightly cron uses, so what you get
+ * here is what tomorrow would have got.
+ *
+ * The board is re-fetched afterwards because a queued photo that gets staged
+ * is REMOVED from the queue, and a stale rail would still show it waiting.
+ */
+async function reroll(btn, date){
+  btn.disabled = true;
+  btn.textContent = 'Rolling…';
+  try{
+    const r = await call('/admin/votd-next?date=' + encodeURIComponent(date));
+    if(!r.staged){
+      throw new Error('Every roll came back unusable just now — people shots, too dark, or Unsplash+. Nothing was changed. Try again.');
+    }
+    await renderLive();
+    render(await call('/admin/votd-board'));
+  }catch(e){
+    btn.disabled = false;
+    btn.textContent = 'Change this photo';
+    alert(e.message);
+  }
+}
+
 (async () => {
-  try{ render(await call('/admin/votd-board')); }
+  try{
+    render(await call('/admin/votd-board'));
+    renderLive();
+  }
   catch(e){ document.getElementById('boot').innerHTML = '<span class="err">' + e.message + '</span>'; }
 })();
 </script>
