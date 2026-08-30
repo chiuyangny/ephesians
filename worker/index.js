@@ -13,9 +13,12 @@
 //                                          readers ask for local-date-minus-one so every
 //                                          timezone rolls at its OWN midnight.
 //   /votd/next                            -> Tomorrow's STAGED photo (public, read-only, never rolls)
-//   /admin/votd-next?date=YYYY-MM-DD      -> (X-Admin-Secret) re-roll the staged photo for a date
+//   /admin/votd-next?date=YYYY-MM-DD      -> (X-Admin-Secret) re-roll the photo for a date.  Allowed from
+//                                            ET-YESTERDAY forward — that is the date readers are currently
+//                                            served, so the photo on screen right now is replaceable.
 //   /votd/reroll?date=...&t=<hmac>        -> One-tap re-roll from the preview email.  HMAC of the date,
 //                                            keyed by ADMIN_SECRET — scoped to one day, secret never in URL.
+//                                            Same ET-yesterday-forward window as /admin/votd-next.
 //   /nkrv/{book}/{chapter}                -> Korean Bible (NKRV), cached per chapter
 //   /admin/warm-esv?from=N&size=M&concurrency=N (X-Admin-Secret header, not ?secret= — keeps it out of URL logs)
 //                                                   -> Pre-fetch every ESV chapter into KV (live /esv/
@@ -2821,9 +2824,9 @@ const VOTD_ORIGIN_FALLBACK = 'https://krengbible.pauljkim22.workers.dev';
  *
  * Instead the link carries an HMAC of the DATE it is for, keyed by the same
  * secret.  That makes it scoped and self-expiring: a token only ever unlocks
- * the one day it was minted for, and that day stops being re-rollable the
- * moment it goes live.  A leaked link is worth at most one day's photo, and
- * the secret itself is never derivable from it.
+ * the one day it was minted for, and that day stops being re-rollable once it
+ * has finished rolling out to every timezone.  A leaked link is worth at most
+ * one day's photo, and the secret itself is never derivable from it.
  */
 async function votdRerollToken(dateET, env) {
   const key = await crypto.subtle.importKey(
@@ -3511,8 +3514,19 @@ Only output valid JSON, no markdown, no preamble.`;
       if (!env.ADMIN_SECRET || !votdSafeEqual(token, expected)) {
         return page('Link not valid', '<p>This re-roll link is not valid for that date.</p>', 403);
       }
-      if (date < votdDateET(0)) {
-        return page('Too late', `<p>${date} is already live to readers, so its photo can no longer be changed.</p>`, 400);
+      // ET-YESTERDAY, not ET-today.  Readers ask for the ET date one day behind
+      // their own local date (see votdOnce.ts / votdKeyTtl), so the photo a
+      // reader is looking at right now is the one for votdDateET(-1) — and a
+      // guard at votdDateET(0) locked exactly the photo anyone would actually
+      // want to change on seeing it.  Only dates older than that, which no
+      // timezone is still being served, are past changing.
+      //
+      // Re-staging a date already in use does mean a reader who loaded the
+      // card earlier keeps the old photo until their next launch, while a
+      // later load gets the new one.  That is the accepted cost of being able
+      // to replace a photo you have actually seen.
+      if (date < votdDateET(-1)) {
+        return page('Too late', `<p>${date} has finished rolling out to every timezone, so its photo can no longer be changed.</p>`, 400);
       }
 
       const photo = await votdStagePhoto(date, env);
@@ -3760,7 +3774,9 @@ Only output valid JSON, no markdown, no preamble.`;
           status: 400, headers: { ...cors, 'Content-Type': 'application/json' }
         });
       }
-      if (date < votdDateET(0)) {
+      // votdDateET(-1) — the date readers are actually being served.  See the
+      // matching guard in /votd/reroll for why this is not votdDateET(0).
+      if (date < votdDateET(-1)) {
         return new Response(JSON.stringify({ error: 'date already past' }), {
           status: 400, headers: { ...cors, 'Content-Type': 'application/json' }
         });
