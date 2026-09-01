@@ -6,6 +6,7 @@
 //   /commentary/{bookNum}/{chapter}       -> AI-generated chapter commentary (cached)
 //   /qt-reflection/{bookNum}/{chapter}/{verseStart}/{verseEnd}
 //                                          -> AI-generated QT reflection scoped to a verse range (cached)
+//   /woori/{book}/{chapter}               -> 우리말성경 chapter (KV only; imported, not scraped)
 //   /search/ko?q=...&offset=...           -> Korean full-text search (FAST: uses pre-built index)
 //   /search/en?q=...&page=...             -> English full-text search (FAST: uses pre-built index)
 //   /votd[?date=YYYY-MM-DD]              -> Verse of the day + photo.  `date` picks a
@@ -176,6 +177,7 @@ const KO_INDEX_CONFIG = {
   NKRV:    { prefix: 'nkrv',    fetch: fetchAndCacheNkrv,    verseKey: (b, c) => `nkrv_v4_${b}_${c}` },
   SAEBEON: { prefix: 'saebeon', fetch: fetchAndCacheSaebeon, verseKey: (b, c) => `saebeon_v1_${b}_${c}` },
   NKT:     { prefix: 'nkt',     fetch: fetchAndCacheNkt,     verseKey: (b, c) => `nkt_v1_${b}_${c}` },
+  WOORI:   { prefix: 'woori',   fetch: fetchAndCacheWoori,   verseKey: (b, c) => `woori_${b}_${c}` },
 };
 function koIndexConfig(v) {
   return KO_INDEX_CONFIG[String(v || 'NKRV').toUpperCase()] || KO_INDEX_CONFIG.NKRV;
@@ -918,6 +920,22 @@ function nktToCanonical(bookNum, chapter, data) {
 
 // NKT fetch + cache, mirroring fetchAndCacheSaebeon.  No heading-translation
 // step (NKT headings aren't extracted), so the cache write is unconditional.
+// ---- 우리말성경 chapter read ----
+// Licensed, and imported into KV wholesale from the publisher's own text rather
+// than scraped a chapter at a time — so unlike NKRV/새번역/새한글 there is no
+// upstream to fall back to.  A miss means the import has not run for that
+// chapter, and saying so beats inventing a fetch that cannot succeed.
+//
+// Same signature as the scraping fetchers so KO_INDEX_CONFIG can hold it and
+// /admin/build-index works unchanged; `cached` is always true because KV is the
+// only source there is.
+async function fetchAndCacheWoori(bookNum, chapter, env) {
+  if (!env.COMMENTARY_KV) return { ok: false, error: 'kv_unset' };
+  const stored = await env.COMMENTARY_KV.get(`woori_${bookNum}_${chapter}`, 'json');
+  if (!stored) return { ok: false, error: 'woori_not_imported' };
+  return { ok: true, cached: true, data: stored };
+}
+
 async function fetchAndCacheNkt(bookNum, chapter, env) {
   const verseKey = `nkt_v1_${bookNum}_${chapter}`;
   if (env.COMMENTARY_KV) {
@@ -3959,6 +3977,24 @@ Only output valid JSON, no markdown, no preamble.`;
       } catch (e) {
         return new Response(JSON.stringify({error: e.message}), {status:500, headers:{...cors,"Content-Type":"application/json"}});
       }
+    }
+
+    // ---- 우리말성경 chapter — KV only, see fetchAndCacheWoori.  Like /nkt it
+    // must run before the nkrv fallback so it does not fall through to the
+    // "Use /nkrv/..." error. ----
+    const wooriMatch = path.match(/^\/woori\/(\d+)\/(\d+)\/?$/);
+    if (wooriMatch) {
+      const bookNum = +wooriMatch[1], chapter = +wooriMatch[2];
+      const result = await fetchAndCacheWoori(bookNum, chapter, env);
+      if (!result.ok) {
+        return new Response(JSON.stringify({ error: result.error, bookNum, chapter }), {
+          status: result.error === 'kv_unset' ? 503 : 404,
+          headers: { ...cors, 'Content-Type': 'application/json' },
+        });
+      }
+      return new Response(JSON.stringify(result.data), {
+        headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=2592000, stale-while-revalidate=86400' },
+      });
     }
 
     // ---- 새한글성경 (NKT) chapter fetch — bskorea's new platform, see
