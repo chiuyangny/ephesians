@@ -1575,6 +1575,200 @@ async function handleIndexStatus(env, url, cors) {
   }, null, 2), {headers:{...cors,'Content-Type':'application/json'}});
 }
 
+// Korean book abbreviations as Korean publishers actually print them,
+// index-aligned with BOOK_NAMES_KO.  Needed because a printed reference is
+// almost never the full book name — "창 12:1-9", not "창세기 12:1-9".
+const BOOK_ABBR_KO = [
+  '창','출','레','민','신','수','삿','룻',
+  '삼상','삼하','왕상','왕하','대상','대하','스','느',
+  '에','욥','시','잠','전','아','사','렘',
+  '애','겔','단','호','욜','암','옵','욘',
+  '미','나','합','습','학','슥','말',
+  '마','막','눅','요','행','롬','고전','고후',
+  '갈','엡','빌','골','살전','살후',
+  '딤전','딤후','딛','몬','히','약',
+  '벧전','벧후','요일','요이','요삼','유','계'
+];
+
+// Korean book name or abbreviation -> 1-indexed book number, or 0.
+//
+// Full names are tried BEFORE abbreviations, longest first.  Order matters:
+// "요한일서" starts with "요", and matching the abbreviation first would file
+// 1 John under John.  Same trap for 사무엘상/사, 고린도전서/고전, 데살로니가전서/살전.
+function koBookNum(name) {
+  const n = (name || '').trim();
+  if (!n) return 0;
+  const full = BOOK_NAMES_KO.indexOf(n);
+  if (full >= 0) return full + 1;
+  const abbr = BOOK_ABBR_KO.indexOf(n);
+  if (abbr >= 0) return abbr + 1;
+  return 0;
+}
+
+// Same, but tolerant of whatever Hangul the match ran into on its left.
+//
+// The probe's capture is greedy over Hangul, so a reference printed with no
+// space after a label — "본문창세기 12:1-9" — arrives as "본문창세기" and
+// resolves to nothing.  Trying successively shorter SUFFIXES finds the book
+// inside it.  Longest first, because the short forms are prefixes of the long
+// ones: give up early on 요한일서 and it resolves as 요.
+function koBookNumLoose(text) {
+  const n = (text || '').trim();
+  for (let i = 0; i < n.length; i++) {
+    const num = koBookNum(n.slice(i));
+    if (num) return { bookNum: num, matched: n.slice(i) };
+  }
+  return { bookNum: 0, matched: '' };
+}
+
+// ---- /admin/reading-probe ----
+//
+// Diagnostic ONLY.  Reports what the Worker's own fetch() receives from the
+// external site that publishes a Korean daily-reading schedule, so the
+// scraper can be written against what Cloudflare actually gets rather than
+// against what a browser renders.
+//
+// It exists because those three things differ, and the difference is the
+// whole risk in this feature:  a Korean site may refuse a datacenter IP,
+// require a session cookie, or serve EUC-KR that text() silently mangles
+// into replacement characters.  Each of those looks like "the parser is
+// broken" from the outside, and none is fixable by changing the parser.
+//
+// It reports STRUCTURE, not content:  bounded context windows around each
+// candidate reference, enough to tell which one is the day's reading and
+// which are quotations inside the surrounding prose.  What this informs
+// takes the passage REFERENCE only — book, chapter, verses — which is a
+// citation of scripture, not of anyone's writing.  The reflection is
+// generated from our own NKRV text by the existing pipeline, and no prose
+// from the source is parsed, stored, or shown.
+async function handleReadingProbe(env, url, cors) {
+  const secret = url.searchParams.get('secret');
+  if (!env.ADMIN_SECRET || secret !== env.ADMIN_SECRET) {
+    return new Response(JSON.stringify({error:'forbidden'}), {status:403, headers:{...cors,'Content-Type':'application/json'}});
+  }
+
+  const target = url.searchParams.get('url') || 'https://www.duranno.com/qt/view/bible.asp';
+  // Only ever the one source host.  Without this the endpoint is an open
+  // proxy that
+  // fetches anything on the Worker's behalf, behind one shared secret.
+  let host = '';
+  try { host = new URL(target).hostname; } catch (e) {
+    return new Response(JSON.stringify({error:'bad_url'}), {status:400, headers:{...cors,'Content-Type':'application/json'}});
+  }
+  if (host !== 'www.duranno.com' && host !== 'duranno.com') {
+    return new Response(JSON.stringify({error:'host_not_allowed', host}), {status:400, headers:{...cors,'Content-Type':'application/json'}});
+  }
+
+  let res;
+  try {
+    res = await fetch(target, {
+      headers: {
+        // A plain Workers fetch sends no UA at all, which is the single most
+        // likely thing to get refused.  This says what we are without
+        // pretending to be a browser.
+        'User-Agent': 'krengbible-qt/1.0 (+https://krengbible.com)',
+        'Accept': 'text/html,application/xhtml+xml',
+        'Accept-Language': 'ko-KR,ko;q=0.9',
+      },
+      redirect: 'follow',
+    });
+  } catch (e) {
+    return new Response(JSON.stringify({error:'fetch_failed', detail: String(e && e.message || e)}, null, 2),
+      {status:502, headers:{...cors,'Content-Type':'application/json'}});
+  }
+
+  const contentType = res.headers.get('content-type') || '';
+  const buf = await res.arrayBuffer();
+
+  // Decode twice and let the caller see which one is sane.  A charset
+  // mismatch does not throw — it yields U+FFFD, so it is counted, not
+  // guessed at.
+  const utf8 = new TextDecoder('utf-8').decode(buf);
+  const badUtf8 = (utf8.match(/\uFFFD/g) || []).length;
+  let eucKr = null, badEucKr = null, eucKrError = null;
+  try {
+    eucKr = new TextDecoder('euc-kr').decode(buf);
+    badEucKr = (eucKr.match(/\uFFFD/g) || []).length;
+  } catch (e) {
+    eucKrError = String(e && e.message || e);
+  }
+  // Fewer replacement characters wins;  ties go to UTF-8.
+  const useEucKr = eucKr !== null && badEucKr < badUtf8;
+  const html = useEucKr ? eucKr : utf8;
+
+  const titleMatch = html.match(/<title[^>]*>([\s\S]{0,200}?)<\/title>/i);
+  const declared = html.match(/charset\s*=\s*["']?\s*([\w-]+)/i);
+
+  // Every shape a Korean publisher prints a reference in.  Which one this
+  // page uses is exactly what is unknown, so all of them are tried and the
+  // caller picks.
+  const PATTERNS = [
+    { name: 'colon-range',   re: /([가-힣]{1,7})\s*(\d{1,3})\s*[:：]\s*(\d{1,3})\s*[-~–—]\s*(\d{1,3})/g },
+    { name: 'jang-jeol',     re: /([가-힣]{1,7})\s*(\d{1,3})\s*장\s*(\d{1,3})\s*[-~–—]\s*(\d{1,3})\s*절/g },
+    { name: 'colon-single',  re: /([가-힣]{1,7})\s*(\d{1,3})\s*[:：]\s*(\d{1,3})(?![\s]*[-~–—:：\d])/g },
+    { name: 'jang-only',     re: /([가-힣]{1,7})\s*(\d{1,3})\s*장(?!\s*\d)/g },
+    // Cross-chapter, e.g. 창 12:1-13:4.  Listed because published daily
+    // readings do span chapters, and our /qt-reflection route does not.
+    { name: 'cross-chapter', re: /([가-힣]{1,7})\s*(\d{1,3})\s*[:：]\s*(\d{1,3})\s*[-~–—]\s*(\d{1,3})\s*[:：]\s*(\d{1,3})/g },
+  ];
+
+  const MAX_CANDIDATES = 40;
+  const candidates = [];
+  for (const { name, re } of PATTERNS) {
+    let m;
+    re.lastIndex = 0;
+    while ((m = re.exec(html)) && candidates.length < MAX_CANDIDATES) {
+      const { bookNum, matched } = koBookNumLoose(m[1]);
+      if (!bookNum) continue;
+      const at = m.index;
+      const c = {
+        pattern: name,
+        raw: m[0].replace(/\s+/g, ' ').trim(),
+        book: BOOK_NAMES_KO[bookNum - 1],
+        bookNum,
+        // What actually resolved, so a wrong book is visible rather than
+        // inferred from the raw text.
+        matchedName: matched,
+        at,
+        // Bounded window — enough to tell a heading from a quotation inside
+        // the commentary, not enough to be a copy of anything.
+        context: html.slice(Math.max(0, at - 80), at + 80).replace(/\s+/g, ' ').trim(),
+      };
+      if (name === 'cross-chapter') {
+        c.chapter = +m[2]; c.verseStart = +m[3];
+        c.endChapter = +m[4]; c.verseEnd = +m[5];
+      } else if (name === 'jang-only') {
+        c.chapter = +m[2];
+      } else if (name === 'colon-single') {
+        c.chapter = +m[2]; c.verseStart = +m[3]; c.verseEnd = +m[3];
+      } else {
+        c.chapter = +m[2]; c.verseStart = +m[3]; c.verseEnd = +m[4];
+      }
+      candidates.push(c);
+    }
+  }
+
+  return new Response(JSON.stringify({
+    target,
+    fetch: {
+      status: res.status,
+      contentType,
+      bytes: buf.byteLength,
+      declaredCharset: declared ? declared[1] : null,
+      decodedAs: useEucKr ? 'euc-kr' : 'utf-8',
+      replacementChars: { utf8: badUtf8, eucKr: badEucKr, eucKrError },
+    },
+    title: titleMatch ? titleMatch[1].replace(/\s+/g, ' ').trim() : null,
+    // A near-empty body with a 200 is the signature of a page whose content
+    // arrives by script, which would mean scraping the HTML never works and
+    // the underlying data endpoint has to be found instead.
+    looksEmpty: buf.byteLength < 2000,
+    candidateCount: candidates.length,
+    truncated: candidates.length >= MAX_CANDIDATES,
+    candidates,
+  }, null, 2), {headers:{...cors,'Content-Type':'application/json'}});
+}
+
 // ---- /search/en — fast in-memory search over the pre-built ESV index ----
 async function handleEnglishSearch(env, url, cors) {
   const q = url.searchParams.get('q');
@@ -3475,6 +3669,7 @@ Only output valid JSON, no markdown, no preamble.`;
     if (path === '/admin/build-en-index') return handleBuildEnIndex(env, url, cors);
     if (path === '/admin/merge-en-index') return handleMergeEnIndex(env, url, cors);
     if (path === '/admin/index-status') return handleIndexStatus(env, url, cors);
+    if (path === '/admin/reading-probe') return handleReadingProbe(env, url, cors);
     if (path === '/admin/wipe-apibible-cache') return handleWipeApiBibleCache(env, url, cors);
     if (path === '/admin/build-apibible-index') return handleBuildApiBibleIndex(env, url, cors);
     if (path === '/admin/merge-apibible-index') return handleMergeApiBibleIndex(env, url, cors);
