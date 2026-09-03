@@ -1621,6 +1621,45 @@ function koBookNumLoose(text) {
   return { bookNum: 0, matched: '' };
 }
 
+// ---- /admin/auth-check ----
+//
+// Answers "why is every admin route saying forbidden" without anyone having
+// to paste a secret into a chat window, and without this endpoint being able
+// to leak one.
+//
+// What it reports and why each is safe:
+//   configured      whether ADMIN_SECRET exists on this Worker at all.  When
+//                   it does not, EVERY admin route refuses every value — the
+//                   guard is `!env.ADMIN_SECRET || ...` — and no amount of
+//                   retrying the right secret will ever work.  This is the
+//                   one fact that cannot be deduced from outside.
+//   receivedLength  the length of what the CALLER just sent.  Their own input.
+//   matches         the same yes/no every admin route already gives by
+//                   answering 200 or 403.  Nothing new.
+//   trimmedMatches  whether it would match after trimming.  Only meaningful
+//                   to someone who already holds the value, so it reveals
+//                   nothing — but it catches the trailing newline a paste on
+//                   a phone adds, which is invisible and otherwise presents
+//                   as a simply wrong secret.
+//
+// Deliberately NOT reported: the configured secret's length or any part of
+// its content.  Length would be a genuine (if small) leak to someone who does
+// not have it, and it is not needed — trimmedMatches covers the case that
+// length would have diagnosed.
+function handleAuthCheck(env, url, cors) {
+  const received = url.searchParams.get('secret') || '';
+  const configured = typeof env.ADMIN_SECRET === 'string' && env.ADMIN_SECRET.length > 0;
+  return new Response(JSON.stringify({
+    configured,
+    receivedLength: received.length,
+    matches: configured && received === env.ADMIN_SECRET,
+    trimmedMatches: configured && received.trim() === env.ADMIN_SECRET.trim(),
+    hint: !configured
+      ? 'ADMIN_SECRET is not set on this Worker.  Every /admin/* route will refuse every value until it is.  Add it under Settings -> Variables and Secrets as an encrypted Secret (a plain-text Variable is removed by the next wrangler deploy), then click Deploy in the dashboard — saving the field alone does not apply it.'
+      : 'ADMIN_SECRET is set.  If matches is false but trimmedMatches is true, the value has stray whitespace on one side — the comparison below already tolerates that, so retry.  If both are false, the value sent is genuinely a different string.',
+  }, null, 2), {headers:{...cors,'Content-Type':'application/json','Cache-Control':'no-store'}});
+}
+
 // ---- /admin/reading-probe ----
 //
 // Diagnostic ONLY.  Reports what the Worker's own fetch() receives from the
@@ -1642,8 +1681,12 @@ function koBookNumLoose(text) {
 // generated from our own NKRV text by the existing pipeline, and no prose
 // from the source is parsed, stored, or shown.
 async function handleReadingProbe(env, url, cors) {
-  const secret = url.searchParams.get('secret');
-  if (!env.ADMIN_SECRET || secret !== env.ADMIN_SECRET) {
+  // Trimmed on both sides:  a secret pasted on a phone routinely carries a
+  // trailing newline, which is invisible and rejects as though it were simply
+  // the wrong value.  Trimming cannot weaken the check — no secret of ours has
+  // meaningful leading or trailing whitespace.
+  const secret = (url.searchParams.get('secret') || '').trim();
+  if (!env.ADMIN_SECRET || secret !== env.ADMIN_SECRET.trim()) {
     return new Response(JSON.stringify({error:'forbidden'}), {status:403, headers:{...cors,'Content-Type':'application/json'}});
   }
 
@@ -3669,6 +3712,7 @@ Only output valid JSON, no markdown, no preamble.`;
     if (path === '/admin/build-en-index') return handleBuildEnIndex(env, url, cors);
     if (path === '/admin/merge-en-index') return handleMergeEnIndex(env, url, cors);
     if (path === '/admin/index-status') return handleIndexStatus(env, url, cors);
+    if (path === '/admin/auth-check') return handleAuthCheck(env, url, cors);
     if (path === '/admin/reading-probe') return handleReadingProbe(env, url, cors);
     if (path === '/admin/wipe-apibible-cache') return handleWipeApiBibleCache(env, url, cors);
     if (path === '/admin/build-apibible-index') return handleBuildApiBibleIndex(env, url, cors);
