@@ -3875,6 +3875,46 @@ Only output valid JSON, no markdown, no preamble.`;
       return new Response(JSON.stringify({ date, ...out }, null, 2),
         {status: out.ok ? 200 : 502, headers:{...cors,'Content-Type':'application/json; charset=utf-8'}});
     }
+    // ---- /daily-readings?date=YYYY-MM-DD ----
+    //
+    // The window the client should match a typed passage against: the given
+    // date and the KST dates either side of it.
+    //
+    // One date is not enough, and the reason is a clock, not a preference.
+    // Korea's date rolls at 15:00 UTC — 11am in New York — so for half of a
+    // US reader's waking day the published schedule is showing the NEXT
+    // Korean date.  Someone who looks at it after lunch and types in what
+    // they saw is holding tomorrow's reference by our local-date reckoning,
+    // and matching only their own date would miss it and pay for a fresh
+    // generation of a passage already warmed.  The day before covers the
+    // mirror case: someone reading in the morning, or east of Korea, or just
+    // catching up on yesterday.
+    //
+    // Three KV reads, in parallel, cached for an hour — the entries are tiny
+    // and only the newest of them can still change.
+    if (path === '/daily-readings') {
+      const date = url.searchParams.get('date') || '';
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return new Response(JSON.stringify({error:'bad_date'}), {status:400, headers:{...cors,'Content-Type':'application/json; charset=utf-8'}});
+      }
+      const base = Date.parse(date + 'T00:00:00Z');
+      if (Number.isNaN(base)) {
+        return new Response(JSON.stringify({error:'bad_date'}), {status:400, headers:{...cors,'Content-Type':'application/json; charset=utf-8'}});
+      }
+      const dates = [-1, 0, 1].map((d) => new Date(base + d * 86400000).toISOString().slice(0, 10));
+      const raws = env.COMMENTARY_KV
+        ? await Promise.all(dates.map((d) => env.COMMENTARY_KV.get(DAILY_READING_PREFIX + d)))
+        : dates.map(() => null);
+      const readings = {};
+      dates.forEach((d, i) => {
+        if (!raws[i]) return;
+        try { readings[d] = JSON.parse(raws[i]); } catch (e) { /* a corrupt entry is simply absent */ }
+      });
+      return new Response(JSON.stringify({ date, readings }, null, 2), {
+        headers: {...cors,'Content-Type':'application/json; charset=utf-8','Cache-Control':'public, max-age=3600'},
+      });
+    }
+
     // ---- /daily-reading?date=YYYY-MM-DD ----
     //
     // Read-only, and deliberately so: it never captures on demand.  The page
