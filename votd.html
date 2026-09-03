@@ -37,10 +37,25 @@
   @media (max-width:900px){ .wrap{grid-template-columns:1fr} }
 
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+  /* THE SHAPE THE APP ACTUALLY SHOWS.
+   *
+   * VotdCard renders the photo into a card that is `width: 100%, maxWidth: 420,
+   * minHeight: 420` with contentFit="cover" — so on a typical phone it is about
+   * 353 wide by 420 tall and the image is CROPPED to that, not letterboxed.
+   * Previewing at 3/2 was showing a landscape strip of a portrait crop: the
+   * top and bottom of every photo were invisible here and the sides were
+   * missing there, which is exactly backwards for choosing one.
+   *
+   * Representative rather than exact — the card grows past 420 when a verse
+   * runs long, and its width follows the device — but a portrait crop at this
+   * ratio is what the reader sees on the common case, and a preview that is
+   * roughly right beats one that is confidently wrong. */
+  :root{--votd-crop:353/420}
+
   .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;
         display:flex;flex-direction:column;transition:opacity .18s,transform .18s}
   .card.busy{opacity:.35;transform:scale(.98);pointer-events:none}
-  .card img{width:100%;aspect-ratio:3/2;object-fit:cover;display:block;background:var(--line)}
+  .card img{width:100%;aspect-ratio:var(--votd-crop);object-fit:cover;display:block;background:var(--line)}
   .meta{padding:9px 11px;font-size:12px;color:var(--dim);flex:1;
         display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .row{display:flex;gap:8px;padding:0 11px 11px}
@@ -58,7 +73,7 @@
   .q:last-child{border-bottom:0}
   .q.drag{opacity:.4;cursor:grabbing}
   .q.over{border-top:2px solid var(--accent)}
-  .q img{width:52px;height:36px;object-fit:cover;border-radius:5px;flex:none;background:var(--line);
+  .q img{width:52px;aspect-ratio:var(--votd-crop);object-fit:cover;border-radius:5px;flex:none;background:var(--line);
          cursor:zoom-in}
   .q .t{flex:1;font-size:12px;line-height:1.35;overflow:hidden;pointer-events:none;
         display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
@@ -66,7 +81,7 @@
         pointer-events:none}
   .q button{padding:1px 5px;font-size:11px;color:var(--dim);line-height:1.2}
   .hint{font-size:11px;color:var(--dim);margin:0 0 8px}
-  .live img{width:100%;aspect-ratio:3/2;object-fit:cover;border-radius:8px;display:block;
+  .live img{width:100%;aspect-ratio:var(--votd-crop);object-fit:cover;border-radius:8px;display:block;
             background:var(--line);cursor:zoom-in}
   .live .cap{font-size:12px;color:var(--dim);margin:8px 0 10px;line-height:1.4}
   .live button{width:100%}
@@ -81,6 +96,10 @@
   #lb{position:fixed;inset:0;background:rgba(0,0,0,.86);display:none;z-index:50;
       align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
   #lb.on{display:flex}
+  /* Deliberately NOT cropped to --votd-crop.  The grid and the rail answer
+     "what will the reader see";  the lightbox answers "what is this photo",
+     which is the question you ask when the crop looks wrong and you want to
+     know whether the subject is simply outside it. */
   #lb img{max-width:100%;max-height:88vh;border-radius:10px;display:block}
   #lb .cap{position:absolute;bottom:16px;left:0;right:0;text-align:center;
            color:#fff;font-size:13px;opacity:.85;padding:0 24px}
