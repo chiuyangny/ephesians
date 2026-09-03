@@ -114,14 +114,32 @@
   .warn{font-size:12px;line-height:1.45;color:#8a5a00;background:#fff6e0;
         border:1px solid #f0d9a0;border-radius:8px;padding:8px 10px;margin:8px 0 0}
 
-  #lb{position:fixed;inset:0;background:rgba(0,0,0,.86);display:none;z-index:50;
-      align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
+  /* Sized in viewport UNITS, not inset:0.
+   *
+   * inset:0 sizes a fixed element against its fixed containing block, and on
+   * iOS that came back about 60% of the screen tall — the overlay dimmed the
+   * top of the screen and the live page carried on underneath it, tappable.
+   * 100dvh is resolved against the viewport itself rather than that block, so
+   * it does not inherit the same wrong number;  100vh is the fallback for
+   * anything without dvh, and is declared first so dvh wins where supported. */
+  #lb{position:fixed;top:0;left:0;width:100vw;height:100vh;height:100dvh;
+      background:rgba(0,0,0,.86);display:none;z-index:50;overscroll-behavior:contain;
+      align-items:center;justify-content:center;padding:24px 24px 56px;cursor:zoom-out}
   #lb.on{display:flex}
+  /* Tapping anywhere closes, and always did — but nothing on screen said so,
+     so the lightbox read as a thing with no way out.  The button is the
+     affordance;  it shares the same handler as the backdrop. */
+  #lb .x{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));right:14px;
+         width:40px;height:40px;padding:0;border:0;border-radius:20px;font-size:17px;
+         background:rgba(255,255,255,.16);color:#fff;line-height:1;
+         display:flex;align-items:center;justify-content:center}
   /* Deliberately NOT cropped to --votd-crop.  The grid and the rail answer
      "what will the reader see";  the lightbox answers "what is this photo",
      which is the question you ask when the crop looks wrong and you want to
      know whether the subject is simply outside it. */
-  #lb img{max-width:100%;max-height:88vh;border-radius:10px;display:block}
+  /* 100% of the padded box, so the photo cannot grow past the overlay however
+     tall the viewport is reported to be — the bottom padding is the caption's. */
+  #lb img{max-width:100%;max-height:100%;border-radius:10px;display:block}
   #lb .cap{position:absolute;bottom:16px;left:0;right:0;text-align:center;
            color:#fff;font-size:13px;opacity:.85;padding:0 24px}
   .empty{color:var(--dim);font-size:13px;padding:6px 0}
@@ -136,7 +154,7 @@
   <div class="warn" id="warn" hidden></div>
 </header>
 <div id="boot" class="msg">Loading…</div>
-<div id="lb"><img alt=""><div class="cap"></div></div>
+<div id="lb"><button class="x" type="button" aria-label="Close">✕</button><img alt=""><div class="cap"></div></div>
 <div class="wrap" id="wrap" hidden>
   <main><div class="grid" id="grid"></div></main>
   <aside>
@@ -296,11 +314,18 @@ function lightbox(item){
   lb.querySelector('.cap').textContent =
     (item.alt || 'Untitled') + ' — ' + (item.credit || 'Unknown');
   lb.classList.add('on');
+  // Without this the board scrolls under the overlay, so closing it drops you
+  // somewhere other than the row you opened.
+  document.body.style.overflow = 'hidden';
 }
-document.getElementById('lb').onclick = function(){ this.classList.remove('on'); };
-document.addEventListener('keydown', (e) => {
-  if(e.key === 'Escape') document.getElementById('lb').classList.remove('on');
-});
+function closeLightbox(){
+  document.getElementById('lb').classList.remove('on');
+  document.body.style.overflow = '';
+}
+// One handler for the backdrop, the image and the button alike — the button
+// needs no listener of its own, the click reaches here either way.
+document.getElementById('lb').onclick = closeLightbox;
+document.addEventListener('keydown', (e) => { if(e.key === 'Escape') closeLightbox(); });
 
 // Reordering sends the WHOLE new order, which the worker accepts only if it is
 // a permutation of what is currently queued — so a stale tab gets a 409 and a
