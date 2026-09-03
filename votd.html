@@ -150,14 +150,34 @@ function secret(){
   return (s || '').trim();
 }
 
+// The worker answers every refusal with {"error":"..."} saying which one it
+// was.  Reading only the status code turned that into "Worker 400", which
+// names no cause and suggests no fix.  Translate the ones the worker can
+// actually send;  fall back to its own text, and only then to the number.
+const CALL_ERRORS = {
+  'unknown slug': 'That photo is not on the board any more — it was staged, ' +
+                  'used, or removed since this page loaded.',
+  'bad action':   'The page asked the worker for something it does not support.',
+};
+// A stale view can't be fixed by retrying, only by re-reading the board — so
+// these reload instead of leaving a dead page behind an alert.
+const STALE = new Set([400, 409]);
+
 async function call(path){
   const r = await fetch(WORKER + path, { headers: { 'X-Admin-Secret': secret() } });
   if(r.status === 403){
     localStorage.removeItem(KEY);          // wrong secret — don't keep re-sending it
     throw new Error('Rejected. Reload and re-enter the secret.');
   }
-  if(!r.ok) throw new Error('Worker ' + r.status);
-  return r.json();
+  let body = null;
+  try { body = await r.json(); } catch { /* non-JSON error page — fall through */ }
+  if(!r.ok){
+    const why = (body && body.error) || '';
+    const err = new Error(CALL_ERRORS[why] || why || ('Worker ' + r.status));
+    err.stale = STALE.has(r.status);
+    throw err;
+  }
+  return body;
 }
 
 // Ask Unsplash for a bigger rendition than the stored url carries.  The saved
@@ -291,7 +311,11 @@ function moveTo(slug, beforeSlug){
 async function act(el, action, slug){
   el.classList.add('busy');
   try{ render(await call('/admin/votd-act?action=' + action + '&slug=' + encodeURIComponent(slug))); }
-  catch(e){ el.classList.remove('busy'); alert(e.message); }
+  catch(e){
+    el.classList.remove('busy');
+    alert(e.stale ? e.message + '\n\nReloading the board.' : e.message);
+    if(e.stale) location.reload();
+  }
 }
 
 /**
