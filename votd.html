@@ -46,11 +46,18 @@
    * top and bottom of every photo were invisible here and the sides were
    * missing there, which is exactly backwards for choosing one.
    *
-   * Representative rather than exact — the card grows past 420 when a verse
-   * runs long, and its width follows the device — but a portrait crop at this
-   * ratio is what the reader sees on the common case, and a preview that is
-   * roughly right beats one that is confidently wrong. */
-  :root{--votd-crop:353/420}
+   * WHY THIS EXACT RATIO, AND WHY THERE IS NO SINGLE RIGHT ONE.
+   *
+   * The card is `min(screenWidth - 40, 420)` wide by `max(420, content)` tall,
+   * so the crop depends on the phone: about 0.80 on an SE, 0.93 on a Pro Max.
+   * 362/420 is an iPhone 16 Pro (402pt wide, less the 20pt page padding on each
+   * side), which is what this was checked against.  Nudge it if the reference
+   * device changes;  every preview here follows this one value.
+   *
+   * The height moves too — the card grows past 420 when a verse runs long — so
+   * a preview can be close but never exact.  Close is the point: it exists to
+   * stop a photo being chosen whose subject the crop cuts through. */
+  :root{--votd-crop:362/420}
 
   .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;
         display:flex;flex-direction:column;transition:opacity .18s,transform .18s}
