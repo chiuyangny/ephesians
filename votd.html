@@ -72,8 +72,22 @@
   button.x{color:var(--danger);width:42px;flex:none}
   button:disabled{opacity:.5;cursor:default}
 
-  aside{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;
-        position:sticky;top:22px}
+  aside{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+  /* Sticky ONLY in the two-column layout, and never taller than the viewport.
+   *
+   * A sticky panel taller than the screen pins its top and leaves its bottom
+   * permanently off-screen:  scrolling slides the page underneath it instead
+   * of revealing the rest, so with ten queued photos the bottom of the queue
+   * simply cannot be reached.  On iOS that shows up as the page appearing to
+   * end partway down with dead background below it.
+   *
+   * Capping the height and letting the panel scroll inside itself fixes that
+   * where sticky is wanted.  Below 900px the panel is stacked beneath the
+   * grid rather than beside it, so there is nothing to stay level with and
+   * sticky buys nothing — it only reintroduces the trap. */
+  @media (min-width:901px){
+    aside{position:sticky;top:22px;max-height:calc(100vh - 44px);overflow:auto}
+  }
   aside h2{font-size:13px;margin:0 0 10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)}
   .q{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);
      cursor:grab;background:var(--panel)}
