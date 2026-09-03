@@ -1062,9 +1062,73 @@ Respond in this exact JSON format, no markdown, no preamble. Each paragraph is i
   if (env.COMMENTARY_KV) {
     await env.COMMENTARY_KV.put(cacheKey, result);   // this year's occurrence
     await env.COMMENTARY_KV.put(latestKey, result);  // fallback for future failures
+    // And record that we HAVE this one, so a passage typed later can find it.
+    // Every reflection was already kept forever under latestKey;  what was
+    // missing is any way to enumerate them — a stored reflection could only be
+    // retrieved by knowing its exact verse tuple in advance.
+    await addToQtIndex(bookNum, chapter, verseStart, verseEnd, env);
   }
   return { ok: true, json: result, cached: false };
 }
+
+// ===== The archive of reflections we hold =====
+//
+// One index PER BOOK rather than one big one.  A lookup always knows its book
+// (you cannot type a passage without naming one), so this reads a single small
+// key instead of a list that grows without bound;  and it keeps the
+// read-modify-write below scoped to one book, which is what makes the race
+// small enough to accept.
+//
+// That race is real and deliberately tolerated: two generations for the SAME
+// book landing together can lose one entry.  The consequence is bounded — the
+// reflection itself is still stored under its own key and still served on an
+// exact request, it is merely undiscoverable by overlap until the index is
+// rebuilt.  /admin/rebuild-qt-index rebuilds from the reflection keys
+// themselves, which are the authority;  the index is only ever a finding aid.
+function qtIndexKey(bookNum) {
+  return `qt_index_b${bookNum}`;
+}
+
+async function readQtIndex(bookNum, env) {
+  if (!env.COMMENTARY_KV) return [];
+  const raw = await env.COMMENTARY_KV.get(qtIndexKey(bookNum));
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+async function addToQtIndex(bookNum, chapter, verseStart, verseEnd, env) {
+  const entries = await readQtIndex(bookNum, env);
+  if (entries.some((e) => e[0] === chapter && e[1] === verseStart && e[2] === verseEnd)) return;
+  entries.push([chapter, verseStart, verseEnd]);
+  await env.COMMENTARY_KV.put(qtIndexKey(bookNum), JSON.stringify(entries));
+}
+
+/**
+ * How much of a STORED reflection's range a typed range covers.
+ *
+ * The denominator is the stored range, not the typed one, for the same reason
+ * the client uses: someone typing a whole chapter has covered a nine-verse
+ * reflection completely and should get it, while someone typing three verses
+ * of a sixteen-verse reflection has not — handing them that one would be
+ * answering about thirteen verses they are not reading.
+ */
+function qtOverlapFraction(typed, entry) {
+  const [chapter, verseStart, verseEnd] = entry;
+  if (typed.chapter !== chapter) return 0;
+  const lo = Math.max(typed.verseStart, verseStart);
+  const hi = Math.min(typed.verseEnd, verseEnd);
+  if (hi < lo) return 0;
+  const len = verseEnd - verseStart + 1;
+  if (len <= 0) return 0;
+  return (hi - lo + 1) / len;
+}
+
+const QT_MATCH_THRESHOLD = 2 / 3;
 
 // Strip (KN:NN) markers from a verse for clean search display.
 function cleanForSearch(text) {
@@ -3847,6 +3911,45 @@ Only output valid JSON, no markdown, no preamble.`;
     // showing the same reflection on every QT day that landed in the
     // same chapter.  This generates and caches one reflection per
     // (book, chapter, verseStart, verseEnd) tuple instead.
+    // ---- /qt-reflection/match?book=&chapter=&verseStart=&verseEnd= ----
+    //
+    // "Do we already have a reflection covering this?"  Ordered BEFORE the
+    // tuple route below, which claims the whole /qt-reflection/ prefix and
+    // would otherwise answer this with bad-path.
+    //
+    // Every reflection ever generated is kept, so this grows into an archive:
+    // a passage typed today can be answered by one written for the reading
+    // plan years ago, at no cost and with no new generation.  Nothing here
+    // creates a reflection — a miss is a miss, and the caller falls back to
+    // asking for one by exact range if it wants one.
+    if (path === '/qt-reflection/match') {
+      const bookNum = parseInt(url.searchParams.get('book') || '', 10);
+      const chapter = parseInt(url.searchParams.get('chapter') || '', 10);
+      const verseStart = parseInt(url.searchParams.get('verseStart') || '', 10);
+      const verseEnd = parseInt(url.searchParams.get('verseEnd') || '', 10);
+      if (!bookNum || !chapter || !verseStart || !verseEnd || verseEnd < verseStart) {
+        return new Response(JSON.stringify({error:'bad_range'}), {status:400, headers:{...cors,'Content-Type':'application/json; charset=utf-8'}});
+      }
+      const entries = await readQtIndex(bookNum, env);
+      const typed = { chapter, verseStart, verseEnd };
+      let best = null, bestFraction = 0;
+      for (const e of entries) {
+        const f = qtOverlapFraction(typed, e);
+        // Strictly greater, so the FIRST of equally good matches wins rather
+        // than the last — otherwise the answer depends on insertion order.
+        if (f >= QT_MATCH_THRESHOLD && f > bestFraction) { best = e; bestFraction = f; }
+      }
+      if (!best) {
+        return new Response(JSON.stringify({error:'no_match'}), {status:404, headers:{...cors,'Content-Type':'application/json; charset=utf-8','Cache-Control':'public, max-age=300'}});
+      }
+      const saved = await env.COMMENTARY_KV.get(`qt_reflection_latest_${bookNum}_${best[0]}_${best[1]}_${best[2]}`);
+      if (!saved) {
+        // Indexed but absent — the index is a finding aid, not the authority.
+        return new Response(JSON.stringify({error:'no_match'}), {status:404, headers:{...cors,'Content-Type':'application/json; charset=utf-8'}});
+      }
+      return new Response(saved, {headers:{...cors,'Content-Type':'application/json; charset=utf-8','Cache-Control':'public, max-age=3600'}});
+    }
+
     if (path.startsWith('/qt-reflection/')) {
       const qtParts = path.match(/\/qt-reflection\/(\d+)\/(\d+)\/(\d+)\/(\d+)/);
       if (!qtParts) return new Response(JSON.stringify({error:'bad path'}), {status:400, headers:{...cors,'Content-Type':'application/json'}});
@@ -3864,6 +3967,38 @@ Only output valid JSON, no markdown, no preamble.`;
     if (path === '/admin/merge-en-index') return handleMergeEnIndex(env, url, cors);
     if (path === '/admin/index-status') return handleIndexStatus(env, url, cors);
     if (path === '/admin/auth-check') return handleAuthCheck(env, url, cors);
+    // Rebuild the per-book indexes from the stored reflections, which are the
+    // authority.  Repairs an entry lost to a concurrent write, and backfills
+    // every reflection generated before the index existed.
+    if (path === '/admin/rebuild-qt-index') {
+      const secret = (url.searchParams.get('secret') || '').trim();
+      if (!env.ADMIN_SECRET || secret !== env.ADMIN_SECRET.trim()) {
+        return new Response(JSON.stringify({error:'forbidden'}), {status:403, headers:{...cors,'Content-Type':'application/json; charset=utf-8'}});
+      }
+      const byBook = new Map();
+      let cursor, scanned = 0, safety = 0;
+      while (true) {
+        const page = await env.COMMENTARY_KV.list({ prefix: 'qt_reflection_latest_', cursor, limit: 1000 });
+        for (const k of page.keys) {
+          const m = k.name.match(/^qt_reflection_latest_(\d+)_(\d+)_(\d+)_(\d+)$/);
+          if (!m) continue;
+          scanned++;
+          const b = +m[1];
+          if (!byBook.has(b)) byBook.set(b, []);
+          byBook.get(b).push([+m[2], +m[3], +m[4]]);
+        }
+        if (page.list_complete || !page.cursor) break;
+        cursor = page.cursor;
+        if (++safety > 50) break;
+      }
+      for (const [b, entries] of byBook) {
+        await env.COMMENTARY_KV.put(qtIndexKey(b), JSON.stringify(entries));
+      }
+      return new Response(JSON.stringify({
+        ok: true, scanned, books: byBook.size,
+        perBook: Object.fromEntries([...byBook].map(([b, e]) => [b, e.length])),
+      }, null, 2), {headers:{...cors,'Content-Type':'application/json; charset=utf-8'}});
+    }
     // Manual capture, for testing and for backfilling a date a cron missed.
     if (path === '/admin/capture-reading') {
       const secret = (url.searchParams.get('secret') || '').trim();
