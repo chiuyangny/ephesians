@@ -1621,6 +1621,152 @@ function koBookNumLoose(text) {
   return { bookNum: 0, matched: '' };
 }
 
+// ===== Daily reading schedule =====
+//
+// A published Korean daily-reading schedule gives one passage per day.  We take
+// the REFERENCE only — book, chapter, verses, which is a citation of scripture
+// — and generate the reflection from our own NKRV text through the existing
+// /qt-reflection pipeline.  No prose from the source is parsed, stored or
+// shown, and nothing in the app names it.
+//
+// WHY THE DATE IS A LABEL, NOT A MOMENT
+//
+// The schedule is published against a KOREAN calendar date.  Readers are not
+// all in Korea, so "today's reading" has to mean "the reading published for
+// the date the reader is on", not "whatever Korea is showing right now" —
+// otherwise a reader in New York gets tomorrow's passage all evening.  So each
+// day is stored under its KST date string and looked up by the CLIENT's own
+// local date.  Two readers on the same local date get the same passage
+// wherever they are.
+//
+// The cron runs at 15:10 UTC = 00:10 KST, so a KST date is captured minutes
+// after it is published — hours before that same date begins anywhere west of
+// Korea, which is everywhere our readers are.  Timezones at UTC+10 and east
+// briefly precede the fetch;  they fall back to the app's own plan, which is
+// what they had before this existed.
+
+/** The KST calendar date, as a label.  Shifting by +9h and reading UTC fields
+ *  gives Korea's date without any timezone database. */
+function kstDateStamp(offsetDays = 0) {
+  const d = new Date(Date.now() + 9 * 3600 * 1000 + offsetDays * 86400000);
+  return d.toISOString().slice(0, 10);
+}
+
+const DAILY_READING_PREFIX = 'daily_reading_';
+// Long enough that a missed cron or two is invisible, bounded so the namespace
+// does not accumulate a key per day forever.
+const DAILY_READING_TTL = 90 * 86400;
+
+/**
+ * Fetch and parse the day's reference.
+ *
+ * Decoding is explicit and non-negotiable: the source serves EUC-KR, and
+ * Response.text() assumes UTF-8, which turns every Hangul byte into a
+ * replacement character.  Measured on the live page: 2997 replacement
+ * characters via UTF-8, 0 via EUC-KR.  That failure does not throw — it just
+ * yields text no pattern matches — so it is decoded deliberately rather than
+ * left to a default.
+ *
+ * Returns { ok, reading } or { ok: false, error }.  It refuses to guess: the
+ * page carries exactly ONE scripture reference (the day's heading), so
+ * anything other than exactly one match means the markup moved and the answer
+ * would be a guess.  Failing loudly there beats silently pinning the wrong
+ * passage into a dated, cached key.
+ */
+async function fetchDailyReading() {
+  let res;
+  try {
+    res = await fetch('https://www.duranno.com/qt/view/bible.asp', {
+      headers: {
+        'User-Agent': 'krengbible-qt/1.0 (+https://krengbible.com)',
+        'Accept': 'text/html,application/xhtml+xml',
+        'Accept-Language': 'ko-KR,ko;q=0.9',
+      },
+      redirect: 'follow',
+    });
+  } catch (e) {
+    return { ok: false, error: 'fetch_failed', detail: String(e && e.message || e) };
+  }
+  if (!res.ok) return { ok: false, error: 'bad_status', status: res.status };
+
+  const buf = await res.arrayBuffer();
+  let html;
+  try {
+    html = new TextDecoder('euc-kr').decode(buf);
+  } catch (e) {
+    return { ok: false, error: 'decode_failed', detail: String(e && e.message || e) };
+  }
+
+  // Cross-chapter FIRST: a reading like 창 12:1-13:4 also matches the plain
+  // colon-range pattern, as 12:1-13, which is a real range and silently wrong.
+  // Trying the more specific shape first is what stops that.
+  const cross = html.match(/([가-힣]{1,7})\s*(\d{1,3})\s*[:：]\s*(\d{1,3})\s*[-~–—]\s*(\d{1,3})\s*[:：]\s*(\d{1,3})/);
+  if (cross) {
+    const { bookNum } = koBookNumLoose(cross[1]);
+    if (bookNum) {
+      return { ok: true, reading: {
+        bookNum, chapter: +cross[2], verseStart: +cross[3],
+        endChapter: +cross[4], verseEnd: +cross[5],
+      } };
+    }
+  }
+
+  const re = /([가-힣]{1,7})\s*(\d{1,3})\s*[:：]\s*(\d{1,3})\s*[-~–—]\s*(\d{1,3})/g;
+  const found = [];
+  let m;
+  while ((m = re.exec(html))) {
+    const { bookNum } = koBookNumLoose(m[1]);
+    if (!bookNum) continue;
+    found.push({ bookNum, chapter: +m[2], verseStart: +m[3], verseEnd: +m[4] });
+  }
+  if (found.length !== 1) {
+    return { ok: false, error: 'ambiguous_or_missing', matches: found.length };
+  }
+  const r = found[0];
+  if (r.verseEnd < r.verseStart) return { ok: false, error: 'reversed_range' };
+  return { ok: true, reading: r };
+}
+
+/**
+ * Capture one KST date's reading and warm its reflection.
+ *
+ * Write-once per date: a date already captured is never re-fetched, because
+ * the page only ever shows the CURRENT Korean day.  Asking it later, for a
+ * date that has rolled past, would answer with a different day's passage and
+ * overwrite a correct entry with a wrong one — the same write-once hazard the
+ * VOTD route documents.
+ */
+async function captureDailyReading(dateStamp, env, { force = false } = {}) {
+  if (!env.COMMENTARY_KV) return { ok: false, error: 'no_kv' };
+  const key = DAILY_READING_PREFIX + dateStamp;
+  if (!force) {
+    const existing = await env.COMMENTARY_KV.get(key);
+    if (existing) return { ok: true, cached: true, reading: JSON.parse(existing) };
+  }
+
+  const got = await fetchDailyReading();
+  if (!got.ok) return got;
+  const reading = got.reading;
+
+  // The reflection pipeline is per-chapter.  For a cross-chapter reading, the
+  // reflection covers the FIRST chapter's portion, and that sub-range is
+  // recorded so the app can state what the reflection is actually about
+  // instead of implying it covers the whole span.
+  const scope = reading.endChapter && reading.endChapter !== reading.chapter
+    ? { chapter: reading.chapter, verseStart: reading.verseStart, verseEnd: 200 }
+    : { chapter: reading.chapter, verseStart: reading.verseStart, verseEnd: reading.verseEnd };
+
+  const stored = { ...reading, scope, capturedAt: Date.now() };
+  await env.COMMENTARY_KV.put(key, JSON.stringify(stored), { expirationTtl: DAILY_READING_TTL });
+
+  // Warm it, so the first reader to type this passage gets a cached answer
+  // rather than paying for a live generation.  One generation per day.
+  const warm = await getOrCreateQtReflection(
+    reading.bookNum, scope.chapter, scope.verseStart, scope.verseEnd, env,
+  );
+  return { ok: true, reading: stored, warmed: warm.ok };
+}
+
 // ---- /admin/auth-check ----
 //
 // Answers "why is every admin route saying forbidden" without anyone having
@@ -3718,6 +3864,36 @@ Only output valid JSON, no markdown, no preamble.`;
     if (path === '/admin/merge-en-index') return handleMergeEnIndex(env, url, cors);
     if (path === '/admin/index-status') return handleIndexStatus(env, url, cors);
     if (path === '/admin/auth-check') return handleAuthCheck(env, url, cors);
+    // Manual capture, for testing and for backfilling a date a cron missed.
+    if (path === '/admin/capture-reading') {
+      const secret = (url.searchParams.get('secret') || '').trim();
+      if (!env.ADMIN_SECRET || secret !== env.ADMIN_SECRET.trim()) {
+        return new Response(JSON.stringify({error:'forbidden'}), {status:403, headers:{...cors,'Content-Type':'application/json; charset=utf-8'}});
+      }
+      const date = url.searchParams.get('date') || kstDateStamp();
+      const out = await captureDailyReading(date, env, { force: url.searchParams.get('force') === '1' });
+      return new Response(JSON.stringify({ date, ...out }, null, 2),
+        {status: out.ok ? 200 : 502, headers:{...cors,'Content-Type':'application/json; charset=utf-8'}});
+    }
+    // ---- /daily-reading?date=YYYY-MM-DD ----
+    //
+    // Read-only, and deliberately so: it never captures on demand.  The page
+    // only ever shows Korea's CURRENT day, so a request for some other date
+    // would answer with the wrong passage and pin it under that date's key.
+    // Capture belongs to the cron, which runs when the page is showing the
+    // date it is writing.  A miss is a miss;  the app falls back to its own
+    // plan, which is what it used before this existed.
+    if (path === '/daily-reading') {
+      const date = url.searchParams.get('date') || '';
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return new Response(JSON.stringify({error:'bad_date'}), {status:400, headers:{...cors,'Content-Type':'application/json; charset=utf-8'}});
+      }
+      const raw = env.COMMENTARY_KV ? await env.COMMENTARY_KV.get(DAILY_READING_PREFIX + date) : null;
+      if (!raw) {
+        return new Response(JSON.stringify({error:'not_captured'}), {status:404, headers:{...cors,'Content-Type':'application/json; charset=utf-8','Cache-Control':'public, max-age=300'}});
+      }
+      return new Response(raw, {headers:{...cors,'Content-Type':'application/json; charset=utf-8','Cache-Control':'public, max-age=3600'}});
+    }
     if (path === '/admin/reading-probe') return handleReadingProbe(env, url, cors);
     if (path === '/admin/wipe-apibible-cache') return handleWipeApiBibleCache(env, url, cors);
     if (path === '/admin/build-apibible-index') return handleBuildApiBibleIndex(env, url, cors);
@@ -4301,6 +4477,14 @@ Only output valid JSON, no markdown, no preamble.`;
     // the day BEFORE, with time to reject a photo before midnight ET.
     // Cloudflare crons are UTC-only, so the one-hour DST drift is accepted
     // rather than worked around.
+    // 15:10 UTC = 00:10 KST — capture the Korean day's reading minutes after it
+    // is published, which is hours before that same date starts anywhere west
+    // of Korea.  See captureDailyReading for why this is write-once per date
+    // and why the fetch cannot be deferred to a reader's request.
+    if (event.cron === '10 15 * * *') {
+      ctx.waitUntil(captureDailyReading(kstDateStamp(), env));
+      return;
+    }
     if (event.cron === '0 16 * * *') {
       const date = votdDateET(1);
       ctx.waitUntil(
