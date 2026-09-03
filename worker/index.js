@@ -1657,7 +1657,7 @@ function handleAuthCheck(env, url, cors) {
     hint: !configured
       ? 'ADMIN_SECRET is not set on this Worker.  Every /admin/* route will refuse every value until it is.  Add it under Settings -> Variables and Secrets as an encrypted Secret (a plain-text Variable is removed by the next wrangler deploy), then click Deploy in the dashboard — saving the field alone does not apply it.'
       : 'ADMIN_SECRET is set.  If matches is false but trimmedMatches is true, the value has stray whitespace on one side — the comparison below already tolerates that, so retry.  If both are false, the value sent is genuinely a different string.',
-  }, null, 2), {headers:{...cors,'Content-Type':'application/json','Cache-Control':'no-store'}});
+  }, null, 2), {headers:{...cors,'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'}});
 }
 
 // ---- /admin/reading-probe ----
@@ -1809,7 +1809,12 @@ async function handleReadingProbe(env, url, cors) {
     candidateCount: candidates.length,
     truncated: candidates.length >= MAX_CANDIDATES,
     candidates,
-  }, null, 2), {headers:{...cors,'Content-Type':'application/json'}});
+    // charset stated explicitly: this body is mostly Korean, and a bare
+    // application/json lets a browser fall back to Latin-1 and render every
+    // Hangul character as mojibake — which reads as a broken scrape rather
+    // than a display problem, and would send the next hour chasing an
+    // encoding bug that is not in the parser.
+  }, null, 2), {headers:{...cors,'Content-Type':'application/json; charset=utf-8'}});
 }
 
 // ---- /search/en — fast in-memory search over the pre-built ESV index ----
