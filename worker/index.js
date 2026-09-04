@@ -3280,6 +3280,63 @@ function votdKeyTtl(dateET) {
 }
 
 /**
+ * Write the verse for an ET date, if it does not already have one.
+ *
+ * WHY THIS EXISTS
+ *
+ * A date's verse was only ever stored as a SIDE EFFECT of a reader missing.
+ * Readers ask for the ET date one day behind their own local date, which is a
+ * dated request — and dated requests are deliberately read-only, because
+ * upstream serves only its current verse and letting a dated request populate
+ * from it would pin the wrong verse under a write-once key.  So a miss falls
+ * back to the current ET date and the write-once path stores the verse THERE.
+ *
+ * That makes population alternate.  On a day whose key is missing, the reader
+ * misses, falls back, and populates today.  The next day their request hits
+ * that key and is served — no miss, so nothing populates that day, and the
+ * day after misses again.  Every miss shows the reader the current verse
+ * rather than the one they asked for, so the verse appears to stop changing
+ * for a day at a time.
+ *
+ * Nothing wrote a date's key on purpose.  This does, from the cron that
+ * already runs, so every date has its verse before anyone asks for it and no
+ * reader ever lands on the fallback.
+ *
+ * TODAY's date, not tomorrow's, unlike the photo staged beside it.  A photo
+ * can be chosen a day ahead because we choose it;  the verse cannot, because
+ * upstream only ever serves its current one — which is the same reason a
+ * dated request may not populate.  Writing today's key is exactly what the
+ * write-once path does when a reader happens to trigger it;  this only makes
+ * it happen reliably.
+ *
+ * Never overwrites.  The key stays write-once: if a reader already populated
+ * today, that value stands, and this returns without touching upstream.
+ */
+async function votdEnsureVerse(dateET, env) {
+  if (!env.COMMENTARY_KV) return { ok: false, reason: 'no_kv' };
+  const verseKey = `votdverse_${dateET}`;
+  const existing = await env.COMMENTARY_KV.get(verseKey);
+  if (existing) return { ok: true, already: true };
+
+  let data = null;
+  try {
+    const res = await fetch('https://labs.bible.org/api/?passage=votd&type=json', {
+      headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' },
+    });
+    data = await res.json();
+  } catch (e) {
+    return { ok: false, reason: 'fetch_failed', detail: String(e && e.message || e) };
+  }
+  // An empty or malformed answer is not written.  A bad value under a
+  // write-once key outlives the request that made it;  leaving the key absent
+  // means the next reader falls back, which is the behaviour this is
+  // replacing and is recoverable.
+  if (!Array.isArray(data) || data.length === 0) return { ok: false, reason: 'empty_upstream' };
+  await env.COMMENTARY_KV.put(verseKey, JSON.stringify(data), { expirationTtl: votdKeyTtl(dateET) });
+  return { ok: true, written: true, verses: data.length };
+}
+
+/**
  * Public origin used in emailed links.  A cron has no inbound request to read
  * the host from, so it cannot be derived — set VOTD_PUBLIC_ORIGIN if the
  * worker ever moves behind a custom domain.
@@ -3967,6 +4024,20 @@ Only output valid JSON, no markdown, no preamble.`;
     if (path === '/admin/merge-en-index') return handleMergeEnIndex(env, url, cors);
     if (path === '/admin/index-status') return handleIndexStatus(env, url, cors);
     if (path === '/admin/auth-check') return handleAuthCheck(env, url, cors);
+    // Run the verse population the 16:00 cron does, on demand.  Exists so the
+    // fix can be exercised without waiting a day for the cron — and it is
+    // safe to call repeatedly, since votdEnsureVerse never overwrites a key
+    // that already has a verse.
+    if (path === '/admin/votd-ensure-verse') {
+      const secret = (url.searchParams.get('secret') || '').trim();
+      if (!env.ADMIN_SECRET || secret !== env.ADMIN_SECRET.trim()) {
+        return new Response(JSON.stringify({error:'forbidden'}), {status:403, headers:{...cors,'Content-Type':'application/json; charset=utf-8'}});
+      }
+      const date = url.searchParams.get('date') || votdDateET(0);
+      const out = await votdEnsureVerse(date, env);
+      return new Response(JSON.stringify({ date, ...out }, null, 2),
+        {status: out.ok ? 200 : 502, headers:{...cors,'Content-Type':'application/json; charset=utf-8'}});
+    }
     // Rebuild the per-book indexes from the stored reflections, which are the
     // authority.  Repairs an entry lost to a concurrent write, and backfills
     // every reflection generated before the index existed.
@@ -4676,6 +4747,12 @@ Only output valid JSON, no markdown, no preamble.`;
         // silent unless the queue has fallen below VOTD_LOW_QUEUE.
         votdStagePhoto(date, env).then((photo) => votdWarnLowQueue(date, photo, env))
       );
+      // And today's VERSE, which nothing wrote on purpose before — see
+      // votdEnsureVerse.  Separate from the photo above and on a different
+      // date deliberately: the photo is staged a day ahead, the verse can only
+      // ever be today's.  waitUntil'd separately so a failure in one does not
+      // take the other with it.
+      ctx.waitUntil(votdEnsureVerse(votdDateET(0), env));
       return;
     }
 
