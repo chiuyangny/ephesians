@@ -4494,8 +4494,18 @@ Only output valid JSON, no markdown, no preamble.`;
       // would write today's verse under tomorrow's write-once key and pin the
       // wrong verse for everyone, permanently.  Past dates cannot do that.
       const requested = url.searchParams.get('date');
+      // Upper bound is ET+1, not ET.  A reader asks for their OWN local date
+      // now, and everywhere east of Eastern that date runs ahead of the ET
+      // one — Korea at its local midnight is still the previous ET day, so
+      // its "today" reads as a future ET date and a tighter clamp refused it.
+      //
+      // The original reason for refusing a future date was that populating it
+      // from upstream would pin the wrong verse under a write-once key.  That
+      // hazard was closed separately when dated requests were made READ-ONLY:
+      // they never populate anything now, they fall back.  So the clamp no
+      // longer has to carry that job, and can be as wide as real readers need.
       let dated = !!requested && /^\d{4}-\d{2}-\d{2}$/.test(requested)
-        && requested <= currentET && requested >= votdDateET(-2);
+        && requested <= votdDateET(1) && requested >= votdDateET(-2);
       let today = dated ? requested : currentET;
       // Verse and photo are cached under SEPARATE keys so refreshing the
       // photo (or redeploying photo logic) never re-rolls the verse.  The
@@ -4727,6 +4737,22 @@ Only output valid JSON, no markdown, no preamble.`;
     // is published, which is hours before that same date starts anywhere west
     // of Korea.  See captureDailyReading for why this is write-once per date
     // and why the fetch cannot be deferred to a reader's request.
+    // 09:00 UTC — write TOMORROW's verse, before any timezone has entered
+    // that date.  A local date begins earliest at UTC+14, which is 10:00 UTC
+    // the day before, so this lands with an hour in hand;  everywhere west
+    // has many more.  That is what lets a reader ask for their own local date
+    // and always find it written, instead of asking for yesterday's to be
+    // sure it exists.
+    //
+    // The verse stored is whatever upstream is serving when this runs.  It
+    // cannot be that date's own verse — upstream only ever serves its current
+    // one, and by the time it rotates, half the world is already on the date.
+    // So a date's verse is defined as "what upstream had the morning before",
+    // fixed once and identical for every reader on that date.
+    if (event.cron === '0 9 * * *') {
+      ctx.waitUntil(votdEnsureVerse(votdDateET(1), env));
+      return;
+    }
     if (event.cron === '10 15 * * *') {
       ctx.waitUntil(captureDailyReading(kstDateStamp(), env));
       return;
