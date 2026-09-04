@@ -4034,6 +4034,24 @@ Only output valid JSON, no markdown, no preamble.`;
         return new Response(JSON.stringify({error:'forbidden'}), {status:403, headers:{...cors,'Content-Type':'application/json; charset=utf-8'}});
       }
       const date = url.searchParams.get('date') || votdDateET(0);
+      // clear=1 DELETES the date's verse instead of writing one.
+      //
+      // The key is write-once, which is right — a date's verse must not change
+      // under readers who have already seen it.  But a key written for the
+      // WRONG day has no other way out: backfilling two dates in one sitting
+      // stores the same upstream verse under both, since upstream only ever
+      // serves its current one.  Clearing the later date lets it be populated
+      // when that day actually arrives, which is the only moment upstream has
+      // the right verse to give.
+      if (url.searchParams.get('clear') === '1') {
+        if (!env.COMMENTARY_KV) {
+          return new Response(JSON.stringify({error:'no_kv'}), {status:500, headers:{...cors,'Content-Type':'application/json; charset=utf-8'}});
+        }
+        const had = await env.COMMENTARY_KV.get(`votdverse_${date}`);
+        await env.COMMENTARY_KV.delete(`votdverse_${date}`);
+        return new Response(JSON.stringify({ date, cleared: true, hadVerse: !!had }, null, 2),
+          {headers:{...cors,'Content-Type':'application/json; charset=utf-8'}});
+      }
       const out = await votdEnsureVerse(date, env);
       return new Response(JSON.stringify({ date, ...out }, null, 2),
         {status: out.ok ? 200 : 502, headers:{...cors,'Content-Type':'application/json; charset=utf-8'}});
