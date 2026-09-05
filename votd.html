@@ -362,18 +362,24 @@ async function act(el, action, slug){
  *
  * Deliberately the app's own expression, not an ET one:
  *
- *   votdOnce.ts:  api.votd(prevDayIso(localDayIso()))
+ *   votdOnce.ts:  api.votd(localDayIso())
  *
- * — the viewer's own LOCAL calendar date, minus one day.  A first cut computed
- * ET-minus-one instead, which is the same answer only in Eastern;  open the
- * picker anywhere else and the button re-rolled a date nobody on this phone
- * was looking at.  Since the picker is opened on the same device as the app,
- * running the app's own arithmetic in the browser is right by construction.
+ * — the viewer's own LOCAL calendar date.  A first cut computed an ET date
+ * instead, which is the same answer only in Eastern;  open the picker anywhere
+ * else and the button re-rolled a date nobody on this phone was looking at.
+ * Since the picker is opened on the same device as the app, running the app's
+ * own arithmetic in the browser is right by construction.
  *
- * Why the app is a day behind at all: the verse is mirrored from
- * labs.bible.org, which only ever serves its own current verse, so every
- * reader asks one day back and the whole world sees the same verse on the same
- * local date.  See votdOnce.ts's own comment.
+ * THIS USED TO SUBTRACT A DAY, AND THAT WAS THE BUG.
+ *
+ * The app once asked for yesterday's local date, because a date's verse might
+ * not have been written yet.  The worker now writes each date the morning
+ * before it starts anywhere, so votdOnce.ts asks for today directly — and this
+ * page was never brought along.  It showed yesterday's photo under "on screen
+ * now" while the app showed today's, which reads as the app being stale when
+ * it is the picker that is;  worse, "Change this photo" re-rolled yesterday,
+ * so pressing it changed a date nobody was looking at and appeared to do
+ * nothing.
  */
 const localDayIso = (d = new Date()) =>
   d.getFullYear() + '-' +
@@ -381,8 +387,7 @@ const localDayIso = (d = new Date()) =>
   String(d.getDate()).padStart(2, '0');
 
 function readerDate(){
-  const [y, m, d] = localDayIso().split('-').map(Number);
-  return localDayIso(new Date(y, m - 1, d - 1));   // prevDayIso, verbatim
+  return localDayIso();   // votdOnce.ts's own expression, verbatim
 }
 
 /**
