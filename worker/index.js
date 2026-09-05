@@ -4533,6 +4533,15 @@ Only output valid JSON, no markdown, no preamble.`;
       // is now unused; it just expires.)
       let verseKey = `votdverse_${today}`;
       let photoKey = `votdphoto2_${today}`;
+      // `today` is echoed back as `date` on every response below, and that is
+      // load-bearing rather than informational.  A caller cannot work out which
+      // key it was served: a dated request can be refused by the clamp, or fall
+      // back to the current ET date when its verse is missing, and either way
+      // the answer is a different date than the one asked for.  The VOTD picker
+      // used to restate the app's date arithmetic to caption "on screen now"
+      // and to aim its re-roll, and when the app's rule changed the picker
+      // silently aimed at the wrong day.  Reading the date off the response
+      // removes the guess: what the worker says it served IS what it served.
 
       const tomorrowDateET = new Date(now.getTime() + 86400000).toLocaleDateString('en-CA', {timeZone:'America/New_York'});
       const midnightET = new Date(`${tomorrowDateET}T00:00:00`);
@@ -4601,7 +4610,7 @@ Only output valid JSON, no markdown, no preamble.`;
       if (!needVerse && !needPhoto) {
         let cachedPhoto = null;
         try { cachedPhoto = JSON.parse(photoRaw); } catch { cachedPhoto = null; }
-        return new Response(JSON.stringify({ verses: votdData, photo: cachedPhoto }), { headers: votdHeaders });
+        return new Response(JSON.stringify({ date: today, verses: votdData, photo: cachedPhoto }), { headers: votdHeaders });
       }
 
       // Topics lean toward bright, clear-sky scenes (sunrise / golden
@@ -4651,7 +4660,7 @@ Only output valid JSON, no markdown, no preamble.`;
         try { photo = JSON.parse(photoRaw); } catch { photo = null; }
       }
 
-      const result = JSON.stringify({ verses: votdData || [], photo });
+      const result = JSON.stringify({ date: today, verses: votdData || [], photo });
       return new Response(result, { headers: votdHeaders });
     }
 

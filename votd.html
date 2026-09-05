@@ -360,35 +360,29 @@ async function act(el, action, slug){
 /**
  * The date key behind the photo on THIS device's screen.
  *
- * Deliberately the app's own expression, not an ET one:
+ * NOT COMPUTED HERE.  The worker echoes the key it actually served as `date`
+ * on the /votd response, and that is what this page captions and what its
+ * re-roll aims at.
  *
- *   votdOnce.ts:  api.votd(localDayIso())
+ * It used to restate the app's own expression instead — a copy of
+ * votdOnce.ts's arithmetic, living in a different repository with nothing
+ * linking the two.  The app changed which date it asks for and this page kept
+ * the old rule, so "on screen now" showed yesterday beside an app showing
+ * today, and "Change this photo" re-rolled a day nobody was looking at.
  *
- * — the viewer's own LOCAL calendar date.  A first cut computed an ET date
- * instead, which is the same answer only in Eastern;  open the picker anywhere
- * else and the button re-rolled a date nobody on this phone was looking at.
- * Since the picker is opened on the same device as the app, running the app's
- * own arithmetic in the browser is right by construction.
+ * A copy could only ever be right until the original moved.  The response
+ * cannot be wrong about itself: the worker's clamp can refuse a date, and a
+ * dated request whose verse is missing falls back to the current ET one, so
+ * even a correct guess here could differ from what was served.
  *
- * THIS USED TO SUBTRACT A DAY, AND THAT WAS THE BUG.
- *
- * The app once asked for yesterday's local date, because a date's verse might
- * not have been written yet.  The worker now writes each date the morning
- * before it starts anywhere, so votdOnce.ts asks for today directly — and this
- * page was never brought along.  It showed yesterday's photo under "on screen
- * now" while the app showed today's, which reads as the app being stale when
- * it is the picker that is;  worse, "Change this photo" re-rolled yesterday,
- * so pressing it changed a date nobody was looking at and appeared to do
- * nothing.
+ * The request still carries this device's own calendar date, which is what the
+ * app sends too — but that is now the only thing shared, and it is not a rule
+ * about verses, just what day it is on this phone.
  */
 const localDayIso = (d = new Date()) =>
   d.getFullYear() + '-' +
   String(d.getMonth() + 1).padStart(2, '0') + '-' +
   String(d.getDate()).padStart(2, '0');
-
-function readerDate(){
-  return localDayIso();   // votdOnce.ts's own expression, verbatim
-}
 
 /**
  * /votd is public, so this needs no secret — only the re-roll does.
@@ -405,15 +399,23 @@ function readerDate(){
  * only `date`.
  */
 async function renderLive(){
-  const date = readerDate();
+  // What we ASK for.  What we were SERVED comes back in the response, and the
+  // two can differ — see the comment above localDayIso.
+  const asked = localDayIso();
   const el = document.getElementById('live');
-  let photo = null;
+  let photo = null, date = asked;
   try{
     const r = await fetch(
-      WORKER + '/votd?date=' + encodeURIComponent(date) + '&_=' + Date.now(),
+      WORKER + '/votd?date=' + encodeURIComponent(asked) + '&_=' + Date.now(),
       { cache: 'no-store' }
     );
-    if(r.ok) photo = (await r.json()).photo;
+    if(r.ok){
+      const body = await r.json();
+      photo = body.photo;
+      // Older workers do not send it;  falling back to what we asked for is
+      // what this page did before, so an un-deployed worker is no worse.
+      if(body.date) date = body.date;
+    }
   }catch(e){ /* falls through to the no-photo caption below */ }
 
   el.textContent = '';
