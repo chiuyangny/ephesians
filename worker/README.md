@@ -162,7 +162,7 @@ If you ever change verse text (you almost certainly won't), re-run the chunked b
 | `/commentary/{book}/{ch}` | AI chapter commentary | KV-cached forever |
 | `/search/ko?q=&offset=` | Korean search | Uses pre-built index — fast |
 | `/search/en?q=&page=` | English search | ESV API |
-| `/votd[?date=YYYY-MM-DD]` | Verse of the day | KV-cached ~72h.  `date` selects an ET date, clamped to the last 3 days — readers request local-date-minus-one so each timezone rolls at its own midnight, and a future date is refused because the verse source only serves its own current verse and the key is write-once |
+| `/votd[?date=YYYY-MM-DD]` | Verse of the day | KV-cached ~72h.  `date` selects an ET date, clamped ET-2 through ET+1 — readers request their OWN local date, and east of Eastern that date is still a future ET one, which is what the +1 is for.  A future date used to be refused because populating it from upstream would pin the wrong verse under a write-once key;  dated requests are read-only now, so they never populate and the clamp no longer has to carry that job.  The verse for each date is written at 09:00 UTC the day before it begins anywhere, so a reader's own date is always already there |
 | `/nkrv/{book}/{ch}` | Korean Bible chapter | KV-cached forever |
 | `/admin/build-index` | Build search index chunk | Requires `secret` |
 | `/admin/merge-index` | Merge chunks into final index | Requires `secret` |

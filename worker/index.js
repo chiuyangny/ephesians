@@ -10,9 +10,10 @@
 //   /search/ko?q=...&offset=...           -> Korean full-text search (FAST: uses pre-built index)
 //   /search/en?q=...&page=...             -> English full-text search (FAST: uses pre-built index)
 //   /votd[?date=YYYY-MM-DD]              -> Verse of the day + photo.  `date` picks a
-//                                          specific ET date, clamped to the last 3 days;
-//                                          readers ask for local-date-minus-one so every
-//                                          timezone rolls at its OWN midnight.
+//                                          specific ET date, clamped ET-2..ET+1;  readers
+//                                          ask for their OWN local date, which east of
+//                                          Eastern is still a FUTURE ET one — hence +1.
+//                                          Dated requests are read-only and never populate.
 //   /votd/next                            -> Tomorrow's STAGED photo (public, read-only, never rolls)
 //   /admin/votd-next?date=YYYY-MM-DD      -> (X-Admin-Secret) re-roll the photo for a date.  Allowed over
 //                                            the same window /votd serves — ET-today-minus-2 forward — so
@@ -4222,11 +4223,15 @@ Only output valid JSON, no markdown, no preamble.`;
       // seen, and therefore one worth being able to change.
       //
       // Not votdDateET(0), and not -1 either.  Readers ask for their OWN local
-      // date minus one (votdOnce.ts), so which ET date a reader is being
-      // served depends on where they are: a reader in UTC-12 late in their day
-      // is on ET_today - 2, while one in UTC+14 at their midnight is on
-      // ET_today.  A guard at -1 refuses the westmost readers' photo, which is
-      // the one they are looking at.
+      // date (votdOnce.ts — the minus-one this used to describe is gone), so
+      // which ET date a reader is being served still depends on where they
+      // are: one in UTC-12 late in their day is on ET_today - 1, while one in
+      // UTC+14 at their midnight is on ET_today + 1.
+      //
+      // The floor stays at -2 rather than tracking that shift, because it
+      // mirrors /votd's own clamp and the two should not drift apart.  Erring
+      // wide only permits re-staging a day nobody is on;  erring tight refuses
+      // the westmost readers' photo, which is the one they are looking at.
       //
       // Re-staging a date already in use does mean a reader who loaded the
       // card earlier keeps the old photo until their next launch, while a
