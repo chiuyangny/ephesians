@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <!-- Temporary, and not part of the site: unlisted, linked from nothing, and
+       kept out of search results so it cannot surface next to the Bible
+       pages.  Delete this file when it has served its purpose. -->
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Passcode Trainer</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      margin-top: 15%;
+      background: #111;
+      color: #FFFFFF;
+    }
+    #display {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      white-space: pre-line;
+    }
+    #quizInput {
+      font-size: 1.5rem;
+      padding: 0.3rem;
+      width: 60px;
+      margin-bottom: 1rem;
+      display: none;
+    }
+    #progress {
+      display: none;
+    }
+    button {
+      font-size: 1.5rem;
+      padding: 0.7rem 1.5rem;
+      border: none;
+      background: #FFFFFF;
+      color: #111;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:disabled {
+      background: #444;
+      color: #888;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <div id="display">Click "Next" to begin.</div>
+  <input id="quizInput" type="number" />
+  <div id="progress"></div>
+  <button id="nextBtn">Next</button>
+
+  <script>
+    function generatePasscode() {
+      let digits = [];
+      while (digits.length < 4) {
+        let digit = Math.floor(Math.random() * 10).toString();
+        if (!digits.includes(digit)) {
+          digits.push(digit);
+        }
+      }
+      return digits;
+    }
+
+    function generateQuizPair() {
+      return [
+        {
+          a: Math.floor(Math.random() * 9) + 1,
+          b: Math.floor(Math.random() * 9) + 1,
+        },
+        {
+          a: Math.floor(Math.random() * 9) + 1,
+          b: Math.floor(Math.random() * 9) + 1,
+        }
+      ];
+    }
+
+    const passcode = generatePasscode();
+    console.log("Passcode:", passcode);
+
+    const sequence = [
+      'enter', 'enter',
+      'delete', 'delete',
+      'enter', 'enter',
+      'delete',
+      'enter', 'enter',
+      'delete', 'delete', 'delete',
+      'enter', 'enter', 'enter',
+      'delete', 'delete',
+      'enter', 'enter',
+      'delete',
+      'enter',
+      'quizBlock',
+      'quizBlock',
+      'enter'
+    ];
+
+    const realDigitSteps = [12, 17, 20, 23];
+
+    let step = 0;
+    let round = 1;
+    let currentInput = [];
+    let round1Index = 0;
+    let round2Index = 0;
+    let awaitingQuiz = false;
+    let currentQuiz = [];
+    let currentQuizIndex = 0;
+    let quizCorrectCount = 0;
+
+    const display = document.getElementById("display");
+    const nextBtn = document.getElementById("nextBtn");
+    const quizInput = document.getElementById("quizInput");
+
+    function startNewQuizRound() {
+      currentQuiz = generateQuizPair();
+      currentQuizIndex = 0;
+      quizCorrectCount = 0;
+      awaitingQuiz = true;
+      showCurrentQuizQuestion();
+    }
+
+    function showCurrentQuizQuestion() {
+      const q = currentQuiz[currentQuizIndex];
+      display.innerText = `Round ${round}\nSolve: ${q.a} × ${q.b} = ?`;
+      quizInput.style.display = "inline-block";
+      quizInput.value = '';
+      quizInput.focus();
+    }
+
+    function handleQuizAnswer() {
+      const q = currentQuiz[currentQuizIndex];
+      const answer = quizInput.value.trim();
+      if (answer === (q.a * q.b).toString()) {
+        quizCorrectCount++;
+        currentQuizIndex++;
+        if (quizCorrectCount === 2) {
+          awaitingQuiz = false;
+          quizInput.style.display = "none";
+          step++;
+          handleClick();
+        } else {
+          showCurrentQuizQuestion();
+        }
+      } else {
+        display.innerText = `Incorrect. Restarting quiz...`;
+        quizInput.style.display = "none";
+        setTimeout(() => {
+          startNewQuizRound();
+        }, 1000);
+      }
+    }
+
+    function handleClick() {
+      if (awaitingQuiz) {
+        handleQuizAnswer();
+        return;
+      }
+
+      if (step >= sequence.length) {
+        if (round === 1) {
+          round = 2;
+          step = 0;
+          round2Index = 0;
+          currentInput = [];
+          display.innerText = "First entry complete.\nClick to begin second entry.";
+          return;
+        } else {
+          display.innerText = `Second entry complete.\nTraining finished.`;
+          nextBtn.disabled = true;
+          return;
+        }
+      }
+
+      const action = sequence[step];
+      let instructionText = `Round ${round}\n`;
+      let digit = null;
+
+      if (action === 'quizBlock') {
+        startNewQuizRound();
+        return;
+      }
+
+      if (action === 'enter') {
+        if (round === 1) {
+          if (realDigitSteps.includes(step)) {
+            digit = passcode[round1Index];
+            round1Index++;
+          } else {
+            digit = Math.floor(Math.random() * 10).toString();
+          }
+        } else {
+          if (realDigitSteps.includes(step)) {
+            digit = passcode[round2Index];
+            round2Index++;
+          } else {
+            digit = Math.floor(Math.random() * 10).toString();
+          }
+        }
+
+        currentInput.push(digit);
+        instructionText += `Enter ${digit}`;
+      } else if (action === 'delete') {
+        if (currentInput.length > 0) {
+          currentInput.pop();
+        }
+        instructionText += `Delete`;
+      }
+
+      display.innerText = instructionText;
+      step++;
+    }
+
+    nextBtn.addEventListener("click", handleClick);
+
+    quizInput.addEventListener("keypress", function (e) {
+      if (e.key === "Enter") {
+        handleClick();
+      }
+    });
+  </script>
+</body>
+</html>
