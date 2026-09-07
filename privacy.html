@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Privacy Policy — krengbible</title>
+<title>Privacy Policy · 개인정보 처리방침 — krengbible</title>
 <link rel="icon" href="/favicon-32.png" sizes="32x32">
 <link rel="icon" href="/favicon-16.png" sizes="16x16">
 <link rel="icon" href="/favicon-192.png" sizes="192x192">
@@ -23,6 +23,8 @@
     body { color: #eee; background: #1a1a1a; }
     a { color: #7ab8ff; }
     .card { background: #262626; border-color: #3a3a3a; }
+    .langbtn { color: #eee; border-color: #3a3a3a; background: #262626; }
+    .langbtn[aria-pressed="true"] { background: #eee; color: #1a1a1a; border-color: #eee; }
   }
   h1 { font-size: 28px; margin-bottom: 4px; }
   .updated { color: #888; font-size: 14px; margin-bottom: 32px; }
@@ -36,27 +38,60 @@
     background: #fff;
     margin: 24px 0;
   }
+  /* Language switch.  Two buttons rather than a <select> so the choice and
+     the current state are both visible without a tap. */
+  .langbar { display: flex; gap: 6px; justify-content: flex-end; margin-bottom: 8px; }
+  .langbtn {
+    font: inherit; font-size: 13px; line-height: 1;
+    padding: 7px 12px; border-radius: 999px; cursor: pointer;
+    border: 1px solid #ddd; background: #fff; color: #1a1a1a;
+  }
+  .langbtn[aria-pressed="true"] { background: #1a1a1a; color: #f4f1eb; border-color: #1a1a1a; }
+  /* Hidden rather than removed, so the copy of both languages is always in the
+     page — a reader can find either with the browser's own find, and a search
+     engine sees both. */
+  [data-lang][hidden] { display: none; }
 </style>
 </head>
 <body>
 
-<h1>Privacy Policy</h1>
-<p class="updated">Last updated: July 10, 2026</p>
+<div class="langbar">
+  <button class="langbtn" type="button" data-set="en" aria-pressed="false">English</button>
+  <button class="langbtn" type="button" data-set="ko" aria-pressed="false">한국어</button>
+</div>
 
-<p>krengbible ("the app," "we," "us") is a bilingual Korean/English Bible reading app. This page explains what information the app collects, how it's used, and how to reach us.</p>
+<section data-lang="en">
+
+<h1>Privacy Policy</h1>
+<p class="updated">Last updated: September 7, 2026</p>
+
+<p>krengbible ("the app," "we," "us") is a bilingual Korean/English Bible reading app. This page explains what information the app collects, how it is used, who can see it, and how to reach us.</p>
 
 <h2>What we collect</h2>
-<p>If you create an account (email and password), we collect:</p>
+<p>If you create an account, we collect:</p>
 <ul>
-  <li><strong>Email address</strong> — used only to sign you in and sync your data across devices.</li>
-  <li><strong>Your content</strong> — highlights, saved verses, reading progress, and Quiet Time (QT) journal notes you create in the app.</li>
+  <li><strong>Email address and password</strong> — used to sign you in and sync your data across your devices. Passwords are handled by Firebase Authentication and are never visible to us.</li>
+  <li><strong>Profile</strong> — a display name, and a profile photo if you choose to add one.</li>
+  <li><strong>Your content</strong> — highlights, saved verses, folders, notes, reading progress, and Quiet Time journal entries you create in the app.</li>
+  <li><strong>Notification token</strong> — if you turn on notifications, a device token so we can send the ones you asked for. It identifies a device, not you.</li>
 </ul>
-<p>This content is stored in our database (Firebase/Firestore, operated by Google) under your account, and is not visible to other users or shared with anyone.</p>
+<p>This is stored in Firebase (Firestore and Storage, operated by Google) under your account. Apart from reading groups, described next, it is private to you: no other user can see it, and we do not share it with anyone.</p>
 
-<p>If you don't create an account, the app still stores your reading progress, highlights, and settings — but only locally on your device, never sent anywhere.</p>
+<p>If you do not create an account, the app still keeps your reading progress, highlights, and settings — but only on your device, never sent anywhere.</p>
+
+<h2>Reading groups</h2>
+<p>Reading groups are the one part of the app where other people see something of yours. Nothing here happens unless you join a group, and leaving one stops it.</p>
+<p>Other members of a group you join can see:</p>
+<ul>
+  <li>Your display name and profile photo.</li>
+  <li>Your reading rhythm — the book you are currently in, today's chapter if you have read it, your streak, and which <em>days</em> you read over roughly the last four months.</li>
+  <li>Any Quiet Time note you deliberately share to that group, including its text, the verse it is on, reactions, and anyone you mention.</li>
+</ul>
+<p>They cannot see which chapters you read, your private notes, your highlights, or your saved verses. Your reading summary is written by your own device from your own progress; group members are never given access to the underlying records.</p>
 
 <h2>Usage analytics</h2>
-<p>The app uses Firebase Analytics (Google) to understand how the app is used — which screens are viewed and which features are used — so we can improve it.  This is first-party analytics about app usage only: it is <strong>not</strong> used to track you across other companies' apps or websites, and no advertising identifier is collected.  Analytics data is not linked to your name or email address.</p>
+<p>The app uses Firebase Analytics (Google) to understand how it is used, so we can improve it. This includes which screens are opened, which features are used, and reading activity — which book and chapter was read, in which translation and language, and whether that translation was the primary or the secondary one on screen. Search terms typed into the app's search are also recorded.</p>
+<p>This is first-party analytics about app usage only. It is <strong>not</strong> used to track you across other companies' apps or websites, no advertising identifier is collected, and analytics data is not linked to your name or email address. Analytics data may be exported to Google BigQuery inside the same project so we can summarise it; it stays under our own Google account and goes nowhere else.</p>
 
 <div class="card">
   <strong>What we don't do:</strong>
@@ -71,26 +106,144 @@
 <h2>Third-party services</h2>
 <p>The app relies on a small number of services to function:</p>
 <ul>
-  <li><strong>Firebase (Google)</strong> — account sign-in, storage for your synced content, and app usage analytics (see above).</li>
-  <li><strong>Cloudflare Workers</strong> — our backend API that serves Bible text and generates devotional content.</li>
-  <li><strong>Bible text providers</strong> (대한성서공회/Korean Bible Society, Crossway/ESV, Tyndale House/NLT, Biblica/NIV, NavPress/The Message) — these provide the Scripture text itself; no personal data is shared with them. See the app's Attribution & Copyright screen for full licensing details.</li>
+  <li><strong>Firebase (Google)</strong> — account sign-in, storage for your synced content and profile photo, notification delivery, and app usage analytics.</li>
+  <li><strong>Cloudflare Workers</strong> — our backend, which serves Bible text and generates devotional content.</li>
+  <li><strong>Expo</strong> — delivers app updates and relays push notifications.</li>
+  <li><strong>Bible text providers</strong> (대한성서공회 / Korean Bible Society, Crossway/ESV, Tyndale House/NLT, Biblica/NIV, NavPress/The Message) — these provide the Scripture text itself; no personal data is shared with them. See the app's Attribution &amp; Copyright screen for full licensing details.</li>
   <li><strong>Unsplash</strong> — supplies the background photo shown on the Verse of the Day card.</li>
 </ul>
 
 <h2>AI-generated content</h2>
-<p>Some devotional reflections and section-heading translations in the app are generated using Anthropic's Claude API from Bible text alone — no personal or account information is sent to this service.</p>
+<p>Some devotional reflections and section-heading translations are generated using Anthropic's Claude API from Bible text alone. No personal or account information is sent to this service, and nothing you write is used to train any model.</p>
 
 <h2>Data retention and deletion</h2>
-<p>Your synced data is kept as long as your account exists. You can permanently delete your account and its synced data at any time from within the app: Settings → Delete Account. If you'd rather we do it for you, email the address below.</p>
+<p>Your synced data is kept as long as your account exists. You can permanently delete your account and its synced data at any time from within the app: Settings → Delete Account. If you would rather we did it for you, email the address below.</p>
+<p>Deleting your account removes your synced highlights, saved verses, folders, notes, reading progress, and journal entries. Two things sit outside that, because they belong to a group rather than to you alone: your entry in a reading group’s roster, and any note you shared into a group, which stays as a message in a conversation does. If you want those gone as well, delete the shared notes and leave your groups before deleting the account.</p>
 
 <h2>Children's privacy</h2>
 <p>The app is not directed at children under 13, and we do not knowingly collect personal information from children under 13.</p>
 
 <h2>Changes to this policy</h2>
-<p>If this policy changes, the "Last updated" date above will change accordingly.</p>
+<p>If this policy changes, the "Last updated" date above will change with it.</p>
 
 <h2>Contact</h2>
 <p>Questions, feedback, or a data deletion request — reach us at <a href="mailto:inbox@krengbible.com">inbox@krengbible.com</a>.</p>
+
+</section>
+
+<section data-lang="ko" hidden>
+
+<h1>개인정보 처리방침</h1>
+<p class="updated">최종 수정일: 2026년 9월 7일</p>
+
+<p>krengbible(이하 "본 앱")은 한국어·영어 이중 언어 성경 읽기 앱입니다. 이 문서는 본 앱이 어떤 정보를 수집하고, 그 정보를 어떻게 사용하며, 누가 볼 수 있는지, 그리고 문의 방법을 안내합니다.</p>
+
+<h2>수집하는 정보</h2>
+<p>계정을 만드시면 다음 정보를 수집합니다.</p>
+<ul>
+  <li><strong>이메일 주소와 비밀번호</strong> — 로그인과 여러 기기 간 데이터 동기화에 사용됩니다. 비밀번호는 Firebase Authentication이 처리하며 저희는 볼 수 없습니다.</li>
+  <li><strong>프로필</strong> — 표시 이름, 그리고 직접 등록하신 경우 프로필 사진.</li>
+  <li><strong>이용자가 만든 내용</strong> — 하이라이트, 저장한 구절, 폴더, 노트, 읽기 진도, QT 저널.</li>
+  <li><strong>알림 토큰</strong> — 알림을 켜신 경우, 요청하신 알림을 보내기 위한 기기 토큰입니다. 개인이 아니라 기기를 식별합니다.</li>
+</ul>
+<p>이 정보는 회원님의 계정 아래 Firebase(Google이 운영하는 Firestore 및 Storage)에 저장됩니다. 아래에 설명하는 읽기 모임을 제외하면 이 정보는 회원님만의 것으로, 다른 이용자가 볼 수 없으며 저희가 누구와도 공유하지 않습니다.</p>
+
+<p>계정을 만들지 않으셔도 읽기 진도, 하이라이트, 설정은 저장됩니다. 다만 기기 안에만 저장되며 외부로 전송되지 않습니다.</p>
+
+<h2>읽기 모임</h2>
+<p>읽기 모임은 회원님의 정보가 다른 사람에게 보이는 유일한 기능입니다. 모임에 참여하지 않으시면 아무것도 공유되지 않으며, 모임에서 나가시면 공유도 중단됩니다.</p>
+<p>참여하신 모임의 다른 구성원은 다음을 볼 수 있습니다.</p>
+<ul>
+  <li>표시 이름과 프로필 사진.</li>
+  <li>읽기 흐름 — 현재 읽고 계신 성경, 오늘 읽으셨다면 오늘의 장, 연속 읽기 일수, 그리고 최근 약 4개월 동안 <em>어느 날</em> 읽으셨는지.</li>
+  <li>회원님이 직접 그 모임에 공유하신 QT 노트. 본문, 해당 구절, 반응, 언급한 사람이 포함됩니다.</li>
+</ul>
+<p>어떤 장을 읽으셨는지, 개인 노트, 하이라이트, 저장한 구절은 볼 수 없습니다. 모임에 표시되는 읽기 요약은 회원님의 기기가 회원님의 진도에서 직접 만들어 올리는 것이며, 모임 구성원에게 원본 기록에 대한 접근 권한은 주어지지 않습니다.</p>
+
+<h2>이용 통계</h2>
+<p>본 앱은 개선을 위해 Firebase Analytics(Google)로 이용 방식을 파악합니다. 여기에는 어떤 화면을 열었는지, 어떤 기능을 사용했는지, 그리고 읽기 활동 — 어떤 성경의 몇 장을 어떤 역본과 언어로 읽었는지, 그 역본이 화면에서 주 역본이었는지 대조 역본이었는지 — 가 포함됩니다. 앱 안에서 검색하신 검색어도 기록됩니다.</p>
+<p>이는 본 앱의 이용에 관한 자사 통계일 뿐입니다. 다른 회사의 앱이나 웹사이트에서 회원님을 추적하는 데 <strong>사용되지 않으며</strong>, 광고 식별자를 수집하지 않고, 통계 데이터는 회원님의 이름이나 이메일 주소와 연결되지 않습니다. 통계 데이터는 집계를 위해 동일한 프로젝트 안의 Google BigQuery로 내보내질 수 있으며, 저희 Google 계정 안에 머무르고 그 밖으로 나가지 않습니다.</p>
+
+<div class="card">
+  <strong>하지 않는 것:</strong>
+  <ul style="margin-bottom:0">
+    <li>광고 없음, 광고 네트워크 없음</li>
+    <li>앱 간·사이트 간 추적 없음</li>
+    <li>데이터 판매 및 제3자 제공 없음</li>
+    <li>연락처, 사진, 카메라, 위치 접근 없음</li>
+  </ul>
+</div>
+
+<h2>제3자 서비스</h2>
+<p>본 앱은 아래의 서비스를 이용해 작동합니다.</p>
+<ul>
+  <li><strong>Firebase(Google)</strong> — 계정 로그인, 동기화 내용과 프로필 사진 저장, 알림 발송, 이용 통계.</li>
+  <li><strong>Cloudflare Workers</strong> — 성경 본문 제공과 묵상 콘텐츠 생성을 담당하는 백엔드.</li>
+  <li><strong>Expo</strong> — 앱 업데이트 배포와 푸시 알림 전달.</li>
+  <li><strong>성경 본문 제공처</strong>(대한성서공회, Crossway/ESV, Tyndale House/NLT, Biblica/NIV, NavPress/The Message) — 성경 본문 자체를 제공하며, 개인정보는 공유되지 않습니다. 자세한 저작권 정보는 앱의 저작권 및 출처 화면에서 확인하실 수 있습니다.</li>
+  <li><strong>Unsplash</strong> — 오늘의 말씀 카드 배경 사진을 제공합니다.</li>
+</ul>
+
+<h2>AI로 생성된 내용</h2>
+<p>일부 묵상 글과 소제목 번역은 성경 본문만을 바탕으로 Anthropic의 Claude API를 통해 생성됩니다. 이 서비스에는 개인정보나 계정 정보가 전송되지 않으며, 회원님이 쓰신 글이 모델 학습에 사용되지 않습니다.</p>
+
+<h2>보관과 삭제</h2>
+<p>동기화된 데이터는 계정이 유지되는 동안 보관됩니다. 앱 안에서 언제든지 계정과 동기화된 데이터를 영구히 삭제하실 수 있습니다(설정 → 계정 삭제). 저희가 대신 처리해 드리기를 원하시면 아래 주소로 메일을 보내 주십시오.</p>
+<p>계정을 삭제하시면 동기화된 하이라이트, 저장한 구절, 폴더, 노트, 읽기 진도, 저널이 삭제됩니다. 다만 두 가지는 회원님 한 분이 아니라 모임에 속한 것이므로 남습니다. 읽기 모임 명단에 있는 회원님의 항목과, 모임에 공유하신 노트입니다. 공유된 노트는 대화 속의 메시지처럼 그 모임에 남습니다. 이 두 가지도 함께 지워지기를 원하시면 계정을 삭제하시기 전에 공유한 노트를 삭제하시고 모임에서 나가 주십시오.</p>
+
+<h2>아동의 개인정보</h2>
+<p>본 앱은 만 13세 미만 아동을 대상으로 하지 않으며, 만 13세 미만 아동의 개인정보를 알면서 수집하지 않습니다.</p>
+
+<h2>방침의 변경</h2>
+<p>이 방침이 바뀌면 위의 "최종 수정일"도 함께 바뀝니다.</p>
+
+<h2>문의</h2>
+<p>문의, 의견, 데이터 삭제 요청은 <a href="mailto:inbox@krengbible.com">inbox@krengbible.com</a> 으로 연락해 주십시오.</p>
+
+</section>
+
+<script>
+/* Language switch.  The page carries both languages and shows one.
+ *
+ * Same URL for both, deliberately: /privacy.html and /terms.html are
+ * registered with the App Store and linked from inside the app, so a
+ * per-language URL would either break those links or need redirects that
+ * outlive whoever remembers why they exist.
+ *
+ * The first visit follows the browser's own language, which is right far more
+ * often than defaulting to English for an app whose readers are mostly Korean.
+ * After that the reader's choice is remembered.  Storage is wrapped because
+ * private browsing can make it throw, and a policy page must render anyway. */
+(function () {
+  var KEY = 'krengbible_policy_lang';
+  var saved = null;
+  try { saved = localStorage.getItem(KEY); } catch (e) {}
+  var lang = saved === 'ko' || saved === 'en'
+    ? saved
+    : ((navigator.language || '').toLowerCase().indexOf('ko') === 0 ? 'ko' : 'en');
+
+  function apply(next) {
+    lang = next;
+    document.documentElement.lang = next;
+    var blocks = document.querySelectorAll('[data-lang]');
+    for (var i = 0; i < blocks.length; i++) {
+      blocks[i].hidden = blocks[i].getAttribute('data-lang') !== next;
+    }
+    var btns = document.querySelectorAll('.langbtn');
+    for (var j = 0; j < btns.length; j++) {
+      btns[j].setAttribute('aria-pressed', String(btns[j].dataset.set === next));
+    }
+    try { localStorage.setItem(KEY, next); } catch (e) {}
+  }
+
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest ? e.target.closest('.langbtn') : null;
+    if (btn) apply(btn.dataset.set);
+  });
+
+  apply(lang);
+})();
+</script>
 
 </body>
 </html>
