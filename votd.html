@@ -140,6 +140,16 @@
   /* 100% of the padded box, so the photo cannot grow past the overlay however
      tall the viewport is reported to be — the bottom padding is the caption's. */
   #lb img{max-width:100%;max-height:100%;border-radius:10px;display:block}
+  .reportbtn{font:inherit;font-size:12px;padding:5px 10px;border-radius:999px;
+    border:1px solid var(--line);background:transparent;color:inherit;cursor:pointer;margin-left:8px}
+  .report{padding:12px 16px;border-bottom:1px solid var(--line);font-size:13px}
+  .report h3{font-size:13px;margin:14px 0 6px}
+  .report table{border-collapse:collapse;width:100%;max-width:520px}
+  .report td,.report th{padding:3px 8px 3px 0;text-align:left;font-weight:400;white-space:nowrap}
+  .report th{color:#888;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+  .report .bad{color:#c0392b}
+  .report .good{color:#1e8449}
+  .report .hint{color:#888;max-width:520px;white-space:normal;line-height:1.5}
   #lb .cap{position:absolute;bottom:16px;left:0;right:0;text-align:center;
            color:#fff;font-size:13px;opacity:.85;padding:0 24px}
   .empty{color:var(--dim);font-size:13px;padding:6px 0}
@@ -151,8 +161,13 @@
 <header>
   <h1>VOTD picker</h1>
   <span class="stats" id="stats"></span>
+  <button class="reportbtn" id="reportBtn" type="button">Why am I blocking?</button>
   <div class="warn" id="warn" hidden></div>
 </header>
+<!-- The report reads the used and blocked lists together and shows only where
+     they disagree.  Collapsed by default: it is a thing you open when the board
+     feels wrong, not part of picking a photo. -->
+<div class="report" id="report" hidden></div>
 <div id="boot" class="msg">Loading…</div>
 <div id="lb"><button class="x" type="button" aria-label="Close">✕</button><img alt=""><div class="cap"></div></div>
 <div class="wrap" id="wrap" hidden>
@@ -464,6 +479,72 @@ async function reroll(btn, date){
     alert(e.message);
   }
 }
+
+/* Captions and photographer names come from Unsplash, so they are somebody
+ * else's text going into innerHTML.  Escaped rather than trusted. */
+function esc(t){
+  return String(t == null ? '' : t).replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+/* ---- The report: what the blocked pile is actually saying ----
+ *
+ * Both lists already existed and were used for one thing, never showing the
+ * same photo twice.  That stops repeats and teaches nothing, so a search that
+ * yields junk goes on yielding it and only the blocklist grows.
+ *
+ * What is worth reading is where the two piles DISAGREE.  A word in half of
+ * each says nothing.  A word in nine blocked photos and no kept ones is a
+ * keyword worth adding to the worker's reject list;  a topic blocked four
+ * times in five is a line worth deleting from VOTD_TOPICS.  So rows are shown
+ * with both counts side by side, and the ones that decide nothing are simply
+ * not shown — terms below the minimum are dropped worker-side.
+ */
+function reportTable(title, rows, hint){
+  if(!rows || !rows.length) return '';
+  const pct = (r) => Math.round(r.rate * 100);
+  // Colour only at the ends.  A 100% blocked term is actionable and a 0% one
+  // is a keeper;  the middle is genuinely undecided and should not be dressed
+  // up as though it were a finding.
+  const cls = (r) => (r.rate >= 0.8 ? 'bad' : r.rate <= 0.2 ? 'good' : '');
+  return '<h3>' + title + '</h3>' +
+    (hint ? '<div class="hint">' + hint + '</div>' : '') +
+    '<table><tr><th>term</th><th>blocked</th><th>kept</th><th>blocked %</th></tr>' +
+    rows.map((r) =>
+      '<tr><td>' + esc(r.term) + '</td><td>' + r.blocked + '</td><td>' + r.kept +
+      '</td><td class="' + cls(r) + '">' + pct(r) + '%</td></tr>').join('') +
+    '</table>';
+}
+
+async function showReport(btn){
+  const panel = document.getElementById('report');
+  if(!panel.hidden){ panel.hidden = true; btn.textContent = 'Why am I blocking?'; return; }
+  btn.disabled = true;
+  btn.textContent = 'Reading…';
+  try{
+    const d = await call('/admin/votd-photo-report');
+    const t = d.totals;
+    panel.innerHTML =
+      '<div><strong>' + t.kept + ' kept · ' + t.blocked + ' blocked</strong> — ' +
+      Math.round(t.blockRate * 100) + '% of everything you have judged was blocked.</div>' +
+      reportTable('Words', d.words,
+        'Words from the photo captions. A word blocked nearly every time is worth adding to the worker\'s reject keywords, which stops those photos reaching the board at all.') +
+      reportTable('Photographers', d.photographers,
+        'Someone blocked every time is a style the card does not suit — which no keyword will catch.') +
+      (d.topics && d.topics.length
+        ? reportTable('Search topics', d.topics,
+            'The Unsplash searches the photos came from. A topic blocked most of the time is a line to drop from VOTD_TOPICS.')
+        : '<h3>Search topics</h3><div class="hint">' + esc(d.note || '') + '</div>');
+    panel.hidden = false;
+    btn.textContent = 'Hide';
+  }catch(e){
+    alert(e.message);
+    btn.textContent = 'Why am I blocking?';
+  }finally{
+    btn.disabled = false;
+  }
+}
+document.getElementById('reportBtn').addEventListener('click', (e) => showReport(e.currentTarget));
 
 (async () => {
   try{

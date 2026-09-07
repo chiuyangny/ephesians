@@ -3230,8 +3230,16 @@ async function votdRollPhoto(first, seen, env) {
   return votdNormalize(pd);
 }
 
-/** Unsplash payload -> the record shape stored in KV and rendered by clients. */
-function votdNormalize(pd) {
+/** Unsplash payload -> the record shape stored in KV and rendered by clients.
+ *
+ *  `topic` is the search that produced the photo, carried so the photo report
+ *  can say which of VOTD_TOPICS is generating the rejects.  Without it a block
+ *  is evidence about one photo;  with it, a topic that yields nothing usable
+ *  can be found and dropped, which is the difference between a growing
+ *  blocklist and a better search.  Null where the caller does not know it —
+ *  the one-off re-roll in votdRollPhoto draws at random and never learns which
+ *  topic it got. */
+function votdNormalize(pd, topic) {
   const url = pd.urls?.regular || null;
   return {
     url,
@@ -3241,6 +3249,7 @@ function votdNormalize(pd) {
     slug: votdSlug(url),
     id: pd.id || null,
     alt: pd.alt_description || '',
+    topic: topic || null,
   };
 }
 
@@ -3401,7 +3410,7 @@ async function votdRollCandidates(n, seen, env) {
       const slug = votdSlug(pd.urls.regular);
       if (!slug || taken.has(slug)) continue;
       taken.add(slug);
-      picks.push(votdNormalize(pd));
+      picks.push(votdNormalize(pd, topics[round]));
     }
   }
   // Parked so the emailed links can resolve a slug back to a full record —
@@ -3491,7 +3500,7 @@ async function votdBoard(env, n = 10) {
         const slug = votdSlug(pd.urls.regular);
         if (!slug || seen.has(slug) || have.has(slug)) continue;
         have.add(slug);
-        cands.push(votdNormalize(pd));
+        cands.push(votdNormalize(pd, topics[round]));
       }
     }
   }
@@ -3710,6 +3719,7 @@ async function votdMarkUsed(env, photo, dateET, note) {
     credit: photo.credit ?? prev.credit ?? null,
     creditLink: photo.creditLink ?? prev.creditLink ?? null,
     alt: photo.alt || prev.alt || '',
+    topic: photo.topic ?? prev.topic ?? null,
     dates,
     date: dates[dates.length - 1],   // kept for anything reading the old shape
     note,
@@ -4364,7 +4374,14 @@ Only output valid JSON, no markdown, no preamble.`;
 
         if (action === 'reject') {
           const rejected = await votdReadJson(env, 'votd_rejected', {});
-          rejected[slug] = { credit: rec.credit, alt: rec.alt, at: new Date().toISOString() };
+          // topic and colour ride along for the photo report.  A block used to
+          // store only who took it and what it showed, which is enough to stop
+          // it recurring and nothing else;  the search it came from and how
+          // dark it was are what turn a pile of blocks into a fix.
+          rejected[slug] = {
+            credit: rec.credit, alt: rec.alt, topic: rec.topic || null,
+            color: rec.color || null, at: new Date().toISOString(),
+          };
           await votdWriteJson(env, 'votd_rejected', rejected);
         } else if (action === 'queue') {
           const queue = await votdReadJson(env, 'votd_queue', []);
@@ -4383,6 +4400,96 @@ Only output valid JSON, no markdown, no preamble.`;
         }
       }
       return json(await votdBoard(env, 10));
+    }
+
+    // ---- /admin/votd-photo-report — what the blocked pile is trying to say ----
+    //
+    // The picker keeps two lists and uses them for one thing: never show the
+    // same photo twice.  That stops repeats and teaches nothing, so a bad
+    // search goes on producing bad candidates for as long as it is in
+    // VOTD_TOPICS, and the only thing that grows is the blocklist.
+    //
+    // This reads both lists together and reports where they DIFFER, which is
+    // the only part that carries information.  A word in half the kept photos
+    // and half the blocked ones says nothing;  a word in nine blocked photos
+    // and no kept ones is a keyword for VOTD_MANMADE_KEYWORDS, and a topic
+    // whose photos are blocked four times out of five is a line to delete.
+    //
+    // Read-only.  It changes no list and blocks nothing — the point is to
+    // decide what to change, by hand, with the evidence in view.
+    if (path === '/admin/votd-photo-report') {
+      const secret = request.headers.get('X-Admin-Secret') || url.searchParams.get('secret');
+      const json = (obj, status = 200) => new Response(JSON.stringify(obj), {
+        status, headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
+      });
+      if (!env.ADMIN_SECRET || secret !== env.ADMIN_SECRET) return json({ error: 'forbidden' }, 403);
+
+      const used = await votdReadJson(env, 'votd_used', {}) || {};
+      const rejected = await votdReadJson(env, 'votd_rejected', {}) || {};
+      const keptRecs = Object.values(used);
+      const blockedRecs = Object.values(rejected);
+
+      /* Alt text into comparable words.  Unsplash writes these as sentences
+       * ("a flock of sheep grazing on a lush green hillside"), so the
+       * grammatical filler would otherwise top every list and say nothing.
+       * Nothing about the SUBJECT is filtered — "sheep", "green", "field" are
+       * exactly what is being measured, and stripping them to reduce noise
+       * would strip the signal with it. */
+      const STOP = new Set(('a an the of on in at to and or with is are was were by for from '
+        + 'that this it its as into over under near above below during while some there their'
+        ).split(' '));
+      const words = (t) => String(t || '').toLowerCase().match(/[a-z][a-z'-]{2,}/g) || [];
+
+      /** count[term] = {kept, blocked} over a per-record term extractor. */
+      const tally = (extract) => {
+        const m = new Map();
+        const bump = (term, side) => {
+          if (!term) return;
+          const row = m.get(term) || { term, kept: 0, blocked: 0 };
+          row[side]++;
+          m.set(term, row);
+        };
+        // Per RECORD, not per occurrence: a word repeated inside one caption is
+        // still one photo's worth of evidence, and counting it twice would let
+        // a single wordy caption outvote several photos.
+        for (const r of keptRecs) for (const t of new Set(extract(r))) bump(t, 'kept');
+        for (const r of blockedRecs) for (const t of new Set(extract(r))) bump(t, 'blocked');
+        return [...m.values()];
+      };
+
+      /* Sorted by how lopsided a term is, then by how much of it there is.
+       * Rate alone puts a single 1-of-1 block at the top of everything, which
+       * is noise;  volume alone buries the decisive terms under the common
+       * ones.  `min` keeps out terms too rare to act on either way. */
+      const rank = (rows, min) => rows
+        .map((r) => ({ ...r, total: r.kept + r.blocked, rate: r.blocked / (r.kept + r.blocked) }))
+        .filter((r) => r.total >= min)
+        .sort((a, b) => (b.rate - a.rate) || (b.blocked - a.blocked))
+        .slice(0, 40);
+
+      const withTopic = [...keptRecs, ...blockedRecs].filter((r) => r && r.topic).length;
+
+      return json({
+        totals: {
+          kept: keptRecs.length,
+          blocked: blockedRecs.length,
+          blockRate: keptRecs.length + blockedRecs.length
+            ? blockedRecs.length / (keptRecs.length + blockedRecs.length) : 0,
+        },
+        // Words that separate the two piles.  Candidates for
+        // VOTD_MANMADE_KEYWORDS when they are near-always blocked.
+        words: rank(tally((r) => words(r.alt).filter((w) => !STOP.has(w))), 3),
+        // A photographer blocked every time is a style that does not suit the
+        // card, which no keyword will catch.
+        photographers: rank(tally((r) => (r.credit ? [r.credit] : [])), 2),
+        // Empty until enough photos have been rolled since topics started
+        // being recorded — `topicsRecorded` says how far along that is.
+        topics: rank(tally((r) => (r.topic ? [r.topic] : [])), 2),
+        topicsRecorded: withTopic,
+        note: withTopic === 0
+          ? 'No photo carries its search topic yet. Topics are recorded from now on, so this fills in as the board refills.'
+          : null,
+      });
     }
 
     // ---- /admin/votd-lowcheck — run the low-queue check on demand ----
