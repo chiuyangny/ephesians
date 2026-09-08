@@ -36,6 +36,9 @@
 //   /admin/build-en-index?secret=...&from=N&size=M  -> (re)build the ESV English search index.  Chunked.
 //   /admin/merge-en-index?secret=...                -> Merge EN chunks -> esv_search_index.
 //   /admin/index-status?secret=...                  -> Status of both indexes + api.bible cache counts.
+//   /admin/export-kv?cursor=...&limit=N            -> (X-Admin-Secret) NDJSON page of every key and
+//                                            value in KV, for backup.  Cursor comes back in the
+//                                            X-Kv-Cursor header;  X-Kv-Complete says when done.
 //   /admin/wipe-apibible-cache?secret=...[&translationId=...]
 //                                                   -> Delete cached api.bible chapters + chunks + index.
 //   /admin/build-apibible-index?secret=...&translationId=...&from=N&size=M
@@ -1246,6 +1249,71 @@ async function handleBuildIndex(env, url, cors) {
     totalChapters: TOTAL_CHAPTERS,
     done
   }, null, 2), {headers:{...cors,'Content-Type':'application/json'}});
+}
+
+// ---- /admin/export-kv — read every key and value out of KV, one page at a time ----
+//
+// The backup route.  Everything in KV can in principle be regenerated — the
+// search indexes rebuild from /admin/build-index, the cached chapters re-fetch
+// from upstream — but "in principle" costs Anthropic credits for every AI
+// commentary, book intro and QT reflection, plus hours of chunked admin calls.
+// The 우리말성경 text cannot be regenerated from here at all: /woori reads KV
+// and has no fetch path, so KV plus the publisher's TXT set are the only two
+// copies that exist.
+//
+// WHY THIS IS A WORKER ROUTE AND NOT A SCRIPT AGAINST THE CLOUDFLARE API
+//
+// Cloudflare's REST API is globally rate limited at 1200 requests per five
+// minutes, and reading a namespace one key at a time needs one request per
+// key.  At this namespace's size that is hours, most of it spent backing off
+// 429s.  A Worker reading its own binding has no such limit, so the whole
+// export is a few hundred paged requests instead of tens of thousands.
+//
+// NDJSON so the caller can append pages straight to a file, and the cursor
+// travels in a header so the body stays parseable as-is.
+async function handleExportKv(env, url, cors, request) {
+  const secret = request.headers.get('X-Admin-Secret') || url.searchParams.get('secret');
+  if (!env.ADMIN_SECRET || secret !== env.ADMIN_SECRET) {
+    return new Response(JSON.stringify({error:'forbidden'}), {status:403, headers:{...cors,'Content-Type':'application/json'}});
+  }
+  if (!env.COMMENTARY_KV) {
+    return new Response(JSON.stringify({error:'no_kv'}), {status:500, headers:{...cors,'Content-Type':'application/json'}});
+  }
+  const cursor = url.searchParams.get('cursor') || undefined;
+  // Modest default: one page holds every value it lists, and a single key here
+  // (nkrv_search_index) is over 2 MB on its own.
+  const limit = Math.min(200, Math.max(1, parseInt(url.searchParams.get('limit') || '100')));
+
+  const list = await env.COMMENTARY_KV.list({ limit, cursor });
+  const lines = [];
+  const concurrency = 10;
+  for (let i = 0; i < list.keys.length; i += concurrency) {
+    const batch = list.keys.slice(i, i + concurrency);
+    const values = await Promise.all(batch.map((k) => env.COMMENTARY_KV.get(k.name, 'text')));
+    batch.forEach((k, j) => {
+      // A null value means the key expired between the list and the read.
+      // Recorded as null rather than dropped, so a restore can tell "was not
+      // there" from "was never asked for".
+      lines.push(JSON.stringify({
+        k: k.name,
+        ...(k.expiration ? { e: k.expiration } : {}),
+        ...(k.metadata ? { m: k.metadata } : {}),
+        v: values[j] === undefined ? null : values[j],
+      }));
+    });
+  }
+
+  const complete = !!list.list_complete;
+  return new Response(lines.length ? lines.join('\n') + '\n' : '', {
+    status: 200,
+    headers: {
+      ...cors,
+      'Content-Type': 'application/x-ndjson',
+      'X-Kv-Complete': String(complete),
+      'X-Kv-Cursor': complete ? '' : (list.cursor || ''),
+      'X-Kv-Count': String(lines.length),
+    },
+  });
 }
 
 // ---- /admin/warm-esv — pre-fetch every ESV chapter into KV so the
@@ -4036,6 +4104,7 @@ Only output valid JSON, no markdown, no preamble.`;
     if (path === '/admin/build-en-index') return handleBuildEnIndex(env, url, cors);
     if (path === '/admin/merge-en-index') return handleMergeEnIndex(env, url, cors);
     if (path === '/admin/index-status') return handleIndexStatus(env, url, cors);
+    if (path === '/admin/export-kv') return handleExportKv(env, url, cors, request);
     if (path === '/admin/auth-check') return handleAuthCheck(env, url, cors);
     // Run the verse population the 16:00 cron does, on demand.  Exists so the
     // fix can be exercised without waiting a day for the cron — and it is
