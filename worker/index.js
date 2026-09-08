@@ -1004,18 +1004,20 @@ async function getOrCreateQtReflection(bookNum, chapter, verseStart, verseEnd, e
     ? `${bookName} ${chapter}:${verseStart}`
     : `${bookName} ${chapter}:${verseStart}-${verseEnd}`;
 
-  const prompt = `You are writing a short daily Quiet Time (QT) devotional reflection in the Reformed/evangelical tradition (Calvin, Sproul, Keller, Piper) — warm, pastoral, Christ-centered, practically applicable.
+  const prompt = `You are writing a short daily Quiet Time (QT) devotional reflection in the Reformed/evangelical tradition (Calvin, Sproul, Keller, Piper): warm, pastoral, Christ-centered, practically applicable.
 
-Write a reflection specifically on ${refLabel} — these exact verses only, not the surrounding chapter.
+Write a reflection specifically on ${refLabel}. These exact verses only, not the surrounding chapter.
 
 Passage text (Korean, for your reference, use it to ground the reflection in what these specific verses actually say):
 """
 ${passageKo}
 """
 
-Write a devotional reflection on THIS PASSAGE SPECIFICALLY, broken into 4-6 SHORT paragraphs — each paragraph just 1-2 sentences, one idea per paragraph (e.g. observation, the text's context, a theological point, a practical application, a closing thought — as separate paragraphs, not combined). Favor more, shorter paragraphs over fewer, longer ones; this is read on a phone screen where dense blocks are hard to read. Then provide a Korean translation using 존댓말 (formal polite -습니다/-ㅂ니다 speech level), with the same paragraph breaks.
+Write a devotional reflection on THIS PASSAGE SPECIFICALLY, broken into 4-6 SHORT paragraphs. Each paragraph is just 1-2 sentences, one idea per paragraph (e.g. observation, the text's context, a theological point, a practical application, a closing thought, as separate paragraphs rather than combined). Favor more, shorter paragraphs over fewer, longer ones; this is read on a phone screen where dense blocks are hard to read. Then provide a Korean translation using 존댓말 (formal polite -습니다/-ㅂ니다 speech level), with the same paragraph breaks.
 
-Respond in this exact JSON format, no markdown, no preamble. Each paragraph is its OWN array element — do not put multiple paragraphs in one string, and do not include newline characters inside a string:
+PUNCTUATION. Use the em dash (—) sparingly, in the Korean as well as the English. It earns its place only when what follows names or expands what the sentence has just said, so that the two halves cannot stand apart: "two very different kinds of resistance — Ephraim's wounded pride and Succoth's cold refusal". It does NOT belong between two statements that could each be their own sentence, where it is standing in for a full stop: end the sentence and start a new one instead. At most one em dash in a whole reflection, and usually none. Too many break the reader's flow, which is the opposite of what this writing is for.
+
+Respond in this exact JSON format, no markdown, no preamble. Each paragraph is its OWN array element. Do not put multiple paragraphs in one string, and do not include newline characters inside a string:
 {
   "reflection_en": ["paragraph 1", "paragraph 2", "paragraph 3", "paragraph 4"],
   "reflection_ko": ["문단 1", "문단 2", "문단 3", "문단 4"]
