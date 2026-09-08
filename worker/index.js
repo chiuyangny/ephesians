@@ -3864,6 +3864,14 @@ async function votdStagePhoto(dateET, env) {
         blurHash: photo.blurHash ?? null,
         credit: photo.credit,
         creditLink: photo.creditLink,
+        /* The Unsplash id, kept because this record is the only copy for a
+         * staged date and without it the photo cannot be asked about later.
+         * The BlurHash backfill needs exactly this, and on today's record —
+         * staged before the field was persisted — it had nothing to go on:
+         * the URL's `photo-1786241455839-...` is the image filename, not the
+         * id the API answers to, so the lookup 404'd on a plausible-looking
+         * string.  Cheap to store, and it makes the record self-sufficient. */
+        id: photo.id ?? null,
       }),
       { expirationTtl: votdKeyTtl(dateET) }
     );
@@ -4680,9 +4688,25 @@ Only output valid JSON, no markdown, no preamble.`;
           headers: { ...cors, 'Content-Type': 'application/json' },
         });
       }
-      // The staged record may predate `id` too;  the slug in the URL is the
-      // photo's public identifier and the API accepts it.
-      const id = photo.id || votdSlug(photo.url)?.replace(/^photo-/, '') || null;
+      /* Only a real Unsplash id will do.
+       *
+       * This first tried the URL's slug as a fallback, on the assumption that
+       * `photo-1786241455839-d39081f9efd0` was the photo's identifier.  It is
+       * the image FILENAME;  the API's id is an opaque token like
+       * `O8z_PF1dlhA` and lives nowhere in the URL.  The lookup therefore
+       * 404'd while reporting a plausible-looking id, which reads as "Unsplash
+       * is down" rather than "this record never had an id".
+       *
+       * A record staged before `id` was persisted cannot be backfilled at all,
+       * and saying so is more useful than a failed request. */
+      const id = photo.id || null;
+      if (!id) {
+        return new Response(JSON.stringify({
+          date,
+          error: 'no_photo_id',
+          detail: 'This record was staged before the photo id was kept, so the photo cannot be looked up.  Records staged from now on carry it.',
+        }), { status: 409, headers: { ...cors, 'Content-Type': 'application/json' } });
+      }
       const blurHash = await votdFetchBlurHash(id, env);
       if (!blurHash) {
         return new Response(JSON.stringify({ date, id, error: 'lookup_failed' }), {
