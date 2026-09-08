@@ -15,6 +15,9 @@
 //                                          Eastern is still a FUTURE ET one — hence +1.
 //                                          Dated requests are read-only and never populate.
 //   /votd/next                            -> Tomorrow's STAGED photo (public, read-only, never rolls)
+//   /admin/votd-blurhash?date=YYYY-MM-DD  -> (X-Admin-Secret) give an ALREADY-CHOSEN photo its BlurHash,
+//                                            by looking it up on its own Unsplash id.  Same photo, one
+//                                            field added.  Defaults to tomorrow.
 //   /admin/votd-next?date=YYYY-MM-DD      -> (X-Admin-Secret) re-roll the photo for a date.  Allowed over
 //                                            the same window /votd serves — ET-today-minus-2 forward — so
 //                                            any photo a reader can still be shown can still be changed.
@@ -3269,6 +3272,30 @@ const votdFetchPhotos = async (count, env, topic) => {
 const votdFetchOnePhoto = async (env) => (await votdFetchPhotos(1, env)).photos[0] || null;
 
 /**
+ * One photo's BlurHash, by its Unsplash id.
+ *
+ * Exists so a photo that was chosen before the worker started recording
+ * BlurHashes can gain one WITHOUT being replaced.  The hash is a property of
+ * the picture, not of the choosing, so re-rolling to get it would swap a
+ * perfectly good photo for an unrelated one to obtain a fact about the first.
+ *
+ * One request against a single-photo endpoint, which is far cheaper against
+ * the hourly quota than a fresh random draw.
+ */
+async function votdFetchBlurHash(id, env) {
+  const key = env && env.VOTD_UNSPLASH_KEY;
+  if (!key || !id) return null;
+  try {
+    const r = await fetch(`https://api.unsplash.com/photos/${encodeURIComponent(id)}?client_id=${key}`);
+    if (!r.ok) return null;
+    const j = await r.json();
+    return j.blur_hash || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Roll one acceptable VOTD photo, or null for the solid-color card.
  * `first` lets the live route hand in the photo it already fetched in
  * parallel with the verse, so a cold day still costs one round trip.
@@ -4613,6 +4640,63 @@ Only output valid JSON, no markdown, no preamble.`;
       }
       await votdWarnLowQueue(date, staged, env);
       return json({ queued: n, threshold: VOTD_LOW_QUEUE, mailable, sent: mailable && n < VOTD_LOW_QUEUE });
+    }
+
+    /* ---- /admin/votd-blurhash — give an already-chosen photo its BlurHash ----
+     *
+     * A photo staged before the worker began recording BlurHashes has none,
+     * and the only other way to get one is to re-roll — which throws away a
+     * perfectly good photo in order to learn a fact about it.  The hash
+     * belongs to the picture, so this looks it up by the photo's own Unsplash
+     * id and writes it into the record already there.  Same photo, same
+     * credit, same date;  one field added.
+     *
+     * Idempotent, and a no-op on a record that already has one.  Defaults to
+     * tomorrow, since that is the staged date this normally matters for. */
+    if (path === '/admin/votd-blurhash') {
+      const secret = request.headers.get('X-Admin-Secret') || url.searchParams.get('secret');
+      if (!env.ADMIN_SECRET || secret !== env.ADMIN_SECRET) {
+        return new Response(JSON.stringify({ error: 'forbidden' }), {
+          status: 403, headers: { ...cors, 'Content-Type': 'application/json' },
+        });
+      }
+      const date = url.searchParams.get('date') || votdDateET(1);
+      const key = `votdphoto2_${date}`;
+      const raw = env.COMMENTARY_KV ? await env.COMMENTARY_KV.get(key) : null;
+      if (!raw) {
+        return new Response(JSON.stringify({ date, error: 'no_photo_staged' }), {
+          status: 404, headers: { ...cors, 'Content-Type': 'application/json' },
+        });
+      }
+      let photo;
+      try { photo = JSON.parse(raw); } catch { photo = null; }
+      if (!photo || !photo.url) {
+        return new Response(JSON.stringify({ date, error: 'unreadable' }), {
+          status: 500, headers: { ...cors, 'Content-Type': 'application/json' },
+        });
+      }
+      if (photo.blurHash) {
+        return new Response(JSON.stringify({ date, blurHash: photo.blurHash, changed: false }), {
+          headers: { ...cors, 'Content-Type': 'application/json' },
+        });
+      }
+      // The staged record may predate `id` too;  the slug in the URL is the
+      // photo's public identifier and the API accepts it.
+      const id = photo.id || votdSlug(photo.url)?.replace(/^photo-/, '') || null;
+      const blurHash = await votdFetchBlurHash(id, env);
+      if (!blurHash) {
+        return new Response(JSON.stringify({ date, id, error: 'lookup_failed' }), {
+          status: 502, headers: { ...cors, 'Content-Type': 'application/json' },
+        });
+      }
+      await env.COMMENTARY_KV.put(
+        key,
+        JSON.stringify({ ...photo, blurHash }),
+        { expirationTtl: votdKeyTtl(date) },
+      );
+      return new Response(JSON.stringify({ date, id, blurHash, changed: true }), {
+        headers: { ...cors, 'Content-Type': 'application/json' },
+      });
     }
 
     // ---- /admin/votd-chooser — send the chooser email on demand ----
