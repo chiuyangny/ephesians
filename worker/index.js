@@ -3314,6 +3314,19 @@ function votdNormalize(pd, topic) {
   return {
     url,
     color: pd.color || '#555555',
+    /* Unsplash computes a BlurHash for every photo and has been sending it in
+     * this same payload all along;  it was simply never read.
+     *
+     * It matters because the card's first paint is otherwise a flat rectangle
+     * of `color` — the photo's dominant tone, which is honest but tells the
+     * reader nothing and, on a photo whose dominant tone is silver, is
+     * indistinguishable from a loading state.  Twenty or so characters of
+     * BlurHash paint the photo's actual shapes instead, instantly, from the
+     * JSON that has already arrived.
+     *
+     * Free in every sense: no extra request, no image processing here, and it
+     * costs the response a couple of dozen bytes. */
+    blurHash: pd.blur_hash || null,
     credit: pd.user?.name || null,
     creditLink: pd.user?.links?.html || null,
     slug: votdSlug(url),
@@ -3786,6 +3799,9 @@ async function votdMarkUsed(env, photo, dateET, note) {
   used[slug] = {
     url: photo.url || prev.url || null,
     color: photo.color || prev.color || '#555555',
+    // Kept here too, or a recycled photo comes back without its placeholder
+    // and the card falls to a flat colour on exactly the days the well is dry.
+    blurHash: photo.blurHash ?? prev.blurHash ?? null,
     credit: photo.credit ?? prev.credit ?? null,
     creditLink: photo.creditLink ?? prev.creditLink ?? null,
     alt: photo.alt || prev.alt || '',
@@ -3815,7 +3831,13 @@ async function votdStagePhoto(dateET, env) {
     if (!env.COMMENTARY_KV) return;
     await env.COMMENTARY_KV.put(
       `votdphoto2_${dateET}`,
-      JSON.stringify({ url: photo.url, color: photo.color, credit: photo.credit, creditLink: photo.creditLink }),
+      JSON.stringify({
+        url: photo.url,
+        color: photo.color,
+        blurHash: photo.blurHash ?? null,
+        credit: photo.credit,
+        creditLink: photo.creditLink,
+      }),
       { expirationTtl: votdKeyTtl(dateET) }
     );
   };
