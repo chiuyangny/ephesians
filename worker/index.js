@@ -965,7 +965,17 @@ async function fetchAndCacheNkt(bookNum, chapter, env) {
 // can pre-warm today's/tomorrow's reading without going through an
 // HTTP round-trip.  Returns { ok, status?, json } — json is always the
 // stringified body to send/cache, status is only set on failure.
-async function getOrCreateQtReflection(bookNum, chapter, verseStart, verseEnd, env) {
+async function getOrCreateQtReflection(bookNum, chapter, verseStart, verseEnd, env, endChapter) {
+  // A passage may now run past the end of its opening chapter.  The daily
+  // plan builds a day from section headings and fills it to a verse target,
+  // so Jonah's fish and his prayer are one reading (1:17-2:10) rather than a
+  // chapter boundary splitting them in half.  Roughly one day in sixteen.
+  //
+  // `endChapter` is absent for every single-chapter passage, which is what
+  // keeps the cache keys below byte-identical to the ones already in KV —
+  // nothing regenerates, nothing is orphaned.
+  const spans = Number.isFinite(endChapter) && endChapter > chapter;
+  const lastChapter = spans ? endChapter : chapter;
   // Regenerate the meditation for each fresh OCCURRENCE of a passage
   // rather than caching one copy forever: the QT plan cycles roughly
   // every ~10 years, and when a passage comes back around the reader
@@ -976,7 +986,9 @@ async function getOrCreateQtReflection(bookNum, chapter, verseStart, verseEnd, e
   // holds the most recent successful reflection for the passage,
   // year-independent: the fallback served when a fresh generation fails
   // (e.g. API credits exhausted) so the reader still sees something.
-  const base = `${bookNum}_${chapter}_${verseStart}_${verseEnd}`;
+  const base = spans
+    ? `${bookNum}_${chapter}_${verseStart}_${endChapter}_${verseEnd}`
+    : `${bookNum}_${chapter}_${verseStart}_${verseEnd}`;
   const year = new Date().getUTCFullYear();
   const cacheKey = `qt_reflection_v4_${base}_${year}`;
   const latestKey = `qt_reflection_latest_${base}`;
@@ -990,25 +1002,36 @@ async function getOrCreateQtReflection(bookNum, chapter, verseStart, verseEnd, e
     return { ok: false, status, json: errJson };
   }
 
-  const nkrvResult = await fetchAndCacheNkrv(bookNum, chapter, env);
-  if (!nkrvResult.ok) {
-    return { ok: false, status: 502, json: JSON.stringify({ error: nkrvResult.error || 'nkrv_fetch_failed' }) };
+  // One fetch per chapter the passage touches.  The first is clipped at its
+  // start, the last at its end, and anything between is whole — the same
+  // shape the reader app uses to render a spanning passage.
+  const pieces = [];
+  for (let c = chapter; c <= lastChapter; c++) {
+    const nkrvResult = await fetchAndCacheNkrv(bookNum, c, env);
+    if (!nkrvResult.ok) {
+      return { ok: false, status: 502, json: JSON.stringify({ error: nkrvResult.error || 'nkrv_fetch_failed' }) };
+    }
+    const from = c === chapter ? verseStart : 1;
+    const to = c === lastChapter ? verseEnd : Number.MAX_SAFE_INTEGER;
+    for (const v of nkrvResult.data.verses || []) {
+      const n = typeof v.verse === 'string' ? parseInt(v.verse, 10) : v.verse;
+      if (n >= from && n <= to) {
+        // The chapter is named on a verse only when the passage crosses one,
+        // so a single-chapter prompt is unchanged to the character.
+        const label = spans ? `${c}:${v.verse}` : `${v.verse}`;
+        pieces.push(`${label}. ${v.text.replace(/\(KN:\d+\)/g, '')}`);
+      }
+    }
   }
-  const nkrvData = nkrvResult.data;
-
-  const versesInRange = (nkrvData.verses || []).filter(v => {
-    const n = typeof v.verse === 'string' ? parseInt(v.verse, 10) : v.verse;
-    return n >= verseStart && n <= verseEnd;
-  });
-  const passageKo = versesInRange
-    .map(v => `${v.verse}. ${v.text.replace(/\(KN:\d+\)/g, '')}`)
-    .join(' ');
+  const passageKo = pieces.join(' ');
 
   const bookName = BOOK_NAMES_EN[bookNum-1];
   const bookNameKo = BOOK_NAMES_KO[bookNum-1];
-  const refLabel = verseStart === verseEnd
-    ? `${bookName} ${chapter}:${verseStart}`
-    : `${bookName} ${chapter}:${verseStart}-${verseEnd}`;
+  const refLabel = spans
+    ? `${bookName} ${chapter}:${verseStart}-${endChapter}:${verseEnd}`
+    : verseStart === verseEnd
+      ? `${bookName} ${chapter}:${verseStart}`
+      : `${bookName} ${chapter}:${verseStart}-${verseEnd}`;
 
   const prompt = `You are writing a short daily Quiet Time (QT) devotional reflection in the Reformed/evangelical tradition (Calvin, Sproul, Keller, Piper): warm, pastoral, Christ-centered, practically applicable.
 
@@ -1066,6 +1089,9 @@ Respond in this exact JSON format, no markdown, no preamble. Each paragraph is i
   reflection.chapter = chapter;
   reflection.verseStart = verseStart;
   reflection.verseEnd = verseEnd;
+  // Only when it crosses one, so a single-chapter body is byte-identical to
+  // what is already cached and to what older clients expect.
+  if (spans) reflection.endChapter = endChapter;
 
   const result = JSON.stringify(reflection);
   if (env.COMMENTARY_KV) {
@@ -1075,7 +1101,7 @@ Respond in this exact JSON format, no markdown, no preamble. Each paragraph is i
     // Every reflection was already kept forever under latestKey;  what was
     // missing is any way to enumerate them — a stored reflection could only be
     // retrieved by knowing its exact verse tuple in advance.
-    await addToQtIndex(bookNum, chapter, verseStart, verseEnd, env);
+    await addToQtIndex(bookNum, chapter, verseStart, verseEnd, env, spans ? endChapter : undefined);
   }
   return { ok: true, json: result, cached: false };
 }
@@ -1110,10 +1136,17 @@ async function readQtIndex(bookNum, env) {
   }
 }
 
-async function addToQtIndex(bookNum, chapter, verseStart, verseEnd, env) {
+/* Entries are [chapter, verseStart, verseEnd] and now, for a passage that
+ * crosses a chapter, [chapter, verseStart, verseEnd, endChapter].  A fourth
+ * element rather than a new shape, so every entry already written stays
+ * readable and `e[3] === undefined` means what it always meant. */
+async function addToQtIndex(bookNum, chapter, verseStart, verseEnd, env, endChapter) {
   const entries = await readQtIndex(bookNum, env);
-  if (entries.some((e) => e[0] === chapter && e[1] === verseStart && e[2] === verseEnd)) return;
-  entries.push([chapter, verseStart, verseEnd]);
+  if (entries.some((e) =>
+    e[0] === chapter && e[1] === verseStart && e[2] === verseEnd && e[3] === endChapter)) return;
+  entries.push(endChapter === undefined
+    ? [chapter, verseStart, verseEnd]
+    : [chapter, verseStart, verseEnd, endChapter]);
   await env.COMMENTARY_KV.put(qtIndexKey(bookNum), JSON.stringify(entries));
 }
 
@@ -1886,13 +1919,19 @@ async function captureDailyReading(dateStamp, env, { force = false } = {}) {
   if (!got.ok) return got;
   const reading = got.reading;
 
-  // The reflection pipeline is per-chapter.  For a cross-chapter reading, the
-  // reflection covers the FIRST chapter's portion, and that sub-range is
-  // recorded so the app can state what the reflection is actually about
-  // instead of implying it covers the whole span.
-  const scope = reading.endChapter && reading.endChapter !== reading.chapter
-    ? { chapter: reading.chapter, verseStart: reading.verseStart, verseEnd: 200 }
-    : { chapter: reading.chapter, verseStart: reading.verseStart, verseEnd: reading.verseEnd };
+  // The reflection covers the WHOLE reading now, span and all.  This used to
+  // narrow a cross-chapter reading to its first chapter (verseEnd 200, "to
+  // the end of it") because the pipeline could not express the rest;  the
+  // scope was recorded so the app could say what was really covered.  It can
+  // express it now, so the scope IS the reading.
+  const scope = {
+    chapter: reading.chapter,
+    verseStart: reading.verseStart,
+    verseEnd: reading.verseEnd,
+    ...(reading.endChapter && reading.endChapter !== reading.chapter
+      ? { endChapter: reading.endChapter }
+      : {}),
+  };
 
   const stored = { ...reading, scope, capturedAt: Date.now() };
   await env.COMMENTARY_KV.put(key, JSON.stringify(stored), { expirationTtl: DAILY_READING_TTL });
@@ -1900,7 +1939,7 @@ async function captureDailyReading(dateStamp, env, { force = false } = {}) {
   // Warm it, so the first reader to type this passage gets a cached answer
   // rather than paying for a live generation.  One generation per day.
   const warm = await getOrCreateQtReflection(
-    reading.bookNum, scope.chapter, scope.verseStart, scope.verseEnd, env,
+    reading.bookNum, scope.chapter, scope.verseStart, scope.verseEnd, env, scope.endChapter,
   );
   return { ok: true, reading: stored, warmed: warm.ok };
 }
@@ -4148,7 +4187,18 @@ Only output valid JSON, no markdown, no preamble.`;
     if (path.startsWith('/qt-reflection/')) {
       const qtParts = path.match(/\/qt-reflection\/(\d+)\/(\d+)\/(\d+)\/(\d+)/);
       if (!qtParts) return new Response(JSON.stringify({error:'bad path'}), {status:400, headers:{...cors,'Content-Type':'application/json'}});
-      const qtResult = await getOrCreateQtReflection(+qtParts[1], +qtParts[2], +qtParts[3], +qtParts[4], env);
+      /* A QUERY PARAM, not a fifth path segment.
+       *
+       * The path shape is what every already-cached reflection, the QT index
+       * and older clients are built around;  adding a segment would fork the
+       * route and orphan all of it.  `?endChapter=` is simply absent for the
+       * fifteen days in sixteen that stay inside one chapter, so those
+       * requests are unchanged down to the URL. */
+      const rawEnd = url.searchParams.get('endChapter');
+      const endChapter = rawEnd === null ? undefined : Number.parseInt(rawEnd, 10);
+      const qtResult = await getOrCreateQtReflection(
+        +qtParts[1], +qtParts[2], +qtParts[3], +qtParts[4], env, endChapter,
+      );
       return new Response(qtResult.json, {status: qtResult.status || 200, headers:{...cors,'Content-Type':'application/json'}});
     }
 
@@ -5127,7 +5177,12 @@ Only output valid JSON, no markdown, no preamble.`;
     tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
     const reading = getReadingForDate(tomorrow);
     ctx.waitUntil(
-      getOrCreateQtReflection(reading.bookIdx + 1, reading.chapter, reading.verseStart, reading.verseEnd, env)
+      // endChapter rides along: the plan's day can cross a chapter, and a
+      // warm-up for the wrong passage is worse than a cold cache.
+      getOrCreateQtReflection(
+        reading.bookIdx + 1, reading.chapter, reading.verseStart, reading.verseEnd, env,
+        reading.endChapter,
+      )
     );
   }
 };
