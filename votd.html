@@ -63,6 +63,42 @@
         display:flex;flex-direction:column;transition:opacity .18s,transform .18s}
   .card.busy{opacity:.35;transform:scale(.98);pointer-events:none}
   .card img{width:100%;aspect-ratio:var(--votd-crop);object-fit:cover;display:block;background:var(--line)}
+
+  /* A sample verse over every preview, laid out as VotdCard lays it out.
+   *
+   * A bare photo answers "is this a nice photo";  the card answers "can the
+   * verse be read over it", which is the question that actually decides a
+   * pick — a bright lower third that looks fine bare turns white text to
+   * mush.  So the preview carries the app's own scrim (0 → .15 at half →
+   * .65), its label, both languages with the divider between them, and the
+   * button, in the app's sizes.
+   *
+   * SIZED FROM THE PREVIEW'S WIDTH, not in px.  The app's numbers are points
+   * on a 362pt card;  a grid tile here is anywhere from 280 to 500px wide,
+   * and the rail tile 270.  --u is one of those points at this tile's width
+   * (a container query unit), so 18 * var(--u) is the app's 18pt wherever
+   * the tile lands, and the text covers the same share of the photo it
+   * covers on the phone.  That share is what you are judging. */
+  .ph{position:relative;container-type:inline-size;aspect-ratio:var(--votd-crop);
+      overflow:hidden;background:var(--line);--u:calc(100cqw / 362)}
+  .ph img{position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto;border-radius:0}
+  .ov{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;
+      padding:calc(22 * var(--u));color:#fff;pointer-events:none;text-align:left;
+      font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Segoe UI",sans-serif;
+      background:linear-gradient(rgba(0,0,0,0) 0%,rgba(0,0,0,.15) 50%,rgba(0,0,0,.65) 100%)}
+  body.noverse .ov{display:none}
+  .ov .lab{font-size:calc(12 * var(--u));font-weight:500;letter-spacing:calc(1.2 * var(--u));
+           color:rgba(255,255,255,.78);margin-bottom:calc(8 * var(--u))}
+  .ov .ref{font-size:calc(13 * var(--u));font-weight:500;color:rgba(255,255,255,.9);
+           margin-bottom:calc(4 * var(--u))}
+  .ov .txt{font-size:calc(18 * var(--u));line-height:calc(30 * var(--u));font-weight:400;
+           margin-bottom:calc(8 * var(--u))}
+  .ov .txt.sec{font-size:calc(15 * var(--u));opacity:.85}
+  .ov .div{height:1px;background:rgba(255,255,255,.2);margin:calc(10 * var(--u)) 0}
+  .ov .btn{align-self:flex-start;margin-top:calc(14 * var(--u));
+           padding:calc(9 * var(--u)) calc(16 * var(--u));border-radius:calc(8 * var(--u));
+           border:1px solid rgba(255,255,255,.4);background:rgba(255,255,255,.15);
+           font-size:calc(12 * var(--u));font-weight:600;letter-spacing:calc(.2 * var(--u))}
   .meta{padding:9px 11px;font-size:12px;color:var(--dim);flex:1;
         display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .row{display:flex;gap:8px;padding:0 11px 11px}
@@ -102,6 +138,7 @@
         pointer-events:none}
   .q button{padding:1px 5px;font-size:11px;color:var(--dim);line-height:1.2}
   .hint{font-size:11px;color:var(--dim);margin:0 0 8px}
+  .live .ph{border-radius:8px}
   .live img{width:100%;aspect-ratio:var(--votd-crop);object-fit:cover;border-radius:8px;display:block;
             background:var(--line);cursor:zoom-in}
   .live .cap{font-size:12px;color:var(--dim);margin:8px 0 10px;line-height:1.4}
@@ -162,6 +199,7 @@
   <h1>VOTD picker</h1>
   <span class="stats" id="stats"></span>
   <button class="reportbtn" id="reportBtn" type="button">Why am I blocking?</button>
+  <button class="reportbtn" id="ovBtn" type="button">Hide verse</button>
   <div class="warn" id="warn" hidden></div>
 </header>
 <!-- The report reads the used and blocked lists together and shows only where
@@ -235,6 +273,49 @@ async function call(path){
   return body;
 }
 
+/* The sample verse the previews carry.  One fixed verse, not today's: the
+ * point is a typical length in both languages over EVERY photo, so tiles
+ * compare like for like.  John 3:16 is on the long side of the daily verse,
+ * which is the side worth checking — a photo that carries it carries most. */
+const SAMPLE = {
+  label: '오늘의 말씀 · Verse of the Day',
+  koRef: '요한복음 3:16',
+  ko: '하나님이 세상을 이처럼 사랑하사 독생자를 주셨으니 이는 그를 믿는 자마다 멸망하지 않고 영생을 얻게 하려 하심이라',
+  enRef: 'John 3:16',
+  en: 'For God so loved the world, that he gave his only Son, that whoever believes in him should not perish but have eternal life.',
+  cta: '요한복음 3장 읽기  →',
+};
+
+/* A photo with the sample verse laid over it, the way the app lays it.
+ * Everything the app puts on the card is here in the app's order: label,
+ * Korean, divider, English (secondary size), button. */
+function photoTile(src, alt){
+  return '<div class="ph"><img loading="lazy" src="' + src + '" alt="' + (alt || '') + '">' +
+    '<div class="ov">' +
+      '<div class="lab">' + SAMPLE.label + '</div>' +
+      '<div class="ref">' + SAMPLE.koRef + '</div>' +
+      '<div class="txt">' + SAMPLE.ko + '</div>' +
+      '<div class="div"></div>' +
+      '<div class="ref">' + SAMPLE.enRef + '</div>' +
+      '<div class="txt sec">' + SAMPLE.en + '</div>' +
+      '<div class="btn">' + SAMPLE.cta + '</div>' +
+    '</div></div>';
+}
+
+/* Overlay on or off, remembered on this device.  On by default: the bare
+ * photo is the less useful view, and it is one click away. */
+const OV_KEY = 'krengbible_votd_overlay';
+function applyOverlay(){
+  const on = localStorage.getItem(OV_KEY) !== 'off';
+  document.body.classList.toggle('noverse', !on);
+  document.getElementById('ovBtn').textContent = on ? 'Hide verse' : 'Show verse';
+}
+document.getElementById('ovBtn').addEventListener('click', () => {
+  localStorage.setItem(OV_KEY, localStorage.getItem(OV_KEY) === 'off' ? 'on' : 'off');
+  applyOverlay();
+});
+applyOverlay();
+
 // Ask Unsplash for a bigger rendition than the stored url carries.  The saved
 // url is w=1080; the grid shows these at ~300–500px CSS, so w=900 keeps them
 // crisp on a 2x display without pulling full-size originals for ten photos.
@@ -273,7 +354,7 @@ function render(b){
     const el = document.createElement('div');
     el.className = 'card';
     el.innerHTML =
-      '<img loading="lazy" src="' + big(c.url, 900) + '" alt="">' +
+      photoTile(big(c.url, 900)) +
       '<div class="meta">' + (c.alt || 'Untitled') + ' — ' + (c.credit || 'Unknown') + '</div>' +
       '<div class="row"><button class="add">Add to queue</button><button class="x" title="Never show this photo">✕</button></div>';
     el.querySelector('.add').onclick = () => act(el, 'queue', c.slug);
@@ -443,11 +524,8 @@ async function renderLive(){
 
   el.textContent = '';
   if(photo && photo.url){
-    const img = document.createElement('img');
-    img.src = big(photo.url, 640);
-    img.alt = '';
-    img.onclick = () => lightbox(photo);
-    el.appendChild(img);
+    el.insertAdjacentHTML('beforeend', photoTile(big(photo.url, 640)));
+    el.querySelector('img').onclick = () => lightbox(photo);
   }
   const cap = document.createElement('p');
   cap.className = 'cap';
@@ -491,11 +569,8 @@ async function renderNext(){
     return;
   }
   if(photo && photo.url){
-    const img = document.createElement('img');
-    img.src = big(photo.url, 640);
-    img.alt = '';
-    img.onclick = () => lightbox(photo);
-    el.appendChild(img);
+    el.insertAdjacentHTML('beforeend', photoTile(big(photo.url, 640)));
+    el.querySelector('img').onclick = () => lightbox(photo);
   }
   const cap = document.createElement('p');
   cap.className = 'cap';
