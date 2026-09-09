@@ -5117,12 +5117,8 @@ Only output valid JSON, no markdown, no preamble.`;
     // the check, adding the noon cron would have silently doubled the QT
     // warm-up as well.
     //
-    // 16:00 UTC — stage tomorrow's VOTD photo so it can be previewed and
-    // re-rolled during the day.  That is noon in EDT and 11am in EST; the
-    // exact hour does not matter, only that it lands during waking hours on
-    // the day BEFORE, with time to reject a photo before midnight ET.
-    // Cloudflare crons are UTC-only, so the one-hour DST drift is accepted
-    // rather than worked around.
+    // 08:00 UTC — stage tomorrow's VOTD photo (see that branch for why it is
+    // no longer noon), then warm tomorrow's QT reflection.
     // 15:10 UTC = 00:10 KST — capture the Korean day's reading minutes after it
     // is published, which is hours before that same date starts anywhere west
     // of Korea.  See captureDailyReading for why this is write-once per date
@@ -5147,7 +5143,27 @@ Only output valid JSON, no markdown, no preamble.`;
       ctx.waitUntil(captureDailyReading(kstDateStamp(), env));
       return;
     }
-    if (event.cron === '0 16 * * *') {
+    if (event.cron === '0 8 * * *') {
+      // Stage tomorrow's VOTD photo, from the queue if anything is waiting.
+      //
+      // Moved here from 16:00 UTC (noon ET).  Two things were wrong with noon:
+      //
+      //   The app asks for its OWN local date, and the far east reaches
+      //   tomorrow's date from 10:00 UTC — six hours BEFORE noon staged it.
+      //   Those readers found the verse written and the photo absent, so the
+      //   live route rolled a random photo for them and cached it under the
+      //   date;  noon then overwrote it with the queued one.  Korea at its
+      //   midnight was seeing a photo nobody chose.
+      //
+      //   And the app warms tomorrow's photo into its cache whenever it is
+      //   opened — but only if /votd/next has one, which before noon ET it
+      //   never did.  Most people open the app in the morning, so most days
+      //   the warm-up had nothing to warm and the first open painted the
+      //   photo arriving.  Staging at 04:00 ET makes the morning open warm
+      //   tomorrow, which is what the warm-up was for.
+      //
+      // 08:00 UTC is two hours before the earliest local midnight anywhere
+      // (UTC+14), the same margin the QT warm-up below relies on.
       const date = votdDateET(1);
       ctx.waitUntil(
         // Stage tomorrow, from the queue if anything is waiting.
@@ -5169,7 +5185,7 @@ Only output valid JSON, no markdown, no preamble.`;
       // ever be today's.  waitUntil'd separately so a failure in one does not
       // take the other with it.
       ctx.waitUntil(votdEnsureVerse(votdDateET(0), env));
-      return;
+      // No return: 08:00 also warms tomorrow's QT reflection, below.
     }
 
     // 08:00 UTC — warm tomorrow's Daily QT reflection.
