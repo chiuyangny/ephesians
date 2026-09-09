@@ -17,6 +17,10 @@
  * rotation index counts around them.  That part is small, is defined by
  * the calendar rather than by the plan, and does not drift.
  *
+ * The app also freezes the days it published before 2026-09-10, when the
+ * plan changed;  none of that is here, because this file only ever answers
+ * for tomorrow and tomorrow is always past the freeze.
+ *
  * bookIdx is 0-indexed, matching index.js's BOOK_NAMES_EN / BOOK_CHAPTERS
  * order — the standard 66-book Protestant order.  Add 1 for the worker's
  * 1-indexed book-number endpoints.
