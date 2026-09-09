@@ -179,6 +179,14 @@
          you ever see and therefore the only one you ever want to change. -->
     <h2>On screen now</h2>
     <div id="live" class="live"><div class="empty">Loading…</div></div>
+    <!-- Where the top of the queue WENT.  Staging takes the head of the queue
+         at 08:00 UTC and writes it under tomorrow's date, and until this tile
+         existed the picker showed neither the taking nor the result — the
+         queue just lost its first row overnight, which read as the app
+         skipping photos rather than using them.  This is /votd/next, the
+         same read the app's warm-up does. -->
+    <h2>Tomorrow</h2>
+    <div id="next" class="live"><div class="empty">Loading…</div></div>
     <h2>Queue — <span id="qn">0</span></h2>
     <div id="queue"></div>
   </aside>
@@ -276,12 +284,12 @@ function render(b){
   const q = document.getElementById('queue');
   document.getElementById('qn').textContent = b.queue.length;
   q.innerHTML = '';
-  if(!b.queue.length){ q.innerHTML = '<div class="empty">Empty — tomorrow will auto-roll.</div>'; return; }
+  if(!b.queue.length){ q.innerHTML = '<div class="empty">Empty — the next staging at 08:00 UTC will auto-roll.</div>'; return; }
   order = b.queue.map(x => x.slug);
   // Inside #queue, not before it — render() clears this container on every
   // action, and a sibling would stack up one copy per click.
   if(b.queue.length > 1){
-    q.innerHTML = '<p class="hint">Drag to reorder. Top of the list runs first. Click a thumbnail to enlarge.</p>';
+    q.innerHTML = '<p class="hint">Drag to reorder. The top row is taken at 08:00 UTC (04:00 ET) and becomes Tomorrow. Click a thumbnail to enlarge.</p>';
   }
   b.queue.forEach((item, i) => {
     const el = document.createElement('div');
@@ -456,14 +464,65 @@ async function renderLive(){
 }
 
 /**
- * Re-roll the live date.  Takes the head of the queue when one is waiting,
- * otherwise rolls fresh — same path the nightly cron uses, so what you get
- * here is what tomorrow would have got.
+ * What is staged for TOMORROW — the ET date the 08:00 UTC cron writes, which
+ * is also the date the worker's /votd/next reports.  Public read, no secret.
  *
+ * `staged:false` before 08:00 UTC is normal: the cron has not run yet and
+ * the top of the queue is still in the queue.  After 08:00 UTC it means
+ * every roll failed and midnight will roll on first request instead.
+ *
+ * Same no-store belt-and-braces as renderLive, for the same reason: this
+ * runs straight after a re-roll and must show what the re-roll produced.
+ */
+async function renderNext(){
+  const el = document.getElementById('next');
+  let photo = null, date = null, staged = false;
+  try{
+    const r = await fetch(WORKER + '/votd/next?_=' + Date.now(), { cache: 'no-store' });
+    if(r.ok){
+      const body = await r.json();
+      photo = body.photo; date = body.date; staged = !!body.staged;
+    }
+  }catch(e){ /* falls through to the not-staged caption below */ }
+
+  el.textContent = '';
+  if(!date){
+    el.innerHTML = '<div class="empty">Could not read /votd/next.</div>';
+    return;
+  }
+  if(photo && photo.url){
+    const img = document.createElement('img');
+    img.src = big(photo.url, 640);
+    img.alt = '';
+    img.onclick = () => lightbox(photo);
+    el.appendChild(img);
+  }
+  const cap = document.createElement('p');
+  cap.className = 'cap';
+  cap.textContent = staged
+    ? (photo ? (photo.credit || 'Unknown') + ' · staged for ' + date
+             : 'Staged for ' + date + ' but unreadable — roll again.')
+    : 'Nothing staged yet for ' + date + '. The top of the queue is taken at 08:00 UTC (04:00 ET); until then it stays in the queue.';
+  el.appendChild(cap);
+
+  const btn = document.createElement('button');
+  btn.className = 'add';
+  btn.textContent = staged ? 'Change tomorrow\'s photo' : 'Stage now from the queue';
+  btn.onclick = () => reroll(btn, date, [renderNext]);
+  el.appendChild(btn);
+}
+
+/**
+ * Re-roll a date.  Takes the head of the queue when one is waiting,
+ * otherwise rolls fresh — same path the 08:00 UTC cron uses, so what you get
+ * here is what the cron would have staged.
+ *
+ * `after` is which tile(s) to redraw — the live one, tomorrow's, or both.
  * The board is re-fetched afterwards because a queued photo that gets staged
  * is REMOVED from the queue, and a stale rail would still show it waiting.
  */
-async function reroll(btn, date){
+async function reroll(btn, date, after = [renderLive]){
+  const label = btn.textContent;
   btn.disabled = true;
   btn.textContent = 'Rolling…';
   try{
@@ -471,11 +530,11 @@ async function reroll(btn, date){
     if(!r.staged){
       throw new Error('Every roll came back unusable just now — people shots, too dark, or Unsplash+. Nothing was changed. Try again.');
     }
-    await renderLive();
+    await Promise.all(after.map((f) => f()));
     render(await call('/admin/votd-board'));
   }catch(e){
     btn.disabled = false;
-    btn.textContent = 'Change this photo';
+    btn.textContent = label;
     alert(e.message);
   }
 }
@@ -550,6 +609,7 @@ document.getElementById('reportBtn').addEventListener('click', (e) => showReport
   try{
     render(await call('/admin/votd-board'));
     renderLive();
+    renderNext();
   }
   catch(e){ document.getElementById('boot').innerHTML = '<span class="err">' + e.message + '</span>'; }
 })();
