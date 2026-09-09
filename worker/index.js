@@ -3409,6 +3409,61 @@ function votdDateET(offsetDays = 0) {
 }
 
 /**
+ * Attach the verse's own text in the app's default translations — NKRV and
+ * ESV — to a /votd payload, from the chapters already in KV.
+ *
+ * The app used to fetch the whole chapter to show the verse, which on a
+ * first open of the day was a third network round trip on top of the
+ * payload and the photo, and the slowest of the three: an English chapter
+ * the Worker does not have cached goes out to the ESV API.  Both chapters
+ * are in KV for every book (the search indexes are built from them), so two
+ * KV reads here save the app that round trip for everyone reading 개역개정
+ * and ESV.  A reader on another translation still takes the chapter path.
+ *
+ * Additive and best-effort: `ko` and `en` are added to the first verse when
+ * found, and simply absent when either chapter is missing or the verse
+ * cannot be located.  Nothing about the existing shape changes, so a client
+ * from before this field ignores it.
+ */
+async function votdAttachTexts(verses, env) {
+  const first = Array.isArray(verses) ? verses[0] : null;
+  if (!first || !env.COMMENTARY_KV) return verses;
+  const norm = (n) => String(n || '').replace(/\s+/g, '').toLowerCase().replace(/^psalm$/, 'psalms');
+  const want = norm(first.bookname);
+  const bookIdx = BOOK_NAMES_EN.findIndex((b) => norm(b) === want);
+  const chapter = parseInt(first.chapter, 10);
+  const num = parseInt(first.verse, 10);
+  if (bookIdx < 0 || !Number.isFinite(chapter) || !Number.isFinite(num)) return verses;
+  const bookNum = bookIdx + 1;
+  // A verse label can be a range ("16-17") where bskorea merges verses.
+  const covers = (label) => {
+    const m = String(label).match(/^(\d+)(?:-(\d+))?$/);
+    if (!m) return false;
+    const lo = +m[1], hi = m[2] ? +m[2] : lo;
+    return num >= lo && num <= hi;
+  };
+  try {
+    const [koRaw, enRaw] = await Promise.all([
+      env.COMMENTARY_KV.get(`nkrv_v4_${bookNum}_${chapter}`),
+      env.COMMENTARY_KV.get(`esv_${bookNum}_${chapter}`),
+    ]);
+    let ko = null, en = null;
+    if (koRaw) {
+      const v = (JSON.parse(koRaw).verses || []).find((x) => covers(x.verse));
+      if (v && v.text) ko = cleanForSearch(v.text);
+    }
+    if (enRaw) {
+      const v = (JSON.parse(enRaw) || []).find((x) => covers(x.verse));
+      if (v && v.text) en = v.text;
+    }
+    if (ko || en) verses[0] = { ...first, ko, en };
+  } catch {
+    // Best-effort: the payload is complete without it.
+  }
+  return verses;
+}
+
+/**
  * Seconds from now until the END of the given ET date — the TTL a photo key
  * for that date needs.  Staging tomorrow at noon means a ~36h TTL, which is
  * why this cannot reuse the live route's secondsUntilMidnight.
@@ -4973,7 +5028,7 @@ Only output valid JSON, no markdown, no preamble.`;
       if (!needVerse && !needPhoto) {
         let cachedPhoto = null;
         try { cachedPhoto = JSON.parse(photoRaw); } catch { cachedPhoto = null; }
-        return new Response(JSON.stringify({ date: today, verses: votdData, photo: cachedPhoto }), { headers: votdHeaders });
+        return new Response(JSON.stringify({ date: today, verses: await votdAttachTexts(votdData, env), photo: cachedPhoto }), { headers: votdHeaders });
       }
 
       // Topics lean toward bright, clear-sky scenes (sunrise / golden
@@ -5023,7 +5078,7 @@ Only output valid JSON, no markdown, no preamble.`;
         try { photo = JSON.parse(photoRaw); } catch { photo = null; }
       }
 
-      const result = JSON.stringify({ date: today, verses: votdData || [], photo });
+      const result = JSON.stringify({ date: today, verses: await votdAttachTexts(votdData || [], env), photo });
       return new Response(result, { headers: votdHeaders });
     }
 
