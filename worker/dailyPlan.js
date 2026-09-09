@@ -17,9 +17,10 @@
  * rotation index counts around them.  That part is small, is defined by
  * the calendar rather than by the plan, and does not drift.
  *
- * The app also freezes the days it published before 2026-09-10, when the
- * plan changed;  none of that is here, because this file only ever answers
- * for tomorrow and tomorrow is always past the freeze.
+ * FROZEN_DAYS in that same generated file holds the days the rotation does
+ * not compute — the plan as published before it changed, and the bridge day
+ * across the seam.  Those ship here too:  this file answers for tomorrow,
+ * and tomorrow can be one of them.
  *
  * bookIdx is 0-indexed, matching index.js's BOOK_NAMES_EN / BOOK_CHAPTERS
  * order — the standard 66-book Protestant order.  Add 1 for the worker's
@@ -28,10 +29,19 @@
 
 import {
   SCHEDULE,
+  FROZEN_DAYS,
   PLAN_EPOCH,
   CHRISTMAS_SETS,
   CHRISTMAS_ROTATION_BASE_YEAR,
 } from './planSchedule.generated.js';
+
+const FROZEN_BY_DATE = new Map(FROZEN_DAYS.map((d) => [d[0], d]));
+
+function dateKey(date) {
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${m}-${d}`;
+}
 
 const BOOK_CHAPTERS = [50,40,27,36,34,24,21,4,31,24,22,25,29,36,10,13,10,42,150,31,12,8,66,52,5,48,12,14,3,9,1,4,7,3,3,3,2,14,4,28,16,24,21,28,16,16,13,6,6,4,4,5,3,6,4,3,1,13,5,5,3,5,1,1,1,22];
 
@@ -196,6 +206,15 @@ function resolveChristmasReading(date) {
 export function getReadingForDate(date) {
   if (isChristmasDay(date)) return resolveChristmasReading(date);
   if (isGospelDay(date)) return resolveGospelReading(date);
+
+  // A frozen date is answered from the table, never from SCHEDULE — the
+  // rotation would compute a different passage for it, which is the whole
+  // reason it is frozen.
+  const frozen = FROZEN_BY_DATE.get(dateKey(date));
+  if (frozen) {
+    const [, isPsalms, bookIdx, chapter, verseStart, verseEnd] = frozen;
+    return { type: isPsalms ? 'psalms' : 'main', bookIdx, chapter, verseStart, verseEnd };
+  }
 
   const [isPsalms, bookIdx, chapter, verseStart, verseEnd, endChapter] =
     SCHEDULE[rotationDayIndex(date) % SCHEDULE.length];
